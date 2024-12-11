@@ -1,0 +1,13 @@
+// Declaración de terminales (tokens básicos)
+terminal Integer NUM;
+
+// Código a ejecutar tras completar el análisis sintáctico
+parser code {:
+    System.out.println("Parsing complete!");
+:};
+
+// Declaración del símbolo inicial
+start with expr;
+
+// Reglas de producción (gramática)
+expr ::= NUM {: RESULT = $NUM.intValue(); :};

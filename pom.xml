@@ -14,4 +14,19 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <!-- JFlex runtime -->
+        <dependency>
+            <groupId>de.jflex</groupId>
+            <artifactId>jflex</artifactId>
+            <version>1.9.1</version>
+        </dependency>
+        <!-- CUP Runtime -->
+        <dependency>
+            <groupId>java-cup</groupId>
+            <artifactId>java-cup-runtime</artifactId>
+            <version>11b</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
 </project>
