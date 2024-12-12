@@ -1,18 +1,22 @@
 /* Parser.cup */
+package ParserLexer;
+
 import java_cup.runtime.*;
 
+/* Código del parser */
 parser code {:
     private scanner s;
     public Parser(scanner s) { this.s = s; }
 :}
 
+/* Inicialización */
 init with {: s.init(); :};
 scan with {: return s.next_token(); :};
 
-/* Terminales */
-terminal INTEGER, STRING, CHAR, IDENTIFICADOR, ASIGNA, L_INTEGER;
+/* Declaración de terminales */
+terminal IDENTIFICADOR, INTEGER, STRING, CHAR, ASIGNA, L_INTEGER;
 
-/* No terminales */
+/* Declaración de no terminales */
 non terminal programa;
 non terminal declaracion;
 
@@ -22,4 +26,4 @@ start with programa;
 /* Reglas de producción */
 programa ::= declaracion;
 
-declaracion ::= "rodolfo" IDENTIFICADOR ASIGNA L_INTEGER;
+declaracion ::= IDENTIFICADOR ASIGNA L_INTEGER;
