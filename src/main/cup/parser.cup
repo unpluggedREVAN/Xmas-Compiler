@@ -5,12 +5,11 @@ import java_cup.runtime.*;
 
 /* Código del parser */
 parser code {:
-    private scanner s;
-    public Parser(scanner s) { this.s = s; }
+    private Lexer s;
+    public Parser(Lexer s) { this.s = s; }
 :}
 
 /* Inicialización */
-init with {: s.init(); :};
 scan with {: return s.next_token(); :};
 
 /* Declaración de terminales */
