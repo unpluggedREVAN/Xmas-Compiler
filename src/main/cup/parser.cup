@@ -1,13 +1,26 @@
-// Declaración de terminales (tokens básicos)
-terminal Integer NUM;
+// Declaración de terminales
+                terminal Integer NUM;
+                terminal PLUS, MINUS;
 
-// Código a ejecutar tras completar el análisis sintáctico
-parser code {:
-    System.out.println("Parsing complete!");
-:};
+                // Declaración de no-terminales
+                non terminal Integer expr;
 
-// Declaración del símbolo inicial
-start with expr;
+                // Precedencia de operadores
+                precedence left PLUS, MINUS;
 
-// Reglas de producción (gramática)
-expr ::= NUM {: RESULT = $NUM.intValue(); :};
+                // Declaración del símbolo inicial
+                start with expr;
+
+// Reglas de producción
+expr ::= expr PLUS expr
+          {:
+             RESULT = Integer.valueOf(((Integer)left.value).intValue() + ((Integer)right.value).intValue());
+          :}
+       | expr MINUS expr
+          {:
+             RESULT = Integer.valueOf(((Integer)left.value).intValue() - ((Integer)right.value).intValue());
+          :}
+       | NUM
+          {:
+             RESULT = Integer.valueOf(((Integer)value.intValue()));
+          :};
