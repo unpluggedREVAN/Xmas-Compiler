@@ -1,26 +1,25 @@
-// Declaración de terminales
-                terminal Integer NUM;
-                terminal PLUS, MINUS;
+/* Parser.cup */
+import java_cup.runtime.*;
 
-                // Declaración de no-terminales
-                non terminal Integer expr;
+parser code {:
+    private scanner s;
+    public Parser(scanner s) { this.s = s; }
+:}
 
-                // Precedencia de operadores
-                precedence left PLUS, MINUS;
+init with {: s.init(); :};
+scan with {: return s.next_token(); :};
 
-                // Declaración del símbolo inicial
-                start with expr;
+/* Terminales */
+terminal INTEGER, STRING, CHAR, IDENTIFICADOR, ASIGNA, L_INTEGER;
 
-// Reglas de producción
-expr ::= expr PLUS expr
-          {:
-             RESULT = Integer.valueOf(((Integer)left.value).intValue() + ((Integer)right.value).intValue());
-          :}
-       | expr MINUS expr
-          {:
-             RESULT = Integer.valueOf(((Integer)left.value).intValue() - ((Integer)right.value).intValue());
-          :}
-       | NUM
-          {:
-             RESULT = Integer.valueOf(((Integer)value.intValue()));
-          :};
+/* No terminales */
+non terminal programa;
+non terminal declaracion;
+
+/* Producción inicial */
+start with programa;
+
+/* Reglas de producción */
+programa ::= declaracion;
+
+declaracion ::= "rodolfo" IDENTIFICADOR ASIGNA L_INTEGER;
