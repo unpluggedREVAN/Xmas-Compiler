@@ -4,7 +4,7 @@
 
 
 @SuppressWarnings("fallthrough")
-class SimpleLexer implements java_cup.runtime.Scanner {
+class Lexer implements java_cup.runtime.Scanner {
 
   /** This character denotes the end of file. */
   public static final int YYEOF = -1;
@@ -59,8 +59,9 @@ class SimpleLexer implements java_cup.runtime.Scanner {
   private static final int [] ZZ_CMAP_BLOCKS = zzUnpackcmap_blocks();
 
   private static final String ZZ_CMAP_BLOCKS_PACKED_0 =
-    "\12\0\4\1\42\0\12\2\7\0\32\3\4\0\1\3"+
-    "\1\0\32\3\12\0\1\1\u01a2\0\2\1\326\0\u0100\1";
+    "\12\0\4\1\35\0\1\2\1\0\1\3\2\0\12\4"+
+    "\7\0\32\5\4\0\1\5\1\0\32\5\12\0\1\1"+
+    "\u01a2\0\2\1\326\0\u0100\1";
 
   private static int [] zzUnpackcmap_blocks() {
     int [] result = new int[1024];
@@ -87,10 +88,10 @@ class SimpleLexer implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ACTION = zzUnpackAction();
 
   private static final String ZZ_ACTION_PACKED_0 =
-    "\1\0\1\1\1\2\1\3";
+    "\1\0\1\1\1\2\1\3\1\4\1\5";
 
   private static int [] zzUnpackAction() {
-    int [] result = new int[4];
+    int [] result = new int[6];
     int offset = 0;
     offset = zzUnpackAction(ZZ_ACTION_PACKED_0, offset, result);
     return result;
@@ -115,10 +116,10 @@ class SimpleLexer implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ROWMAP = zzUnpackRowMap();
 
   private static final String ZZ_ROWMAP_PACKED_0 =
-    "\0\0\0\4\0\10\0\14";
+    "\0\0\0\6\0\6\0\6\0\14\0\22";
 
   private static int [] zzUnpackRowMap() {
-    int [] result = new int[4];
+    int [] result = new int[6];
     int offset = 0;
     offset = zzUnpackRowMap(ZZ_ROWMAP_PACKED_0, offset, result);
     return result;
@@ -141,10 +142,11 @@ class SimpleLexer implements java_cup.runtime.Scanner {
   private static final int [] ZZ_TRANS = zzUnpacktrans();
 
   private static final String ZZ_TRANS_PACKED_0 =
-    "\1\2\1\0\1\3\1\4\6\0\1\3\3\0\2\4";
+    "\1\2\1\0\1\3\1\4\1\5\1\6\12\0\1\5"+
+    "\5\0\2\6";
 
   private static int [] zzUnpacktrans() {
-    int [] result = new int[16];
+    int [] result = new int[24];
     int offset = 0;
     offset = zzUnpacktrans(ZZ_TRANS_PACKED_0, offset, result);
     return result;
@@ -187,10 +189,10 @@ class SimpleLexer implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ATTRIBUTE = zzUnpackAttribute();
 
   private static final String ZZ_ATTRIBUTE_PACKED_0 =
-    "\1\0\1\11\2\1";
+    "\1\0\3\11\2\1";
 
   private static int [] zzUnpackAttribute() {
-    int [] result = new int[4];
+    int [] result = new int[6];
     int offset = 0;
     offset = zzUnpackAttribute(ZZ_ATTRIBUTE_PACKED_0, offset, result);
     return result;
@@ -274,7 +276,7 @@ class SimpleLexer implements java_cup.runtime.Scanner {
    *
    * @param   in  the java.io.Reader to read input from.
    */
-  SimpleLexer(java.io.Reader in) {
+  Lexer(java.io.Reader in) {
     this.zzReader = in;
   }
 
@@ -636,20 +638,30 @@ class SimpleLexer implements java_cup.runtime.Scanner {
       else {
         switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
           case 1:
-            { System.err.println("Error léxico: " + yytext());
-            }
-          // fall through
-          case 4: break;
-          case 2:
-            { return new java_cup.runtime.Symbol(1, yytext());
-            }
-          // fall through
-          case 5: break;
-          case 3:
-            { return new java_cup.runtime.Symbol(0, yytext());
+            { System.out.println("Carácter no reconocido: " + yytext());
             }
           // fall through
           case 6: break;
+          case 2:
+            { System.out.println("Operador +");
+            }
+          // fall through
+          case 7: break;
+          case 3:
+            { System.out.println("Operador -");
+            }
+          // fall through
+          case 8: break;
+          case 4:
+            { System.out.println("Número: " + yytext());
+            }
+          // fall through
+          case 9: break;
+          case 5:
+            { System.out.println("Identificador: " + yytext());
+            }
+          // fall through
+          case 10: break;
           default:
             zzScanError(ZZ_NO_MATCH);
         }

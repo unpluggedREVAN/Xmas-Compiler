@@ -1,9 +1,13 @@
 %%
-%class SimpleLexer
+
+%class Lexer
 %unicode
 %cup
 
 %%
-[a-zA-Z_][a-zA-Z0-9_]* { return new java_cup.runtime.Symbol(0, yytext()); }
-[0-9]+                  { return new java_cup.runtime.Symbol(1, yytext()); }
-.                       { System.err.println("Error léxico: " + yytext()); }
+
+[a-zA-Z_][a-zA-Z0-9_]*   { System.out.println("Identificador: " + yytext()); }
+[0-9]+                   { System.out.println("Número: " + yytext()); }
+"+"                      { System.out.println("Operador +"); }
+"-"                      { System.out.println("Operador -"); }
+.                        { System.out.println("Carácter no reconocido: " + yytext()); }
