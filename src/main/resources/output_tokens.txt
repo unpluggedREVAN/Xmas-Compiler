@@ -1,0 +1,5 @@
+Lexema          Tipo de Token        Línea     
+--------------------------------------------------------
+rodolfo         INTEGER              1         
+entrega         ASIGNA               1         
+42              L_INTEGER            1         
