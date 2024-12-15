@@ -5,6 +5,8 @@
 /* Lexer.jflex */
 package ParserLexer;
 import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @SuppressWarnings("fallthrough")
@@ -289,12 +291,18 @@ public class Lexer implements java_cup.runtime.Scanner {
 
   /* user code: */
     StringBuffer string = new StringBuffer();
+    // Lista para almacenar la información de los tokens
+    public List<String[]> tokenTable = new ArrayList<>();
 
     private Symbol symbol(int type) {
+        // Guarda el lexema, tipo de token y línea en la tabla
+        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], String.valueOf(yyline + 1)});
         return new Symbol(type, yyline, yycolumn);
     }
 
     private Symbol symbol(int type, Object value) {
+        // Guarda el lexema, tipo de token, línea y columna en la tabla
+        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], String.valueOf(yyline + 1)});
         return new Symbol(type, yyline, yycolumn, value);
     }
 
@@ -733,8 +741,7 @@ public class Lexer implements java_cup.runtime.Scanner {
           // fall through
           case 11: break;
           case 3:
-            { // Ignorar comentario hasta el final de la línea
-    while (!zzAtEOF && !yytext().contains("\n")) {
+            { while (!zzAtEOF && !yytext().contains("\n")) {
         yypushback(1); // Retrocede un carácter
     }
             }
