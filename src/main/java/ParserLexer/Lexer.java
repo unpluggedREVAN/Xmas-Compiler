@@ -295,15 +295,15 @@ public class Lexer implements java_cup.runtime.Scanner {
     public List<String[]> tokenTable = new ArrayList<>();
 
     private Symbol symbol(int type) {
-        // Guarda el lexema, tipo de token y línea en la tabla
-        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], String.valueOf(yyline + 1)});
-        return new Symbol(type, yyline, yycolumn);
+        // Guarda el lexema, tipo de token, línea y columna en la tabla
+        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], (yyline + 1) + ":" + (yycolumn + 1)});
+        return new Symbol(type, yyline + 1, yycolumn + 1);
     }
 
     private Symbol symbol(int type, Object value) {
         // Guarda el lexema, tipo de token, línea y columna en la tabla
-        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], String.valueOf(yyline + 1)});
-        return new Symbol(type, yyline, yycolumn, value);
+        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], (yyline + 1) + ":" + (yycolumn + 1)});
+        return new Symbol(type, yyline + 1, yycolumn + 1, value);
     }
 
 
@@ -731,7 +731,7 @@ public class Lexer implements java_cup.runtime.Scanner {
       else {
         switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
           case 1:
-            { throw new Error("Caracter ilegal: " + yytext());
+            { throw new Error("Caracter ilegal: " + yytext() + " en línea " + (yyline + 1) + ", columna " + (yycolumn + 1));
             }
           // fall through
           case 10: break;

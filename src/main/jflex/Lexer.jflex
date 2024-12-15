@@ -18,21 +18,20 @@ import java.util.List;
     public List<String[]> tokenTable = new ArrayList<>();
 
     private Symbol symbol(int type) {
-        // Guarda el lexema, tipo de token y línea en la tabla
-        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], String.valueOf(yyline + 1)});
-        return new Symbol(type, yyline, yycolumn);
+        // Guarda el lexema, tipo de token, línea y columna en la tabla
+        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], (yyline + 1) + ":" + (yycolumn + 1)});
+        return new Symbol(type, yyline + 1, yycolumn + 1);
     }
 
     private Symbol symbol(int type, Object value) {
         // Guarda el lexema, tipo de token, línea y columna en la tabla
-        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], String.valueOf(yyline + 1)});
-        return new Symbol(type, yyline, yycolumn, value);
+        tokenTable.add(new String[]{yytext(), sym.terminalNames[type], (yyline + 1) + ":" + (yycolumn + 1)});
+        return new Symbol(type, yyline + 1, yycolumn + 1, value);
     }
 %}
 
 /* Definiciones */
 LineTerminator = \r|\n|\r\n
-InputCharacter = [^\\r\\n]
 WhiteSpace = ({LineTerminator} | [ \t\f])
 
 %%
@@ -60,4 +59,4 @@ WhiteSpace = ({LineTerminator} | [ \t\f])
 }
 
 /* Error */
-[^] { throw new Error("Caracter ilegal: " + yytext()); }
+[^] { throw new Error("Caracter ilegal: " + yytext() + " en línea " + (yyline + 1) + ", columna " + (yycolumn + 1)); }

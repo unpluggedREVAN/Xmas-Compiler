@@ -1,11 +1,11 @@
-Lexema          Tipo de Token        Línea     
---------------------------------------------------------
-rodolfo         INTEGER              1         
-entrega         ASIGNA               1         
-24              L_INTEGER            1         
-rodolfo         INTEGER              2         
-entrega         ASIGNA               2         
-50              L_INTEGER            2         
-cometa          STRING               3         
-entrega         ASIGNA               3         
-75              L_INTEGER            3         
+Lexema          Tipo de Token        Posición  
+-------------------------------------------------------------
+rodolfo         INTEGER              1:1       
+entrega         ASIGNA               1:9       
+24              L_INTEGER            1:17      
+rodolfo         INTEGER              2:1       
+entrega         ASIGNA               2:9       
+50              L_INTEGER            2:17      
+cometa          STRING               3:1       
+entrega         ASIGNA               3:8       
+75              L_INTEGER            3:16      
