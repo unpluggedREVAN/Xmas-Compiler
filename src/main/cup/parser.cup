@@ -6,7 +6,6 @@ parser code {:
     private Lexer s;
     public Parser(Lexer s) { this.s = s; }
 
-    // Método para manejar errores de sintaxis de manera más detallada
     public void syntax_error(Symbol s) {
         System.err.println("Error de sintaxis en línea " + (s.left + 1) + ", columna " + (s.right + 1));
         System.err.println("Token inesperado: " + sym.terminalNames[s.sym]);
@@ -20,18 +19,25 @@ scan with {: return s.next_token(); :};
 terminal IDENTIFICADOR, INTEGER, STRING, CHAR, ASIGNA, L_INTEGER;
 
 /* Declaración de no terminales */
-non terminal programa, sentencia;
+non terminal programa, sentencia, lista_sentencias;
 
 /* Producción inicial */
 start with programa;
 
 /* Reglas de producción */
 programa ::=
-    sentencia
+    lista_sentencias
     | /* epsilon */
+    ;
+
+lista_sentencias ::=
+    lista_sentencias sentencia
+    | sentencia
     ;
 
 sentencia ::=
     INTEGER ASIGNA L_INTEGER
     {: System.out.println("Declaración válida: INTEGER entrega L_INTEGER"); :}
+    | STRING ASIGNA L_INTEGER
+    {: System.out.println("Declaración válida: STRING entrega L_INTEGER"); :}
     ;

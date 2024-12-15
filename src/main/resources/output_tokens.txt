@@ -2,4 +2,10 @@ Lexema          Tipo de Token        Línea
 --------------------------------------------------------
 rodolfo         INTEGER              1         
 entrega         ASIGNA               1         
-42              L_INTEGER            1         
+24              L_INTEGER            1         
+rodolfo         INTEGER              2         
+entrega         ASIGNA               2         
+50              L_INTEGER            2         
+cometa          STRING               3         
+entrega         ASIGNA               3         
+75              L_INTEGER            3         
