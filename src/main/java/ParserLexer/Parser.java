@@ -32,8 +32,8 @@ public class Parser extends java_cup.runtime.lr_parser {
   protected static final short _production_table[][] = 
     unpackFromStrings(new String[] {
     "\000\007\000\002\002\004\000\002\002\003\000\002\002" +
-    "\002\000\002\004\004\000\002\004\003\000\002\003\005" +
-    "\000\002\003\005" });
+    "\002\000\002\003\004\000\002\003\003\000\002\004\005" +
+    "\000\002\004\005" });
 
   /** Access to production table. */
   public short[][] production_table() {return _production_table;}
@@ -41,14 +41,14 @@ public class Parser extends java_cup.runtime.lr_parser {
   /** Parse-action table. */
   protected static final short[][] _action_table = 
     unpackFromStrings(new String[] {
-    "\000\014\000\010\002\uffff\005\004\006\005\001\002\000" +
-    "\004\010\015\001\002\000\004\010\013\001\002\000\004" +
-    "\002\012\001\002\000\010\002\000\005\004\006\005\001" +
-    "\002\000\010\002\ufffd\005\ufffd\006\ufffd\001\002\000\010" +
-    "\002\ufffe\005\ufffe\006\ufffe\001\002\000\004\002\001\001" +
-    "\002\000\004\011\014\001\002\000\010\002\ufffb\005\ufffb" +
-    "\006\ufffb\001\002\000\004\011\016\001\002\000\010\002" +
-    "\ufffc\005\ufffc\006\ufffc\001\002" });
+    "\000\014\000\010\002\uffff\005\004\011\005\001\002\000" +
+    "\004\017\015\001\002\000\004\017\013\001\002\000\004" +
+    "\002\012\001\002\000\010\002\000\005\004\011\005\001" +
+    "\002\000\010\002\ufffd\005\ufffd\011\ufffd\001\002\000\010" +
+    "\002\ufffe\005\ufffe\011\ufffe\001\002\000\004\002\001\001" +
+    "\002\000\004\013\014\001\002\000\010\002\ufffb\005\ufffb" +
+    "\011\ufffb\001\002\000\004\013\016\001\002\000\010\002" +
+    "\ufffc\005\ufffc\011\ufffc\001\002" });
 
   /** Access to parse-action table. */
   public short[][] action_table() {return _action_table;}
@@ -56,9 +56,9 @@ public class Parser extends java_cup.runtime.lr_parser {
   /** <code>reduce_goto</code> table. */
   protected static final short[][] _reduce_table = 
     unpackFromStrings(new String[] {
-    "\000\014\000\010\002\005\003\007\004\006\001\001\000" +
+    "\000\014\000\010\002\005\003\006\004\007\001\001\000" +
     "\002\001\001\000\002\001\001\000\002\001\001\000\004" +
-    "\003\010\001\001\000\002\001\001\000\002\001\001\000" +
+    "\004\010\001\001\000\002\001\001\000\002\001\001\000" +
     "\002\001\001\000\002\001\001\000\002\001\001\000\002" +
     "\001\001\000\002\001\001" });
 
@@ -176,7 +176,7 @@ class CUP$Parser$actions {
             {
               Object RESULT =null;
 
-              CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_sentencias",2, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
+              CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_sentencias",1, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
 
@@ -185,7 +185,7 @@ class CUP$Parser$actions {
             {
               Object RESULT =null;
 
-              CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_sentencias",2, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
+              CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_sentencias",1, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
 
@@ -194,7 +194,7 @@ class CUP$Parser$actions {
             {
               Object RESULT =null;
 		 System.out.println("Declaración válida: INTEGER entrega L_INTEGER"); 
-              CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",1, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
+              CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",2, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
 
@@ -203,7 +203,7 @@ class CUP$Parser$actions {
             {
               Object RESULT =null;
 		 System.out.println("Declaración válida: STRING entrega L_INTEGER"); 
-              CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",1, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
+              CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",2, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
 

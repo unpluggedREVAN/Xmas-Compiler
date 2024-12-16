@@ -16,10 +16,20 @@ parser code {:
 scan with {: return s.next_token(); :};
 
 /* Declaración de terminales */
-terminal IDENTIFICADOR, INTEGER, STRING, CHAR, ASIGNA, L_INTEGER;
+terminal IDENTIFICADOR, INTEGER, FLOAT, BOOL, BOOL_LITERAL, STRING, CHAR, L_INTEGER, FLOAT_LITERAL, CHAR_LITERAL, STRING_LITERAL;
+terminal ASIGNA, SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
+terminal INCREMENTO, DECREMENTO, MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
+terminal CONJUNCION, DISYUNCION, NEGACION;
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
+terminal PRINT, READ, MAIN;
+terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
+terminal COMA, PUNTO_Y_COMA, UNKNOWN_TOKEN;
 
 /* Declaración de no terminales */
-non terminal programa, sentencia, lista_sentencias;
+non terminal programa, lista_sentencias, sentencia, declaracion, operacion, control_estructuras, lista_parametros, arreglo, expresion, literal;
+
+/* Declaración de tipos adicionales */
+non terminal lista_identificadores, lista_expresiones, tipo_dato, bloque;
 
 /* Producción inicial */
 start with programa;
