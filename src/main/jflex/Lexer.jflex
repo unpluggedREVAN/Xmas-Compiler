@@ -41,29 +41,33 @@ WhiteSpace = ({LineTerminator} | [ \t\f])
 "nochebuena" {return symbol(sym.MULTIPLICACION); }
 "magos" {return symbol(sym.MODULE); }
 "adviento" {return symbol(sym.POTENCIA); }
-"quien" {return symbol(sym.); }
-"grinch" {return symbol(sym.); }
-"snowball" {return}
-"minstix" {return}
-"upatree" {return}
-"mary" {return}
-"openslae" {return}
+"quien" {return symbol(sym.INCREMENTO); }
+"grinch" {return symbol(sym.DECREMENTO); }
+"snowball" {return symbol(sym.MENOR); }
+"evergreen" {return symbol(sym.MENOROIGUAL); }
+"minstix" {return symbol(sym.MAYOR); }
+"upatree" {return symbol(sym.MAYOROIGUAL); }
+"mary" {return symbol(sym.IGUALDAD); }
+"openslae" {return symbol(sym.DIFERENTE); }
+"melchor" {return symbol(sym.CONJUNCION); }
+"gaspar" {return symbol(sym.DISYUNCION); }
+"baltazar" {return symbol(sym.NEGACION); }
 
 /*Estructuras de control*/
-"elfo" {return }
-"hada" {return }
-"envuelve" {return }
-"duende" {return }
-"varios" {return }
-"historia" {return }
-"ultimo" {return }
-"corta" {return }
-"envia" {return }
-"sigue" {return }
+"elfo" {return symbol(sym.IF); }
+"hada" {return symbol(sym.ELSE); }
+"envuelve" {return symbol(sym.WHILE); }
+"duende" {return symbol(sym.FOR); }
+"varios" {return symbol(sym.SWITCH); }
+"historia" {return symbol(sym.CASE); }
+"ultimo" {return symbol(sym.DEFAULT); }
+"corta" {return symbol(sym.BREAK); }
+"envia" {return symbol(sym.RETURN); }
+"sigue" {return symbol(sym.DOS_PUNTOS); }
 
 /*Entrada y salida de datos*/
-"narra" {return }
-"escucha" {return }
+"narra" {return symbol(sym.PRINT); }
+"escucha" {return symbol(sym.READ); }
 
 /* Espacios y comentarios */
 {WhiteSpace} { /* Ignorar espacios en blanco */ }
@@ -72,6 +76,9 @@ WhiteSpace = ({LineTerminator} | [ \t\f])
         yypushback(1); // Retrocede un carácter
     }
 }
+
+/*Comando main para iniciar el programa*/
+"_verano_" {return symbol(sym.MAIN); }
 
 /* Error */
 [^] { throw new Error("Caracter ilegal: " + yytext() + " en línea " + (yyline + 1) + ", columna " + (yycolumn + 1)); }
