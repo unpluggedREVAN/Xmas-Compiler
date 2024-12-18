@@ -38,7 +38,7 @@ import java.util.List;
         return new Symbol(type, yyline + 1, yycolumn + 1, value);
     }
 
-    // guardar errores en lista de errores.
+    // guardar errores en lista de errores. Esto se iba a usar para manejar los errores de otra forma pero bueno
     public void addLexicalError(String errorMessage) {
         lexicalErrors.add(errorMessage);
     }
@@ -62,6 +62,7 @@ Identifier = "_"[a-zA-Z0-9_]*"_"
 IntLiteral = {Digit}+
 FloatLiteral = {Digit}+"."{Digit}+
 
+/* significan Double Quote y Backslash */
 DQ = \"
 BS = \\
 
@@ -70,7 +71,7 @@ StringLiteral = {DQ}({BS}.|[^\"\\\n])*{DQ}
 
 /* Comentarios */
 SingleLineComment = "#"[^\r\n]*
-MultiLineComment = "\\_"[^]*?"_\\"
+MultiLineComment = "\\_"([^\\_]|\\n|\\r)*"_/"
 
 /********************************************
  * Sección de Reglas

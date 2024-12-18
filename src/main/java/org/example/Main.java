@@ -9,8 +9,8 @@ import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class Main {
-    // Rutas a los archivos
-    private static final String BASE_DIR = "src/main/java/ParserLexer";
+    // Rutas a los archivos, aquí partimos de los comandos en la documentación
+    private static final String BASE_DIR = "src/main/java/ParserLexer"; // Tomando la idea prestada del basePath del profe
     private static final String JFLEX_COMMAND = "java -jar lib/jflex-full-1.9.1.jar -d " + BASE_DIR + " src/main/jflex/Lexer.jflex";
     private static final String CUP_COMMAND = "java -jar lib/java-cup-11b.jar -destdir " + BASE_DIR + " -parser Parser src/main/cup/parser.cup";
     private static final String GENERATED_DIR = "src/main/generated";
@@ -21,7 +21,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
-            System.out.println("\n===== Menú Principal =====");
+            System.out.println("\n===== Xmas-Scanner =====");
             System.out.println("1. Generar el ParserLexer (borra los anteriores y genera nuevos)");
             System.out.println("2. Compilar los archivos");
             System.out.println("3. Probar el scanner");
@@ -43,7 +43,7 @@ public class Main {
                         probarScanner();
                         break;
                     case 4:
-                        System.out.println("Saliendo del programa. ¡Hasta luego!");
+                        System.out.println("Saliendo del programa...");
                         return;
                     default:
                         System.out.println("Opción inválida. Intente de nuevo.");
@@ -59,7 +59,7 @@ public class Main {
     private static void generarParserLexer() throws Exception {
         System.out.println("Eliminando archivos anteriores...");
 
-        // Eliminar archivos existentes
+        // se eliminan los .java existentes, también tomamos esta idea del código del profe
         borrarArchivo(BASE_DIR + "/Lexer.java");
         borrarArchivo(BASE_DIR + "/Parser.java");
         borrarArchivo(BASE_DIR + "/sym.java");
@@ -70,7 +70,7 @@ public class Main {
         System.out.println("Generando Parser...");
         ejecutarComando(CUP_COMMAND);
 
-        System.out.println("Generación de ParserLexer completada.");
+        System.out.println("Generación de ParserLexer completa.");
     }
 
     // Opción 2: Compilar los archivos
@@ -79,35 +79,34 @@ public class Main {
         String comandoCompilacion = "javac -cp \"lib/*\" -d " + GENERATED_DIR + " " +
                 "src/main/java/org/example/*.java src/main/java/ParserLexer/*.java";
         ejecutarComando(comandoCompilacion);
-        System.out.println("Compilación completada. Archivos generados en: " + GENERATED_DIR);
+        System.out.println("Compilación completa. Archivos generados en: " + GENERATED_DIR);
     }
 
     // Opción 3: Probar el Scanner
     private static void probarScanner() {
         Scanner scanner = new Scanner(System.in);
 
-        // Pedir al usuario la ruta del archivo de entrada
+        // se pide la ruta del archivo de entrada
         System.out.print("Ingrese la ruta del archivo de entrada (.txt): ");
         String rutaEntrada = scanner.nextLine();
 
-        // Definir la ruta del archivo de salida
         String archivoSalida = "output_tokens.txt"; // Archivo de salida fijo
 
-        // Verificar si el archivo de entrada existe
+        // se verifica si el archivo de entrada existe
         if (!new File(rutaEntrada).exists()) {
             System.err.println("Error: El archivo no existe en la ruta proporcionada.");
             return;
-        }
+        } // Si existe ese return no se ejecuta y se pasa a ejecutar el Test
 
         System.out.println("Ejecutando análisis léxico y sintáctico...");
         Test analizador = new Test();
         analizador.ejecutarAnalisis(rutaEntrada);
 
-        System.out.println("Análisis completado. Resultados guardados en: " + archivoSalida);
+        // System.out.println("Análisis completado. Resultados guardados en: " + archivoSalida);
     }
 
 
-    // Método para borrar archivos si existen
+    // método para borrar archivos si existen ya
     private static void borrarArchivo(String ruta) {
         try {
             Path path = Paths.get(ruta);
@@ -120,7 +119,7 @@ public class Main {
         }
     }
 
-    // Método para ejecutar comandos en la terminal
+    // método para ejecutar comandos en la terminal
     private static void ejecutarComando(String comando) throws Exception {
         Process proceso = Runtime.getRuntime().exec(comando);
         proceso.waitFor();

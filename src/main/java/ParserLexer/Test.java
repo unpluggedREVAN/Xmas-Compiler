@@ -9,18 +9,15 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class Test {
-    /**
-     * Ejecuta el análisis léxico y sintáctico.
-     * @param archivoEntrada Ruta al archivo de entrada.
-     */
+    // ejecuta el análisis léxico y hay una prueba del sintáctico
     public void ejecutarAnalisis(String archivoEntrada) {
         try {
-            // Obtener la ruta de salida eliminando el nombre del archivo
+            // a la ruta hay que ponerle el nombre del archivo
             Path rutaEntrada = Paths.get(archivoEntrada);
             String directorioSalida = rutaEntrada.getParent().toString();
             String archivoSalida = directorioSalida + "/output_tokens.txt";
 
-            // Crear el lexer
+            // creación del lexer
             Reader reader = new BufferedReader(new FileReader(archivoEntrada));
             Lexer lexer = new Lexer(reader);
 
@@ -29,44 +26,44 @@ public class Test {
                 java_cup.runtime.Symbol token = lexer.next_token();
                 if (token.sym == sym.EOF) break;
 
+                // los va convirtiendo en cadenas
                 String lexema = (token.value != null) ? token.value.toString() : lexer.yytext();
                 String tipoToken = sym.terminalNames[token.sym];
                 String posicion = token.left + ":" + token.right; // Línea:Columna
 
-                System.out.println("Token: " + tipoToken + ", Valor: " + lexema + ", Posición: " + posicion);
+                System.out.println("Tipo: " + tipoToken + ", Lexema: " + lexema + ", Posición: " + posicion);
             }
 
-            // Escribir la tabla de tokens en el archivo de salida
+            // aquí escribe la tabla de tokens en el archivo de salida
             escribirTokensEnArchivo(lexer.tokenTable, archivoSalida);
-            System.out.println("\nOutput del scanner escrito en: " + archivoSalida);
+            System.out.println("\nOutput del scanner guardado en: " + archivoSalida);
 
             // Reiniciar el lector para el parser
-            reader = new BufferedReader(new FileReader(archivoEntrada));
-            lexer = new Lexer(reader);
-            Parser parser = new Parser(lexer);
+            // reader = new BufferedReader(new FileReader(archivoEntrada));
+            // lexer = new Lexer(reader);
+            // Parser parser = new Parser(lexer);
 
             // Ejecutar el análisis sintáctico
-            System.out.println("\nIniciando el análisis...");
-            parser.parse();
-            System.out.println("Análisis completado exitosamente.");
+            // System.out.println("\nIniciando el análisis...");
+            // parser.parse();
+            // System.out.println("Análisis completado exitosamente.");
+
         } catch (Exception e) {
             System.err.println("Error durante el análisis:");
             e.printStackTrace();
         }
     }
 
-    /**
-     * Método para escribir la tabla de tokens en un archivo con formato tabular.
-     */
+    // método para escribir la tabla de tokens en un archivo
     private void escribirTokensEnArchivo(List<String[]> tokenTable, String archivoSalida) {
         try (PrintWriter writer = new PrintWriter(archivoSalida)) {
             // Encabezado de la tabla
             writer.printf("%-15s %-20s %-10s%n", "Lexema", "Tipo de Token", "Posición");
             writer.println("-------------------------------------------------------------");
 
-            // Escribir cada fila de la tabla
+            // cada fila de la tabla
             for (String[] fila : tokenTable) {
-                writer.printf("%-15s %-20s %-10s%n", fila[0], fila[1], fila[2]);
+                writer.printf("%-15s %-20s %-10s%n", fila[0], fila[1], fila[2]); // se distancia
             }
         } catch (Exception e) {
             System.err.println("Error al escribir en el archivo de salida:");
@@ -74,9 +71,7 @@ public class Test {
         }
     }
 
-    /**
-     * Método principal que recibe el archivo de entrada como parámetro.
-     */
+    // este main recibe como parámetro la ruta
     public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("Error: Debe proporcionar la ruta del archivo .txt como parámetro.");
@@ -84,10 +79,9 @@ public class Test {
             return;
         }
 
-        // Ruta del archivo de entrada
+        // ruta del archivo
         String archivoEntrada = args[0];
 
-        // Ejecutar el análisis
         Test analizador = new Test();
         analizador.ejecutarAnalisis(archivoEntrada);
     }
