@@ -8,6 +8,13 @@ import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Este archivo fue desarrollado tomando como base el código de ejemplo proporcionado
+ * en la documentación oficial de JFlex y CUP:
+ * - https://www.jflex.de/
+ * - https://www2.cs.tum.edu/projects/cup/examples.php
+ */
+
 
 @SuppressWarnings("fallthrough")
 public class Lexer implements java_cup.runtime.Scanner {
@@ -414,20 +421,24 @@ public class Lexer implements java_cup.runtime.Scanner {
   private boolean zzEOFDone;
 
   /* user code: */
+    // Declaración de estructuras para manejar cadenas temporales, tokens reconocidos y errores léxicos.
     StringBuffer string = new StringBuffer();
     public List<String[]> tokenTable = new ArrayList<>();
     public List<String> lexicalErrors = new ArrayList<>();
 
+    // registrar tokens simples en la tabla de tokens con su tipo y posición.
     private Symbol symbol(int type) {
         tokenTable.add(new String[]{yytext(), sym.terminalNames[type], (yyline + 1) + ":" + (yycolumn + 1)});
         return new Symbol(type, yyline + 1, yycolumn + 1);
     }
 
+    // registrar tokens con valores asociados (como números o cadenas) en la tabla de tokens.
     private Symbol symbol(int type, Object value) {
         tokenTable.add(new String[]{yytext(), sym.terminalNames[type], (yyline + 1) + ":" + (yycolumn + 1)});
         return new Symbol(type, yyline + 1, yycolumn + 1, value);
     }
 
+    // guardar errores en lista de errores.
     public void addLexicalError(String errorMessage) {
         lexicalErrors.add(errorMessage);
     }
@@ -865,17 +876,17 @@ public class Lexer implements java_cup.runtime.Scanner {
           // fall through
           case 57: break;
           case 2:
-            { /* Ignorar espacios en blanco */
+            { /* espacios en blanco - ignorar */
             }
           // fall through
           case 58: break;
           case 3:
-            { /* Ignorar saltos de línea */
+            { /* saltos de línea - ignorar */
             }
           // fall through
           case 59: break;
           case 4:
-            { /* Ignorar comentario de una línea */
+            { /* ignorar comentario */
             }
           // fall through
           case 60: break;
@@ -910,7 +921,7 @@ public class Lexer implements java_cup.runtime.Scanner {
           // fall through
           case 66: break;
           case 11:
-            { /* Ignorar comentario multilinea */
+            { /* ignorar */
             }
           // fall through
           case 67: break;

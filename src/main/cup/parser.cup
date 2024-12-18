@@ -2,11 +2,19 @@
 package ParserLexer;
 import java_cup.runtime.*;
 
-parser code {:
-    private Lexer s;
-    public Parser(Lexer s) { this.s = s; }
+/*
+   Este parser fue hecho así para validar la conexión con el scanner,
+   implementando reglas de producción simples para comprobar el reconocimiento de tokens
+   y la transición entre el análisis léxico y sintáctico.
+*/
 
-    public void syntax_error(Symbol s) {
+
+parser code {:
+    // declaración del scanner
+    private Lexer s;
+    public Parser(Lexer s) { this.s = s; } // constructor
+
+    public void syntax_error(Symbol s) { // manejo de errores - es solo de prueba por ahora
         System.err.println("Error de sintaxis en línea " + (s.left + 1) + ", columna " + (s.right + 1));
         System.err.println("Token inesperado: " + sym.terminalNames[s.sym]);
     }
@@ -15,7 +23,7 @@ parser code {:
 /* Inicialización */
 scan with {: return s.next_token(); :};
 
-/* Declaración de terminales */
+/* terminales */
 terminal IDENTIFICADOR, INTEGER, FLOAT, BOOL, BOOL_LITERAL, STRING, CHAR, L_INTEGER, FLOAT_LITERAL, CHAR_LITERAL, STRING_LITERAL;
 terminal ASIGNA, SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
 terminal INCREMENTO, DECREMENTO, MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
@@ -25,10 +33,10 @@ terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal COMA, PUNTO_Y_COMA, UNKNOWN_TOKEN;
 
-/* Declaración de no terminales */
+/* no terminales */
 non terminal programa, lista_sentencias, sentencia, declaracion, operacion, control_estructuras, lista_parametros, arreglo, expresion, literal;
 
-/* Declaración de tipos adicionales */
+/* tipos adicionales */
 non terminal lista_identificadores, lista_expresiones, tipo_dato, bloque;
 
 /* Producción inicial */

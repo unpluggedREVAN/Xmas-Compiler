@@ -106,10 +106,11 @@ public class Parser extends java_cup.runtime.lr_parser {
     }
 
 
+    // declaración del scanner
     private Lexer s;
-    public Parser(Lexer s) { this.s = s; }
+    public Parser(Lexer s) { this.s = s; } // constructor
 
-    public void syntax_error(Symbol s) {
+    public void syntax_error(Symbol s) { // manejo de errores - es solo de prueba por ahora
         System.err.println("Error de sintaxis en línea " + (s.left + 1) + ", columna " + (s.right + 1));
         System.err.println("Token inesperado: " + sym.terminalNames[s.sym]);
     }
