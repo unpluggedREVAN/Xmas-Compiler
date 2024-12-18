@@ -439,7 +439,7 @@ public class Lexer implements java_cup.runtime.Scanner {
         return new Symbol(type, yyline + 1, yycolumn + 1, value);
     }
 
-    // guardar errores en lista de errores.
+    // guardar errores en lista de errores. Esto se iba a usar para manejar los errores de otra forma pero bueno
     public void addLexicalError(String errorMessage) {
         lexicalErrors.add(errorMessage);
     }
