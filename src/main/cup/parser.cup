@@ -23,35 +23,36 @@ parser code {:
 /* Inicialización */
 scan with {: return s.next_token(); :};
 
-/* --------------------------------------------------------------------
-   TERMINALES
--------------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   TERMINALES (declara solo los que uses de verdad para reducir warnings)
+------------------------------------------------------------------ */
 terminal IDENTIFICADOR, INTEGER, FLOAT, BOOL, BOOL_LITERAL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, CHAR_LITERAL, STRING_LITERAL;
 terminal ASIGNA, SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
-terminal INCREMENTO, DECREMENTO, MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL,
-         IGUALDAD, DIFERENTE;
+terminal INCREMENTO, DECREMENTO;
+terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
 terminal CONJUNCION, DISYUNCION, NEGACION;
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
-terminal COMA, PUNTO_Y_COMA, UNKNOWN_TOKEN;
+terminal PUNTO_Y_COMA, COMA, UNKNOWN_TOKEN;
 
-/* --------------------------------------------------------------------
-   NO TERMINALES (placeholders o en uso)
--------------------------------------------------------------------- */
-non terminal programa, lista_sentencias, sentencia, declaracion, operacion,
-             control_estructuras, lista_parametros, arreglo, expresion, literal;
-non terminal lista_identificadores, lista_expresiones, tipo_dato, bloque;
+/* ------------------------------------------------------------------
+   NO TERMINALES que sí vamos a usar
+------------------------------------------------------------------ */
+non terminal programa, bloque, lista_sentencias, sentencia;
+non terminal declaracion, declaracion_aux, asignacion, tipo_dato, expresion, literal;
+non terminal control_estructuras, if_estructura, while_estructura, for_estructura;
+non terminal switch_estructura, case_blocks, case_block, default_block;
 
-/* --------------------------------------------------------------------
+/* ------------------------------------------------------------------
    PRODUCCIÓN INICIAL
--------------------------------------------------------------------- */
+------------------------------------------------------------------ */
 start with programa;
 
-/* --------------------------------------------------------------------
+/* ------------------------------------------------------------------
    REGLAS DE PRODUCCIÓN
--------------------------------------------------------------------- */
+------------------------------------------------------------------ */
 
 programa ::=
     MAIN bloque
@@ -68,22 +69,34 @@ lista_sentencias ::=
   | sentencia
   ;
 
-/* sentencia:
-   - extender con control_estructuras, asignación, etc.
-*/
 sentencia ::=
     declaracion
+  | asignacion
+  | control_estructuras
   | PRINT ABREREGALO expresion CIERRAREGALO PUNTO_Y_COMA
+  | READ ABREREGALO IDENTIFICADOR CIERRAREGALO PUNTO_Y_COMA
+  | RETURN expresion PUNTO_Y_COMA
+  | BREAK PUNTO_Y_COMA
   ;
 
-/* declaracion:
-   - <tipo_dato> IDENTIFICADOR ;
-   - <tipo_dato> IDENTIFICADOR = expresion ;
-   - (falta arreglos, etc. que se agregan más adelante)
-*/
+/* ------------------------------------------------------------------
+   La parte "declaracion_aux" determina si termina en ";"
+   o " = expr ;"
+   o "[ L_INTEGER ] ;"
+------------------------------------------------------------------ */
 declaracion ::=
-    tipo_dato IDENTIFICADOR PUNTO_Y_COMA
-  | tipo_dato IDENTIFICADOR ASIGNA expresion PUNTO_Y_COMA
+    tipo_dato IDENTIFICADOR declaracion_aux
+  ;
+
+/* declaracion_aux:
+   - ;
+   - = expr ;
+   - [ L_INTEGER ] ;
+*/
+declaracion_aux ::=
+    PUNTO_Y_COMA
+  | ASIGNA expresion PUNTO_Y_COMA
+  | ABREEMPAQUE L_INTEGER CIERRAEMPAQUE PUNTO_Y_COMA
   ;
 
 tipo_dato ::=
@@ -94,11 +107,75 @@ tipo_dato ::=
   | STRING
   ;
 
+/* ------------------------------------------------------------------
+   Asignación
+   var = expr;
+   var[expr] = expr;
+------------------------------------------------------------------ */
+asignacion ::=
+    IDENTIFICADOR ASIGNA expresion PUNTO_Y_COMA
+  | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE ASIGNA expresion PUNTO_Y_COMA
+  ;
+
+/* ------------------------------------------------------------------
+   Estructuras de Control (if, while, for, switch)
+------------------------------------------------------------------ */
+control_estructuras ::=
+    if_estructura
+  | while_estructura
+  | for_estructura
+  | switch_estructura
+  ;
+
+if_estructura ::=
+    IF ABREREGALO expresion CIERRAREGALO bloque
+  | IF ABREREGALO expresion CIERRAREGALO bloque ELSE bloque
+  ;
+
+while_estructura ::=
+    WHILE ABREREGALO expresion CIERRAREGALO bloque
+  ;
+
+/*
+   For (ejemplo):
+   for(asignacion expr; asignacion) bloque
+   Ajusta la sintaxis si deseas init; cond; inc
+*/
+for_estructura ::=
+    FOR ABREREGALO asignacion expresion PUNTO_Y_COMA asignacion CIERRAREGALO bloque
+  ;
+
+switch_estructura ::=
+    SWITCH ABREREGALO expresion CIERRAREGALO ABRECUENTO case_blocks CIERRACUENTO
+  ;
+
+case_blocks ::=
+    case_blocks case_block
+  | case_block
+  | default_block
+  ;
+
+case_block ::=
+    CASE L_INTEGER DOS_PUNTOS bloque
+  | CASE CHAR_LITERAL DOS_PUNTOS bloque
+  ;
+
+default_block ::=
+    DEFAULT DOS_PUNTOS bloque
+  ;
+
+/* ------------------------------------------------------------------
+   Expresión (básico):
+   - literal, identificador, id[expr]
+   - (hay que ampliar con +, -, etc.)
+------------------------------------------------------------------ */
 expresion ::=
     literal
   | IDENTIFICADOR
+  | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE
   ;
 
+/* literales: enteros, float, char, string, bool */
 literal ::=
     L_INTEGER
   | FLOAT_LITERAL
@@ -107,29 +184,6 @@ literal ::=
   | BOOL_LITERAL
   ;
 
-/* --------------------------------------------------------------------
-   PLACEHOLDERS (no se usan todavía, pero no se eliminan)
--------------------------------------------------------------------- */
-operacion ::=
-    /* luego se define */
-  ;
-
-control_estructuras ::=
-    /* luego se define */
-  ;
-
-lista_parametros ::=
-    /* luego se define */
-  ;
-
-arreglo ::=
-    /* luego se define */
-  ;
-
-lista_identificadores ::=
-    /* luego se define */
-  ;
-
-lista_expresiones ::=
-    /* luego se define */
-  ;
+/* ------------------------------------------------------------------
+   (Fin)
+------------------------------------------------------------------ */
