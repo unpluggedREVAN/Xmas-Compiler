@@ -39,14 +39,14 @@ public class Test {
             System.out.println("\nOutput del scanner guardado en: " + archivoSalida);
 
             // Reiniciar el lector para el parser
-            // reader = new BufferedReader(new FileReader(archivoEntrada));
-            // lexer = new Lexer(reader);
-            // Parser parser = new Parser(lexer);
+            reader = new BufferedReader(new FileReader(archivoEntrada));
+            lexer = new Lexer(reader);
+            Parser parser = new Parser(lexer);
 
             // Ejecutar el análisis sintáctico
-            // System.out.println("\nIniciando el análisis...");
-            // parser.parse();
-            // System.out.println("Análisis completado exitosamente.");
+            System.out.println("\nIniciando el análisis...");
+            parser.parse();
+            System.out.println("Análisis completado exitosamente.");
 
         } catch (Exception e) {
             System.err.println("Error durante el análisis:");

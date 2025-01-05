@@ -1,0 +1,9 @@
+_verano_ abrecuento
+    rodolfo _x_ finregalo                  # int _x_;
+    rodolfo _y_ entrega 10 finregalo       # int _y_ = 10;
+    narra abreregalo _y_ cierraregalo finregalo
+
+    bromista _pi_ entrega 3.14 finregalo   # float _pi_ = 3.14;
+    narra abreregalo "Pi = " cierraregalo finregalo
+    narra abreregalo _pi_ cierraregalo finregalo
+cierracuento

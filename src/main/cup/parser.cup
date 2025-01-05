@@ -23,39 +23,113 @@ parser code {:
 /* Inicialización */
 scan with {: return s.next_token(); :};
 
-/* terminales */
-terminal IDENTIFICADOR, INTEGER, FLOAT, BOOL, BOOL_LITERAL, STRING, CHAR, L_INTEGER, FLOAT_LITERAL, CHAR_LITERAL, STRING_LITERAL;
+/* --------------------------------------------------------------------
+   TERMINALES
+-------------------------------------------------------------------- */
+terminal IDENTIFICADOR, INTEGER, FLOAT, BOOL, BOOL_LITERAL, STRING, CHAR;
+terminal L_INTEGER, FLOAT_LITERAL, CHAR_LITERAL, STRING_LITERAL;
 terminal ASIGNA, SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
-terminal INCREMENTO, DECREMENTO, MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
+terminal INCREMENTO, DECREMENTO, MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL,
+         IGUALDAD, DIFERENTE;
 terminal CONJUNCION, DISYUNCION, NEGACION;
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal COMA, PUNTO_Y_COMA, UNKNOWN_TOKEN;
 
-/* no terminales */
-non terminal programa, lista_sentencias, sentencia, declaracion, operacion, control_estructuras, lista_parametros, arreglo, expresion, literal;
-
-/* tipos adicionales */
+/* --------------------------------------------------------------------
+   NO TERMINALES (placeholders o en uso)
+-------------------------------------------------------------------- */
+non terminal programa, lista_sentencias, sentencia, declaracion, operacion,
+             control_estructuras, lista_parametros, arreglo, expresion, literal;
 non terminal lista_identificadores, lista_expresiones, tipo_dato, bloque;
 
-/* Producción inicial */
+/* --------------------------------------------------------------------
+   PRODUCCIÓN INICIAL
+-------------------------------------------------------------------- */
 start with programa;
 
-/* Reglas de producción */
+/* --------------------------------------------------------------------
+   REGLAS DE PRODUCCIÓN
+-------------------------------------------------------------------- */
+
 programa ::=
-    lista_sentencias
-    | /* epsilon */
-    ;
+    MAIN bloque
+  | /* epsilon */
+  ;
+
+bloque ::=
+    ABRECUENTO lista_sentencias CIERRACUENTO
+  | /* epsilon */
+  ;
 
 lista_sentencias ::=
     lista_sentencias sentencia
-    | sentencia
-    ;
+  | sentencia
+  ;
 
+/* sentencia:
+   - extender con control_estructuras, asignación, etc.
+*/
 sentencia ::=
-    INTEGER ASIGNA L_INTEGER
-    {: System.out.println("Declaración válida: INTEGER entrega L_INTEGER"); :}
-    | STRING ASIGNA L_INTEGER
-    {: System.out.println("Declaración válida: STRING entrega L_INTEGER"); :}
-    ;
+    declaracion
+  | PRINT ABREREGALO expresion CIERRAREGALO PUNTO_Y_COMA
+  ;
+
+/* declaracion:
+   - <tipo_dato> IDENTIFICADOR ;
+   - <tipo_dato> IDENTIFICADOR = expresion ;
+   - (falta arreglos, etc. que se agregan más adelante)
+*/
+declaracion ::=
+    tipo_dato IDENTIFICADOR PUNTO_Y_COMA
+  | tipo_dato IDENTIFICADOR ASIGNA expresion PUNTO_Y_COMA
+  ;
+
+tipo_dato ::=
+    INTEGER
+  | FLOAT
+  | BOOL
+  | CHAR
+  | STRING
+  ;
+
+expresion ::=
+    literal
+  | IDENTIFICADOR
+  ;
+
+literal ::=
+    L_INTEGER
+  | FLOAT_LITERAL
+  | CHAR_LITERAL
+  | STRING_LITERAL
+  | BOOL_LITERAL
+  ;
+
+/* --------------------------------------------------------------------
+   PLACEHOLDERS (no se usan todavía, pero no se eliminan)
+-------------------------------------------------------------------- */
+operacion ::=
+    /* luego se define */
+  ;
+
+control_estructuras ::=
+    /* luego se define */
+  ;
+
+lista_parametros ::=
+    /* luego se define */
+  ;
+
+arreglo ::=
+    /* luego se define */
+  ;
+
+lista_identificadores ::=
+    /* luego se define */
+  ;
+
+lista_expresiones ::=
+    /* luego se define */
+  ;
