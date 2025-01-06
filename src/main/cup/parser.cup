@@ -187,6 +187,11 @@ default_block ::=
    F) Expresiones con Precedencia - Esto se podría manejar también con precedence
    ( lógicas, relacionales, aritméticas, potencias, unarios, literales,
      identificadores, acceso a arreglo, paréntesis )
+
+     Para esto fueron usados los siguientes sitios:
+     - https://www.geeksforgeeks.org/operator-grammar-and-precedence-parser-in-toc/
+     - https://stackoverflow.com/questions/43154307/grammar-for-expressions-four-levels-of-precedence-ll1
+     - https://stackoverflow.com/questions/70907855/simplifying-grammar-via-operator-precedence
 ---------------------------------------------------------------------- */
 
 /* La expresión más alta es e_or */
