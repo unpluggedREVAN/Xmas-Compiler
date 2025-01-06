@@ -23,12 +23,14 @@ parser code {:
 /* Inicialización */
 scan with {: return s.next_token(); :};
 
-/* ------------------------------------------------------------------
-   TERMINALES (declara solo los que uses de verdad para reducir warnings)
------------------------------------------------------------------- */
-terminal IDENTIFICADOR, INTEGER, FLOAT, BOOL, BOOL_LITERAL, STRING, CHAR;
-terminal L_INTEGER, FLOAT_LITERAL, CHAR_LITERAL, STRING_LITERAL;
-terminal ASIGNA, SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
+/* ----------------------------------------------------------------------
+   3) Declaración de TERMINALES
+---------------------------------------------------------------------- */
+terminal IDENTIFICADOR;         // Para nombres de variables, arreglos, etc.
+terminal INTEGER, FLOAT, BOOL, STRING, CHAR;  // Tipos de datos
+terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
+terminal ASIGNA;                // =
+terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
 terminal INCREMENTO, DECREMENTO;
 terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
 terminal CONJUNCION, DISYUNCION, NEGACION;
@@ -37,38 +39,56 @@ terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal PUNTO_Y_COMA, COMA, UNKNOWN_TOKEN;
 
-/* ------------------------------------------------------------------
-   NO TERMINALES que sí vamos a usar
------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   4) NO TERMINALES
+---------------------------------------------------------------------- */
 non terminal programa, bloque, lista_sentencias, sentencia;
-non terminal declaracion, declaracion_aux, asignacion, tipo_dato, expresion, literal;
+non terminal declaracion, declaracion_aux, asignacion, tipo_dato;
 non terminal control_estructuras, if_estructura, while_estructura, for_estructura;
 non terminal switch_estructura, case_blocks, case_block, default_block;
 
-/* ------------------------------------------------------------------
-   PRODUCCIÓN INICIAL
------------------------------------------------------------------- */
+/* Expresiones con jerarquía de no-terminales para manejar precedencia */
+non terminal expresion;
+non terminal e_or, e_and, e_cmp, e_cmp_rest, e_cmp_op;
+non terminal e_add, e_add_rest;
+non terminal e_mul, e_mul_rest;
+non terminal e_pow, e_pow_rest;
+non terminal e_unario, e_primario;
+non terminal literal;
+
+/* ----------------------------------------------------------------------
+   5) Producción inicial
+---------------------------------------------------------------------- */
 start with programa;
 
-/* ------------------------------------------------------------------
-   REGLAS DE PRODUCCIÓN
------------------------------------------------------------------- */
+/* ======================================================================
+   6) REGLAS DE PRODUCCIÓN
+====================================================================== */
+
+/* ----------------------------------------------------------------------
+   A) Estructura del Programa
+---------------------------------------------------------------------- */
 
 programa ::=
     MAIN bloque
   | /* epsilon */
   ;
 
+/* Un bloque: { lista_sentencias } o vacío */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
   | /* epsilon */
   ;
 
+/* 1+ sentencias en secuencia */
 lista_sentencias ::=
     lista_sentencias sentencia
   | sentencia
   ;
 
+/* ----------------------------------------------------------------------
+   B) Sentencia
+---------------------------------------------------------------------- */
 sentencia ::=
     declaracion
   | asignacion
@@ -79,18 +99,17 @@ sentencia ::=
   | BREAK PUNTO_Y_COMA
   ;
 
-/* ------------------------------------------------------------------
-   La parte "declaracion_aux" determina si termina en ";"
-   o " = expr ;"
-   o "[ L_INTEGER ] ;"
------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   C) Declaraciones (Variables y Arreglos)
+---------------------------------------------------------------------- */
+/* Ya aquí está contemplado lo de los __*/
 declaracion ::=
     tipo_dato IDENTIFICADOR declaracion_aux
   ;
 
-/* declaracion_aux:
+/* aquí es aux:
    - ;
-   - = expr ;
+   - = expresion ;
    - [ L_INTEGER ] ;
 */
 declaracion_aux ::=
@@ -107,19 +126,21 @@ tipo_dato ::=
   | STRING
   ;
 
-/* ------------------------------------------------------------------
-   Asignación
-   var = expr;
-   var[expr] = expr;
------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   D) Asignaciones
+---------------------------------------------------------------------- */
+/* Asignación:
+   - _var_ = expr;
+   - _arr_[expr] = expr;
+*/
 asignacion ::=
     IDENTIFICADOR ASIGNA expresion PUNTO_Y_COMA
   | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE ASIGNA expresion PUNTO_Y_COMA
   ;
 
-/* ------------------------------------------------------------------
-   Estructuras de Control (if, while, for, switch)
------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   E) Estructuras de Control
+---------------------------------------------------------------------- */
 control_estructuras ::=
     if_estructura
   | while_estructura
@@ -136,15 +157,12 @@ while_estructura ::=
     WHILE ABREREGALO expresion CIERRAREGALO bloque
   ;
 
-/*
-   For (ejemplo):
-   for(asignacion expr; asignacion) bloque
-   Ajusta la sintaxis si deseas init; cond; inc
-*/
+/* for (asignacion; expr; asignacion) bloque */
 for_estructura ::=
     FOR ABREREGALO asignacion expresion PUNTO_Y_COMA asignacion CIERRAREGALO bloque
   ;
 
+/* switch( expr ) { case_blocks } */
 switch_estructura ::=
     SWITCH ABREREGALO expresion CIERRAREGALO ABRECUENTO case_blocks CIERRACUENTO
   ;
@@ -160,22 +178,115 @@ case_block ::=
   | CASE CHAR_LITERAL DOS_PUNTOS bloque
   ;
 
+/* default : bloque */
 default_block ::=
     DEFAULT DOS_PUNTOS bloque
   ;
 
-/* ------------------------------------------------------------------
-   Expresión (básico):
-   - literal, identificador, id[expr]
-   - (hay que ampliar con +, -, etc.)
------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   F) Expresiones con Precedencia - Esto se podría manejar también con precedence
+   ( lógicas, relacionales, aritméticas, potencias, unarios, literales,
+     identificadores, acceso a arreglo, paréntesis )
+---------------------------------------------------------------------- */
+
+/* La expresión más alta es e_or */
 expresion ::=
+    e_or
+  ;
+
+/* e_or -> e_or || e_and | e_and */
+e_or ::=
+    e_or DISYUNCION e_and
+  | e_and
+  ;
+
+/* e_and -> e_and && e_cmp | e_cmp */
+e_and ::=
+    e_and CONJUNCION e_cmp
+  | e_cmp
+  ;
+
+/* e_cmp -> e_add e_cmp_rest  (maneja <, <=, >, >=, ==, !=) */
+e_cmp ::=
+    e_add e_cmp_rest
+  ;
+
+/* e_cmp_rest -> (op_rel e_add)* | ε */
+e_cmp_rest ::=
+    e_cmp_op e_add e_cmp_rest
+  | /* epsilon */
+  ;
+
+e_cmp_op ::=
+    MENOR
+  | MENOROIGUAL
+  | MAYOR
+  | MAYOROIGUAL
+  | IGUALDAD
+  | DIFERENTE
+  ;
+
+/* e_add -> e_mul e_add_rest  (maneja +, -) */
+e_add ::=
+    e_mul e_add_rest
+  ;
+
+e_add_rest ::=
+    (SUMA | RESTA) e_mul e_add_rest
+  | /* epsilon */
+  ;
+
+/* e_mul -> e_pow e_mul_rest  (maneja *, /, %) */
+e_mul ::=
+    e_pow e_mul_rest
+  ;
+
+e_mul_rest ::=
+    (MULTIPLICACION | DIVISION | MODULE) e_pow e_mul_rest
+  | /* epsilon */
+  ;
+
+/* e_pow -> e_unario e_pow_rest (maneja ^) */
+e_pow ::=
+    e_unario e_pow_rest
+  ;
+
+e_pow_rest ::=
+    POTENCIA e_unario e_pow_rest
+  | /* epsilon */
+  ;
+
+/* e_unario:
+   - unarios: -, !
+   - incrementos: ++id, --id, id++, id--
+   - o e_primario
+*/
+e_unario ::=
+    RESTA e_unario
+  | NEGACION e_unario
+  | INCREMENTO IDENTIFICADOR
+  | DECREMENTO IDENTIFICADOR
+  | IDENTIFICADOR INCREMENTO
+  | IDENTIFICADOR DECREMENTO
+  | e_primario
+  ;
+
+/* e_primario:
+   - literal
+   - IDENTIFICADOR
+   - IDENTIFICADOR[expr]
+   - ( expr )
+*/
+e_primario ::=
     literal
   | IDENTIFICADOR
   | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE
+  | ABREREGALO expresion CIERRAREGALO
   ;
 
-/* literales: enteros, float, char, string, bool */
+/* ----------------------------------------------------------------------
+   G) Literales
+---------------------------------------------------------------------- */
 literal ::=
     L_INTEGER
   | FLOAT_LITERAL
@@ -184,6 +295,6 @@ literal ::=
   | BOOL_LITERAL
   ;
 
-/* ------------------------------------------------------------------
-   (Fin)
------------------------------------------------------------------- */
+/* ============================================================================
+   Fin del parser.cup
+============================================================================ */

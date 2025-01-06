@@ -9,7 +9,7 @@ package ParserLexer;
 public class sym {
   /* terminals */
   public static final int STRING_LITERAL = 12;
-  public static final int CHAR = 8;
+  public static final int CHAR = 7;
   public static final int PUNTO_Y_COMA = 50;
   public static final int CHAR_LITERAL = 11;
   public static final int CIERRACUENTO = 45;
@@ -53,13 +53,13 @@ public class sym {
   public static final int DEFAULT = 37;
   public static final int FLOAT = 4;
   public static final int CONJUNCION = 28;
-  public static final int STRING = 7;
+  public static final int STRING = 6;
   public static final int DISYUNCION = 29;
-  public static final int FLOAT_LITERAL = 10;
+  public static final int FLOAT_LITERAL = 9;
   public static final int DIVISION = 16;
   public static final int PRINT = 41;
-  public static final int BOOL_LITERAL = 6;
-  public static final int L_INTEGER = 9;
+  public static final int BOOL_LITERAL = 10;
+  public static final int L_INTEGER = 8;
   public static final int MULTIPLICACION = 17;
   public static final String[] terminalNames = new String[] {
   "EOF",
@@ -68,11 +68,11 @@ public class sym {
   "INTEGER",
   "FLOAT",
   "BOOL",
-  "BOOL_LITERAL",
   "STRING",
   "CHAR",
   "L_INTEGER",
   "FLOAT_LITERAL",
+  "BOOL_LITERAL",
   "CHAR_LITERAL",
   "STRING_LITERAL",
   "ASIGNA",
