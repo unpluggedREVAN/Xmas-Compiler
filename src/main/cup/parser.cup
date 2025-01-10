@@ -60,6 +60,16 @@ non terminal e_pow, e_pow_rest;
 non terminal e_unario, e_primario;
 non terminal literal;
 
+// Operadores con precedencia y asociación
+precedence right POTENCIA;                     // ^ es asociativo por la derecha
+precedence right NEGACION, RESTA;              // Unarios: !, -
+precedence left MULTIPLICACION, DIVISION, MODULE;  // *, /, %
+precedence left SUMA, RESTA;                   // +, -
+precedence left MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL; // <, <=, >, >=
+precedence left IGUALDAD, DIFERENTE;           // ==, !=
+precedence left CONJUNCION;                    // &&
+precedence left DISYUNCION;                    // ||
+
 /* ----------------------------------------------------------------------
    5) Producción inicial
 ---------------------------------------------------------------------- */
@@ -76,7 +86,9 @@ start with programa;
 ---------------------------------------------------------------------- */
 programa ::=
     declaracionesGlobales MAIN bloque
+            {: System.out.println("Regla 'programa' ejecutada."); :}
   | MAIN bloque
+            {: System.out.println("Regla 'programa' ejecutada."); :}
   ;
 
 /* declaracionesGlobales: 1+ globalDeclaracion (variables o funciones) */
@@ -94,13 +106,16 @@ globalDeclaracion ::=
 /* Un bloque { lista_sentencias } o vacío */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
+               {: System.out.println("Regla 'bloque' ejecutada."); :}
   | /* epsilon */
   ;
 
 /* Lista de sentencias (1 o más) */
 lista_sentencias ::=
     lista_sentencias sentencia
+               {: System.out.println("Regla 'lista_sentencias' procesando lista."); :}
   | sentencia
+               {: System.out.println("Regla 'lista_sentencias' procesando sentencia."); :}
   ;
 
 /* ----------------------------------------------------------------------
@@ -108,12 +123,19 @@ lista_sentencias ::=
 ---------------------------------------------------------------------- */
 sentencia ::=
     declaracion
+               {: System.out.println("Se fue por declaración"); :}
   | asignacion
+               {: System.out.println("Regla 'sentencia' ejecutó 'asignacion'."); :}
   | control_estructuras
+               {: System.out.println("Se fue por control_estructuras"); :}
   | PRINT ABREREGALO expresion CIERRAREGALO PUNTO_Y_COMA
+               {: System.out.println("Se fue por PRINT ABREREGALO expresion CIERRAREGALO PUNTO_Y_COMA"); :}
   | READ ABREREGALO IDENTIFICADOR CIERRAREGALO PUNTO_Y_COMA
+               {: System.out.println("Se fue por READ ABREREGALO IDENTIFICADOR CIERRAREGALO PUNTO_Y_COMA"); :}
   | RETURN expresion PUNTO_Y_COMA
+               {: System.out.println("Se fue por RETURN expresion PUNTO_Y_COMA"); :}
   | BREAK PUNTO_Y_COMA
+               {: System.out.println("Se fue por BREAK PUNTO_Y_COMA"); :}
   ;
 
 /* ----------------------------------------------------------------------
@@ -255,107 +277,32 @@ default_block ::=
    - lógicas, relacionales, aritméticas, potencia, unarios, literales...
 ---------------------------------------------------------------------- */
 
-/* expresión -> e_or */
 expresion ::=
-    e_or
-  ;
-
-/* e_or -> e_or DISYUNCION e_and | e_and  (||) */
-e_or ::=
-    e_or DISYUNCION e_and
-  | e_and
-  ;
-
-/* e_and -> e_and CONJUNCION e_cmp | e_cmp  (&&) */
-e_and ::=
-    e_and CONJUNCION e_cmp
-  | e_cmp
-  ;
-
-/* e_cmp -> e_add e_cmp_rest
-   e_cmp_rest -> (op_rel e_add)* | epsilon
-*/
-e_cmp ::=
-    e_add e_cmp_rest
-  ;
-
-e_cmp_rest ::=
-    e_cmp_op e_add e_cmp_rest
-  | /* epsilon */
-  ;
-
-e_cmp_op ::=  MENOR
-            | MENOROIGUAL
-            | MAYOR
-            | MAYOROIGUAL
-            | IGUALDAD
-            | DIFERENTE
-  ;
-
-/* e_add -> e_mul e_add_rest
-   e_add_rest -> (+|-) e_mul e_add_rest | epsilon
-*/
-e_add ::=
-    e_mul e_add_rest
-  ;
-
-e_add_rest ::=
-    SUMA e_mul e_add_rest
-  | RESTA e_mul e_add_rest
-  | /* epsilon */
-;
-
-
-/* e_mul -> e_pow e_mul_rest
-   e_mul_rest -> (*|/|%) e_pow e_mul_rest | epsilon
-*/
-e_mul ::=
-    e_pow e_mul_rest
-  ;
-
-e_mul_rest ::=
-    MULTIPLICACION e_pow e_mul_rest
-  | DIVISION e_pow e_mul_rest
-  | MODULE e_pow e_mul_rest
-  | /* epsilon */
-;
-
-
-/* e_pow -> e_unario e_pow_rest
-   e_pow_rest -> ^ e_unario e_pow_rest | epsilon
-*/
-e_pow ::=
-    e_unario e_pow_rest
-  ;
-
-e_pow_rest ::=
-    POTENCIA e_unario e_pow_rest
-  | /* epsilon */
-  ;
-
-/* e_unario: - e_unario | ! e_unario | ++id | --id | id++ | id-- | e_primario */
-e_unario ::=
-    RESTA e_unario
-  | NEGACION e_unario
-  | INCREMENTO IDENTIFICADOR
-  | DECREMENTO IDENTIFICADOR
-  | IDENTIFICADOR INCREMENTO
-  | IDENTIFICADOR DECREMENTO
-  | e_primario
-  ;
-
-/* e_primario:
-   1) literal
-   2) IDENTIFICADOR
-   3) IDENTIFICADOR[expr]
-   4) ( expr )
-*/
-e_primario ::=
-    literal
-  | IDENTIFICADOR
-  | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE
-  | ABREREGALO expresion CIERRAREGALO
-  ;
+      expresion DISYUNCION expresion           // ||
+    | expresion CONJUNCION expresion           // &&
+    | expresion IGUALDAD expresion             // ==
+    | expresion DIFERENTE expresion            // !=
+    | expresion MENOR expresion                // <
+    | expresion MENOROIGUAL expresion          // <=
+    | expresion MAYOR expresion                // >
+    | expresion MAYOROIGUAL expresion          // >=
+    | expresion SUMA expresion                 // +
+    | expresion RESTA expresion                // -
+    | expresion MULTIPLICACION expresion       // *
+    | expresion DIVISION expresion             // /
+    | expresion MODULE expresion               // %
+    | expresion POTENCIA expresion             // ^
+    | NEGACION expresion                       // Unario: !
+    | RESTA expresion                          // Unario: -
+    | IDENTIFICADOR
+    | L_INTEGER
+    | FLOAT_LITERAL
+    | CHAR_LITERAL
+    | STRING_LITERAL
+    | BOOL_LITERAL
+    | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE
+    | ABREREGALO expresion CIERRAREGALO
+    ;
 
 /* ----------------------------------------------------------------------
    H) Literales
