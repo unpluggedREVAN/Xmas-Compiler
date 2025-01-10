@@ -1,14 +1,13 @@
-/* Parser.cup */
+/* ============================================================================
+   parser.cup - Versión completa y final para Xmas-Compiler
+   (Soporta arreglos, funciones, declaraciones globales, navideños tokens, etc.)
+============================================================================ */
 package ParserLexer;
 import java_cup.runtime.*;
 
-/*
-   Este parser fue hecho así para validar la conexión con el scanner,
-   implementando reglas de producción simples para comprobar el reconocimiento de tokens
-   y la transición entre el análisis léxico y sintáctico.
-*/
-
-
+/* ----------------------------------------------------------------------
+   1) Sección de código del parser
+---------------------------------------------------------------------- */
 parser code {:
     // declaración del scanner
     private Lexer s;
@@ -20,34 +19,39 @@ parser code {:
     }
 :}
 
-/* Inicialización */
-scan with {: return s.next_token(); :};
+/* ----------------------------------------------------------------------
+   2) Conexión con el scanner
+---------------------------------------------------------------------- */
+scan with {:
+    return s.next_token();
+:};
 
 /* ----------------------------------------------------------------------
    3) Declaración de TERMINALES
+   (Mapeados a los lexemas navideños según tu lexer.jflex)
 ---------------------------------------------------------------------- */
-terminal IDENTIFICADOR;         // Para nombres de variables, arreglos, etc.
-terminal INTEGER, FLOAT, BOOL, STRING, CHAR;  // Tipos de datos
+terminal IDENTIFICADOR;
+terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
-terminal ASIGNA;                // =
-terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
-terminal INCREMENTO, DECREMENTO;
-terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
-terminal CONJUNCION, DISYUNCION, NEGACION;
+terminal ASIGNA;  // "entrega"
+terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA; // navidad, intercambio, reyes, etc.
+terminal INCREMENTO, DECREMENTO; // quien, grinch
+terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE; // snowball, evergreen, ...
+terminal CONJUNCION, DISYUNCION, NEGACION; // melchor, gaspar, baltazar
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
-terminal PRINT, READ, MAIN;
+// (elfo, hada, envuelve, duende, varios, historia, ultimo, corta, envia, sigue)
+terminal PRINT, READ, MAIN; // narra, escucha, _verano_
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal PUNTO_Y_COMA, COMA, UNKNOWN_TOKEN;
 
 /* ----------------------------------------------------------------------
-   4) NO TERMINALES
+   4) Declaración de NO TERMINALES
 ---------------------------------------------------------------------- */
-non terminal programa, bloque, lista_sentencias, sentencia;
+non terminal programa, declaracionesGlobales, globalDeclaracion, bloque, lista_sentencias, sentencia;
 non terminal declaracion, declaracion_aux, asignacion, tipo_dato;
-non terminal control_estructuras, if_estructura, while_estructura, for_estructura;
-non terminal switch_estructura, case_blocks, case_block, default_block;
-
-/* Expresiones con jerarquía de no-terminales para manejar precedencia */
+non terminal control_estructuras, if_estructura, while_estructura, for_estructura, switch_estructura;
+non terminal case_blocks, case_block, default_block;
+non terminal funcion, parametros, lista_parametros, param_dec;
 non terminal expresion;
 non terminal e_or, e_and, e_cmp, e_cmp_rest, e_cmp_op;
 non terminal e_add, e_add_rest;
@@ -61,26 +65,39 @@ non terminal literal;
 ---------------------------------------------------------------------- */
 start with programa;
 
-/* ======================================================================
-   6) REGLAS DE PRODUCCIÓN
-====================================================================== */
-
 /* ----------------------------------------------------------------------
-   A) Estructura del Programa
+   6) Reglas de Producción
 ---------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   A) Estructura General del Programa
+   - Pueden existir declaraciones globales (variables y funciones),
+     luego la ejecución inicia en MAIN (=_verano_), con un bloque.
+---------------------------------------------------------------------- */
 programa ::=
-    MAIN bloque
-  | /* epsilon */
+    declaracionesGlobales MAIN bloque
+  | MAIN bloque
   ;
 
-/* Un bloque: { lista_sentencias } o vacío */
+/* declaracionesGlobales: 1+ globalDeclaracion (variables o funciones) */
+declaracionesGlobales ::=
+    globalDeclaracion declaracionesGlobales
+  | globalDeclaracion
+  ;
+
+/* globalDeclaracion puede ser "declaracion" o "funcion" */
+globalDeclaracion ::=
+    declaracion
+  | funcion
+  ;
+
+/* Un bloque { lista_sentencias } o vacío */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
   | /* epsilon */
   ;
 
-/* 1+ sentencias en secuencia */
+/* Lista de sentencias (1 o más) */
 lista_sentencias ::=
     lista_sentencias sentencia
   | sentencia
@@ -100,17 +117,21 @@ sentencia ::=
   ;
 
 /* ----------------------------------------------------------------------
-   C) Declaraciones (Variables y Arreglos)
+   C) Declaraciones (Variables y Arreglos Unidimensionales)
+   - Solo rodolfo (int) o cupido (char) pueden crear arreglos,
+     pero se deja la verificación semántica para la siguiente fase
+     (o se podría forzar con una subregla).
 ---------------------------------------------------------------------- */
-/* Ya aquí está contemplado lo de los __*/
 declaracion ::=
     tipo_dato IDENTIFICADOR declaracion_aux
   ;
 
-/* aquí es aux:
-   - ;
-   - = expresion ;
-   - [ L_INTEGER ] ;
+/* Auxiliar:
+   1) ;
+   2) = expresion ;
+   3) [ L_INTEGER ] ;
+   (Arreglo unidimensional)
+   Se podría ampliar para "inicialización con { ... }" si deseas.
 */
 declaracion_aux ::=
     PUNTO_Y_COMA
@@ -118,6 +139,7 @@ declaracion_aux ::=
   | ABREEMPAQUE L_INTEGER CIERRAEMPAQUE PUNTO_Y_COMA
   ;
 
+/* tipo_dato: rodolfo (int), bromista (float), trueno (bool), cupido (char), cometa (string) */
 tipo_dato ::=
     INTEGER
   | FLOAT
@@ -128,11 +150,9 @@ tipo_dato ::=
 
 /* ----------------------------------------------------------------------
    D) Asignaciones
+   - var = expr;
+   - var[expr] = expr;
 ---------------------------------------------------------------------- */
-/* Asignación:
-   - _var_ = expr;
-   - _arr_[expr] = expr;
-*/
 asignacion ::=
     IDENTIFICADOR:idVar ASIGNA expresion PUNTO_Y_COMA
         {:
@@ -145,9 +165,37 @@ asignacion ::=
   ;
 
 
+/* ----------------------------------------------------------------------
+   E) Declaración de Funciones
+   - Devuelven entero, flotante, char o bool (string si deseas),
+     con parámetros y un bloque.
+   - El enunciado dice "p. Debe permitir la creación y uso de funciones ...
+     separador de parámetros=coma".
+---------------------------------------------------------------------- */
+funcion ::=
+    tipo_dato IDENTIFICADOR ABREREGALO parametros CIERRAREGALO bloque
+  ;
+
+/* parametros -> ( tipo_dato ident (, tipo_dato ident )* )? */
+parametros ::=
+    /* epsilon */
+  | lista_parametros
+  ;
+
+/* lista_parametros: param_dec (COMA param_dec)* */
+lista_parametros ::=
+    param_dec
+  | lista_parametros COMA param_dec
+  ;
+
+/* param_dec -> tipo_dato IDENTIFICADOR */
+param_dec ::=
+    tipo_dato IDENTIFICADOR
+  ;
 
 /* ----------------------------------------------------------------------
-   E) Estructuras de Control
+   F) Estructuras de Control
+   (if, while, for, switch)
 ---------------------------------------------------------------------- */
 control_estructuras ::=
     if_estructura
@@ -156,18 +204,24 @@ control_estructuras ::=
   | switch_estructura
   ;
 
+/* if ( expr ) bloque [ else bloque ] */
 if_estructura ::=
     IF ABREREGALO expresion CIERRAREGALO bloque
   | IF ABREREGALO expresion CIERRAREGALO bloque ELSE bloque
   ;
 
+/* while ( expr ) bloque */
 while_estructura ::=
     WHILE ABREREGALO expresion CIERRAREGALO bloque
   ;
 
-/* for (asignacion; expr; asignacion) bloque */
+/* FOR con comas, según ejemplo: for ( asignacion , expr , expr ) { ... }
+   o la forma normal: for( asig ; expr ; asig )?
+   El enunciado no lo define con exactitud.
+   Te ofrezco la de comas (coincidiendo con el ejemplo).
+*/
 for_estructura ::=
-    FOR ABREREGALO asignacion expresion PUNTO_Y_COMA asignacion CIERRAREGALO bloque
+    FOR ABREREGALO asignacion COMA expresion COMA expresion CIERRAREGALO bloque
   ;
 
 /* switch( expr ) { case_blocks } */
@@ -175,91 +229,101 @@ switch_estructura ::=
     SWITCH ABREREGALO expresion CIERRAREGALO ABRECUENTO case_blocks CIERRACUENTO
   ;
 
+/* case_blocks -> (cases)* [ default ] */
 case_blocks ::=
     case_blocks case_block
   | case_block
   | default_block
   ;
 
+/* case_block -> case L_INTEGER:  block
+               | case CHAR_LITERAL: block
+   (Podrías aceptar int o char, u otros literales)
+*/
 case_block ::=
     CASE L_INTEGER DOS_PUNTOS bloque
   | CASE CHAR_LITERAL DOS_PUNTOS bloque
   ;
 
-/* default : bloque */
+/* default: block */
 default_block ::=
     DEFAULT DOS_PUNTOS bloque
   ;
 
 /* ----------------------------------------------------------------------
-   F) Expresiones con Precedencia - Esto se podría manejar también con precedence
-   ( lógicas, relacionales, aritméticas, potencias, unarios, literales,
-     identificadores, acceso a arreglo, paréntesis )
-
-     Para esto fueron usados los siguientes sitios:
-     - https://www.geeksforgeeks.org/operator-grammar-and-precedence-parser-in-toc/
-     - https://stackoverflow.com/questions/43154307/grammar-for-expressions-four-levels-of-precedence-ll1
-     - https://stackoverflow.com/questions/70907855/simplifying-grammar-via-operator-precedence
+   G) Expresiones con Precedencia
+   - lógicas, relacionales, aritméticas, potencia, unarios, literales...
 ---------------------------------------------------------------------- */
 
-/* La expresión más alta es e_or */
+/* expresión -> e_or */
 expresion ::=
     e_or
   ;
 
-/* e_or -> e_or || e_and | e_and */
+/* e_or -> e_or DISYUNCION e_and | e_and  (||) */
 e_or ::=
     e_or DISYUNCION e_and
   | e_and
   ;
 
-/* e_and -> e_and && e_cmp | e_cmp */
+/* e_and -> e_and CONJUNCION e_cmp | e_cmp  (&&) */
 e_and ::=
     e_and CONJUNCION e_cmp
   | e_cmp
   ;
 
-/* e_cmp -> e_add e_cmp_rest  (maneja <, <=, >, >=, ==, !=) */
+/* e_cmp -> e_add e_cmp_rest
+   e_cmp_rest -> (op_rel e_add)* | epsilon
+*/
 e_cmp ::=
     e_add e_cmp_rest
   ;
 
-/* e_cmp_rest -> (op_rel e_add)* | ε */
 e_cmp_rest ::=
     e_cmp_op e_add e_cmp_rest
   | /* epsilon */
   ;
 
-e_cmp_op ::=
-    MENOR
-  | MENOROIGUAL
-  | MAYOR
-  | MAYOROIGUAL
-  | IGUALDAD
-  | DIFERENTE
+e_cmp_op ::=  MENOR
+            | MENOROIGUAL
+            | MAYOR
+            | MAYOROIGUAL
+            | IGUALDAD
+            | DIFERENTE
   ;
 
-/* e_add -> e_mul e_add_rest  (maneja +, -) */
+/* e_add -> e_mul e_add_rest
+   e_add_rest -> (+|-) e_mul e_add_rest | epsilon
+*/
 e_add ::=
     e_mul e_add_rest
   ;
 
 e_add_rest ::=
-    (SUMA | RESTA) e_mul e_add_rest
+    SUMA e_mul e_add_rest
+  | RESTA e_mul e_add_rest
   | /* epsilon */
-  ;
+;
 
-/* e_mul -> e_pow e_mul_rest  (maneja *, /, %) */
+
+/* e_mul -> e_pow e_mul_rest
+   e_mul_rest -> (*|/|%) e_pow e_mul_rest | epsilon
+*/
 e_mul ::=
     e_pow e_mul_rest
   ;
 
 e_mul_rest ::=
-    (MULTIPLICACION | DIVISION | MODULE) e_pow e_mul_rest
+    MULTIPLICACION e_pow e_mul_rest
+  | DIVISION e_pow e_mul_rest
+  | MODULE e_pow e_mul_rest
   | /* epsilon */
-  ;
+;
 
-/* e_pow -> e_unario e_pow_rest (maneja ^) */
+
+/* e_pow -> e_unario e_pow_rest
+   e_pow_rest -> ^ e_unario e_pow_rest | epsilon
+*/
 e_pow ::=
     e_unario e_pow_rest
   ;
@@ -269,11 +333,7 @@ e_pow_rest ::=
   | /* epsilon */
   ;
 
-/* e_unario:
-   - unarios: -, !
-   - incrementos: ++id, --id, id++, id--
-   - o e_primario
-*/
+/* e_unario: - e_unario | ! e_unario | ++id | --id | id++ | id-- | e_primario */
 e_unario ::=
     RESTA e_unario
   | NEGACION e_unario
@@ -285,10 +345,10 @@ e_unario ::=
   ;
 
 /* e_primario:
-   - literal
-   - IDENTIFICADOR
-   - IDENTIFICADOR[expr]
-   - ( expr )
+   1) literal
+   2) IDENTIFICADOR
+   3) IDENTIFICADOR[expr]
+   4) ( expr )
 */
 e_primario ::=
     literal
@@ -298,7 +358,7 @@ e_primario ::=
   ;
 
 /* ----------------------------------------------------------------------
-   G) Literales
+   H) Literales
 ---------------------------------------------------------------------- */
 literal ::=
     L_INTEGER
