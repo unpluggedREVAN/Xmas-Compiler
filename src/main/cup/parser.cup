@@ -134,9 +134,17 @@ tipo_dato ::=
    - _arr_[expr] = expr;
 */
 asignacion ::=
-    IDENTIFICADOR ASIGNA expresion PUNTO_Y_COMA
-  | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE ASIGNA expresion PUNTO_Y_COMA
+    IDENTIFICADOR:idVar ASIGNA expresion PUNTO_Y_COMA
+        {:
+            System.out.println("Asignación detectada, variable: " + idVar.toString());
+        :}
+  | IDENTIFICADOR:idVar ABREEMPAQUE expresion CIERRAEMPAQUE ASIGNA expresion PUNTO_Y_COMA
+        {:
+            System.out.println("Asignación a arreglo detectada, variable: " + idVar.toString());
+        :}
   ;
+
+
 
 /* ----------------------------------------------------------------------
    E) Estructuras de Control

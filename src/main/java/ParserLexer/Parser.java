@@ -712,7 +712,12 @@ class CUP$Parser$actions {
           case 23: // asignacion ::= IDENTIFICADOR ASIGNA expresion PUNTO_Y_COMA 
             {
               Object RESULT =null;
-
+		int idVarleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)).left;
+		int idVarright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)).right;
+		Object idVar = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-3)).value;
+		
+            System.out.println("Asignación detectada, variable: " + idVar.toString());
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -721,7 +726,12 @@ class CUP$Parser$actions {
           case 24: // asignacion ::= IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE ASIGNA expresion PUNTO_Y_COMA 
             {
               Object RESULT =null;
-
+		int idVarleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)).left;
+		int idVarright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)).right;
+		Object idVar = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-6)).value;
+		
+            System.out.println("Asignación a arreglo detectada, variable: " + idVar.toString());
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
