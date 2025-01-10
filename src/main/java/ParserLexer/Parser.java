@@ -666,7 +666,21 @@ class CUP$Parser$actions {
           case 18: // declaracion ::= tipo_dato IDENTIFICADOR declaracion_aux 
             {
               Object RESULT =null;
-
+		int tleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).left;
+		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
+		Object t = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
+		int idleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
+		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
+		Object id = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
+		int auxleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).left;
+		int auxright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
+		Object aux = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
+		
+            System.out.println("Declaración detectada:");
+            System.out.println("- Tipo de dato: " + t);
+            System.out.println("- Variable: " + id.toString());
+            System.out.println("- Inicialización: " + (aux != null ? aux : "No inicializada"));
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;

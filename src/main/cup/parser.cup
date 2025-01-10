@@ -144,8 +144,15 @@ sentencia ::=
      pero se deja la verificación semántica para la siguiente fase
      (o se podría forzar con una subregla).
 ---------------------------------------------------------------------- */
+
 declaracion ::=
-    tipo_dato IDENTIFICADOR declaracion_aux
+    tipo_dato:t IDENTIFICADOR:id declaracion_aux:aux
+        {:
+            System.out.println("Declaración detectada:");
+            System.out.println("- Tipo de dato: " + t);
+            System.out.println("- Variable: " + id.toString());
+            System.out.println("- Inicialización: " + (aux != null ? aux : "No inicializada"));
+        :}
   ;
 
 /* Auxiliar:
