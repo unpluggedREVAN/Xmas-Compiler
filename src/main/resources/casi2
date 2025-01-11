@@ -1,0 +1,476 @@
+/* ============================================================================
+   parser.cup - Versión "actualizada" para Xmas-Compiler
+   con acciones semánticas que asignan RESULT para evitar null.
+============================================================================ */
+package ParserLexer;
+import java_cup.runtime.*;
+
+/* ----------------------------------------------------------------------
+   1) Sección de código del parser
+---------------------------------------------------------------------- */
+parser code {:
+    // declaración del scanner
+    private Lexer s;
+    public Parser(Lexer s) { this.s = s; } // constructor
+
+    public void syntax_error(Symbol sym) { // manejo de errores - básico
+        System.err.println("Error de sintaxis en línea " + (sym.left + 1)
+                           + ", columna " + (sym.right + 1));
+        if (sym.sym >= 0 && sym.sym < sym.terminalNames.length) {
+            System.err.println("Token inesperado: " + sym.terminalNames[sym.sym]);
+        } else {
+            System.err.println("Token inesperado: " + sym.value);
+        }
+    }
+:}
+
+parser code {:
+    private Lexer s;
+    public Parser(Lexer s) { this.s = s; }
+
+    public void syntax_error(Symbol sym) {
+        System.err.println("Error de sintaxis en línea "
+                           + (sym.left + 1) + ", columna " + (sym.right + 1));
+        System.err.println("Token inesperado: " + sym.value);
+    }
+:}
+
+
+/* ----------------------------------------------------------------------
+   2) Conexión con el scanner
+---------------------------------------------------------------------- */
+scan with {:
+    return s.next_token();
+:};
+
+/* ----------------------------------------------------------------------
+   3) Declaración de TERMINALES (tokens)
+   (Mapeados a los lexemas navideños en tu lexer.jflex)
+---------------------------------------------------------------------- */
+terminal IDENTIFICADOR;
+terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
+terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
+terminal ASIGNA;  // "entrega"
+terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
+// navidad (+), intercambio (-), reyes (/), nochebuena (*), magos (%), adviento (^)
+
+terminal INCREMENTO, DECREMENTO; // quien (++), grinch (--)
+terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
+// snowball (<), evergreen (<=), minstix (>), upatree (>=), mary (==), openslae (!=)
+
+terminal CONJUNCION, DISYUNCION, NEGACION; // melchor (&&), gaspar (||), baltazar (!)
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
+// (elfo, hada, envuelve, duende, varios, historia, ultimo, corta, envia, sigue)
+
+terminal PRINT, READ, MAIN; // narra, escucha, _verano_
+terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
+terminal PUNTO_Y_COMA, COMA, UNKNOWN_TOKEN;
+
+/* ----------------------------------------------------------------------
+   4) Declaración de NO TERMINALES
+---------------------------------------------------------------------- */
+non terminal programa, declaracionesGlobales, globalDeclaracion;
+non terminal bloque, lista_sentencias, sentencia;
+non terminal declaracion, declaracion_aux, asignacion, tipo_dato;
+non terminal control_estructuras, if_estructura, while_estructura, for_estructura, switch_estructura;
+non terminal case_blocks, case_block, default_block;
+non terminal funcion, parametros, lista_parametros, param_dec;
+non terminal expresion;
+
+/*
+   Se eliminaron e_or, e_and, e_cmp, etc. ya que no se usan en la producción final de expresion.
+*/
+
+/* ----------------------------------------------------------------------
+   5) Precedencia
+---------------------------------------------------------------------- */
+precedence right POTENCIA;          // ^ (derecha-asociativo)
+precedence right NEGACION, RESTA;   // unarios
+precedence left MULTIPLICACION, DIVISION, MODULE; // * / %
+precedence left SUMA, RESTA;        // + -
+precedence left MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL;
+precedence left IGUALDAD, DIFERENTE;
+precedence left CONJUNCION;         // &&
+precedence left DISYUNCION;         // ||
+
+/* ----------------------------------------------------------------------
+   6) Producción inicial
+---------------------------------------------------------------------- */
+start with programa;
+
+/* ----------------------------------------------------------------------
+   7) Reglas de Producción
+---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   A) Estructura del Programa
+---------------------------------------------------------------------- */
+programa ::=
+    declaracionesGlobales MAIN bloque
+       {: System.out.println("Regla 'programa' con declaracionesGlobales + MAIN"); :}
+  | MAIN bloque
+       {: System.out.println("Regla 'programa' con sólo MAIN"); :}
+  ;
+
+/* declaracionesGlobales -> (globalDeclaracion)+ */
+declaracionesGlobales ::=
+    declaracionesGlobales globalDeclaracion
+  | globalDeclaracion
+  ;
+
+/* globalDeclaracion -> declaracion | funcion */
+globalDeclaracion ::=
+    declaracion
+  | funcion
+  ;
+
+/* bloque -> { lista_sentencias } | epsilon */
+bloque ::=
+    ABRECUENTO lista_sentencias CIERRACUENTO
+                {: System.out.println("Regla 'bloque' ejecutada."); :}
+  | /* epsilon */
+  ;
+
+/* lista_sentencias -> (sentencia)+ */
+lista_sentencias ::=
+    lista_sentencias sentencia
+      {: System.out.println("Regla 'lista_sentencias' procesando lista."); :}
+  | sentencia
+      {: System.out.println("Regla 'lista_sentencias' procesando sentencia."); :}
+  ;
+
+/* ----------------------------------------------------------------------
+   B) Sentencia
+---------------------------------------------------------------------- */
+sentencia ::=
+    declaracion
+  | asignacion
+  | control_estructuras
+  | PRINT ABREREGALO expresion:e CIERRAREGALO PUNTO_Y_COMA
+      {:
+         System.out.println("Imprimiendo la expresión: " + (String)e);
+      :}
+  | READ ABREREGALO IDENTIFICADOR:id CIERRAREGALO PUNTO_Y_COMA
+      {:
+         System.out.println("Leyendo a variable: " + id);
+      :}
+  | RETURN expresion:ret PUNTO_Y_COMA
+      {:
+         System.out.println("Return con expr: " + (String)ret);
+      :}
+  | BREAK PUNTO_Y_COMA
+  ;
+
+/* ----------------------------------------------------------------------
+   C) Declaraciones (Variables/Arreglos)
+---------------------------------------------------------------------- */
+declaracion ::=
+    tipo_dato:t IDENTIFICADOR:id declaracion_aux:aux
+    {:
+      System.out.println("Declaración detectada:");
+      System.out.println("- Tipo de dato: " + (String)t);
+      System.out.println("- Variable: " + id);
+      System.out.println("- Inicialización: " + (aux != null? aux : "Ninguna"));
+
+      /* Si deseas, podrías RESULT = "decl("+id+")";
+         pero no es estrictamente necesario si no lo usas arriba */
+      RESULT = null;
+    :}
+  ;
+
+/* declaracion_aux:
+   1) ;
+   2) = expr ;
+   3) [ L_INTEGER ] ;
+*/
+declaracion_aux ::=
+    PUNTO_Y_COMA
+     {:
+       RESULT = null; // sin asignación
+     :}
+  | ASIGNA expresion:ex PUNTO_Y_COMA
+     {:
+       RESULT = " = " + ex;
+     :}
+  | ABREEMPAQUE L_INTEGER:lit CIERRAEMPAQUE PUNTO_Y_COMA
+     {:
+       RESULT = "[ " + lit + " ]";
+     :}
+  ;
+
+/* tipo_dato -> rodolfo->int, bromista->float, trueno->bool, cupido->char, cometa->string */
+tipo_dato ::=
+    INTEGER
+      {: RESULT = "int"; :}
+  | FLOAT
+      {: RESULT = "float"; :}
+  | BOOL
+      {: RESULT = "bool"; :}
+  | CHAR
+      {: RESULT = "char"; :}
+  | STRING
+      {: RESULT = "string"; :}
+  ;
+
+/* ----------------------------------------------------------------------
+   D) Asignaciones
+   - var = expr;
+   - var[expr] = expr;
+---------------------------------------------------------------------- */
+asignacion ::=
+    IDENTIFICADOR:idVar ASIGNA expresion:ex PUNTO_Y_COMA
+      {:
+        System.out.println("Asignación simple a variable " + idVar
+                           + " con expr: " + ex);
+        RESULT = "assign(" + idVar + "=" + ex + ")";
+      :}
+  | IDENTIFICADOR:idVar ABREEMPAQUE expresion:pos CIERRAEMPAQUE ASIGNA expresion:rhs PUNTO_Y_COMA
+      {:
+        System.out.println("Asignación a arreglo " + idVar
+                           + "[" + pos + "] = " + rhs);
+        RESULT = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
+      :}
+  ;
+
+/* ----------------------------------------------------------------------
+   E) Declaración de Funciones
+---------------------------------------------------------------------- */
+funcion ::=
+    tipo_dato:t IDENTIFICADOR:id ABREREGALO parametros:p CIERRAREGALO bloque:b
+    {:
+       System.out.println("Función declarada: " + id + " de tipo " + t
+                          + ", con params: " + (p != null ? p : "0 params")
+                          + " y un bloque.");
+       RESULT = "func["+t+" "+id+"("+p+")]";
+    :}
+  ;
+
+/* parametros -> (lista_parametros)? */
+parametros ::=
+    /* epsilon */
+     {:
+       RESULT = "";
+     :}
+  | lista_parametros:p
+     {:
+       RESULT = p;
+     :}
+  ;
+
+/* lista_parametros -> param_dec (, param_dec)* */
+lista_parametros ::=
+    param_dec:pd
+      {:
+        RESULT = pd;
+      :}
+  | lista_parametros:lp COMA param_dec:pd
+      {:
+        RESULT = (String)lp + ", " + (String)pd;
+      :}
+  ;
+
+/* param_dec -> tipo_dato IDENTIFICADOR */
+param_dec ::=
+    tipo_dato:t IDENTIFICADOR:id
+      {:
+         // "char _var_"
+         String paramStr = t + " " + id;
+         RESULT = paramStr;
+         System.out.println("Parametro: " + paramStr);
+      :}
+  ;
+
+/* ----------------------------------------------------------------------
+   F) Estructuras de Control
+   (if, while, for, switch)
+---------------------------------------------------------------------- */
+control_estructuras ::=
+    if_estructura
+  | while_estructura
+  | for_estructura
+  | switch_estructura
+  ;
+
+/* if ( expr ) bloque [ else bloque ] */
+if_estructura ::=
+    IF ABREREGALO expresion:cond CIERRAREGALO bloque:b
+      {:
+        RESULT = "if("+cond+")"+b;
+      :}
+  | IF ABREREGALO expresion:cond CIERRAREGALO bloque:b1 ELSE bloque:b2
+      {:
+        RESULT = "if("+cond+")"+b1+" else "+b2;
+      :}
+  ;
+
+/* while ( expr ) bloque */
+while_estructura ::=
+    WHILE ABREREGALO expresion:cond CIERRAREGALO bloque:bl
+      {:
+        RESULT = "while("+cond+")"+bl;
+      :}
+  ;
+
+/* For con comas -> for ( asignacion, expr, expr ) */
+for_estructura ::=
+    FOR ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
+      {:
+        RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
+      :}
+  ;
+
+/* switch( expr ) { case_blocks } */
+switch_estructura ::=
+    SWITCH ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
+      {:
+        RESULT = "switch("+sw+") { "+cs+" }";
+      :}
+  ;
+
+case_blocks ::=
+    case_blocks:prev case_block:cb
+      {:
+        RESULT = prev + " " + cb;
+      :}
+  | case_block:cb
+      {:
+        RESULT = cb;
+      :}
+  | default_block:db
+      {:
+        RESULT = db;
+      :}
+  ;
+
+case_block ::=
+    CASE L_INTEGER:li DOS_PUNTOS bloque:bl
+      {:
+        RESULT = "case "+li+": "+bl;
+      :}
+  | CASE CHAR_LITERAL:ch DOS_PUNTOS bloque:bl
+      {:
+        RESULT = "case '"+ch+"': "+bl;
+      :}
+  ;
+
+/* default: block */
+default_block ::=
+    DEFAULT DOS_PUNTOS bloque:bl
+      {:
+        RESULT = "default: "+bl;
+      :}
+  ;
+
+/* ----------------------------------------------------------------------
+   G) Expresión con precedencia
+   Usa 'precedence' para resolver
+---------------------------------------------------------------------- */
+expresion ::=
+      expresion:e1 DISYUNCION expresion:e2          // ||
+        {:
+          RESULT = "("+e1+" || "+e2+")";
+        :}
+    | expresion:e1 CONJUNCION expresion:e2          // &&
+        {:
+          RESULT = "("+e1+" && "+e2+")";
+        :}
+    | expresion:e1 IGUALDAD expresion:e2            // ==
+        {:
+          RESULT = "("+e1+" == "+e2+")";
+        :}
+    | expresion:e1 DIFERENTE expresion:e2           // !=
+        {:
+          RESULT = "("+e1+" != "+e2+")";
+        :}
+    | expresion:e1 MENOR expresion:e2               // <
+        {:
+          RESULT = "("+e1+" < "+e2+")";
+        :}
+    | expresion:e1 MENOROIGUAL expresion:e2         // <=
+        {:
+          RESULT = "("+e1+" <= "+e2+")";
+        :}
+    | expresion:e1 MAYOR expresion:e2               // >
+        {:
+          RESULT = "("+e1+" > "+e2+")";
+        :}
+    | expresion:e1 MAYOROIGUAL expresion:e2         // >=
+        {:
+          RESULT = "("+e1+" >= "+e2+")";
+        :}
+    | expresion:e1 SUMA expresion:e2                // +
+        {:
+          RESULT = "("+e1+" + "+e2+")";
+        :}
+    | expresion:e1 RESTA expresion:e2               // -
+        {:
+          RESULT = "("+e1+" - "+e2+")";
+        :}
+    | expresion:e1 MULTIPLICACION expresion:e2      // *
+        {:
+          RESULT = "("+e1+" * "+e2+")";
+        :}
+    | expresion:e1 DIVISION expresion:e2            // /
+        {:
+          RESULT = "("+e1+" / "+e2+")";
+        :}
+    | expresion:e1 MODULE expresion:e2              // %
+        {:
+          RESULT = "("+e1+" % "+e2+")";
+        :}
+    | expresion:e1 POTENCIA expresion:e2            // ^
+        {:
+          RESULT = "("+e1+" ^ "+e2+")";
+        :}
+    | NEGACION expresion:e                          // unario: !
+        {:
+          RESULT = "!"+e;
+        :}
+    | RESTA expresion:e                             // unario: -
+        {:
+          RESULT = "-"+e;
+        :}
+    | IDENTIFICADOR:id
+        {:
+          RESULT = id;
+        :}
+    | L_INTEGER:lint
+        {:
+          RESULT = lint.toString();
+        :}
+    | FLOAT_LITERAL:fli
+        {:
+          RESULT = fli.toString();
+        :}
+    | CHAR_LITERAL:chl
+        {:
+          RESULT = "'"+chl+"'";
+        :}
+    | STRING_LITERAL:str
+        {:
+          /* str ya es un objeto (String).
+             Se envuelve con comillas si quieres. */
+          RESULT = "\""+str+"\"";
+        :}
+    | BOOL_LITERAL:boo
+        {:
+          RESULT = boo.toString();
+        :}
+    | IDENTIFICADOR:id ABREEMPAQUE expresion:ex CIERRAEMPAQUE
+        {:
+          RESULT = id + "["+ex+"]";
+        :}
+    | ABREREGALO expresion:ex CIERRAREGALO
+        {:
+          RESULT = "("+ex+")";
+        :}
+  ;
+
+/* No modificado, pero lo dejamos por si se usa en algún lado. */
+literal ::=
+    L_INTEGER
+  | FLOAT_LITERAL
+  | CHAR_LITERAL
+  | STRING_LITERAL
+  | BOOL_LITERAL
+  ;

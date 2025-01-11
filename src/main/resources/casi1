@@ -1,0 +1,322 @@
+/* ============================================================================
+   parser.cup - Versión "actualizada" para Xmas-Compiler
+   Mantiene la estructura anterior, elimina no terminales no usados,
+   corrige detalles de expresiones y paréntesis.
+============================================================================ */
+package ParserLexer;
+import java_cup.runtime.*;
+
+/* ----------------------------------------------------------------------
+   1) Sección de código del parser
+---------------------------------------------------------------------- */
+parser code {:
+    // declaración del scanner
+    private Lexer s;
+    public Parser(Lexer s) { this.s = s; } // constructor
+
+    public void syntax_error(Symbol sym) { // manejo de errores - básico
+        System.err.println("Error de sintaxis en línea " + (sym.left + 1)
+                           + ", columna " + (sym.right + 1));
+        if (sym.sym >= 0 && sym.sym < sym.terminalNames.length) {
+            System.err.println("Token inesperado: " + sym.terminalNames[sym.sym]);
+        } else {
+            System.err.println("Token inesperado: " + sym.value);
+        }
+    }
+:}
+
+/* ----------------------------------------------------------------------
+   2) Conexión con el scanner
+---------------------------------------------------------------------- */
+scan with {:
+    return s.next_token();
+:};
+
+/* ----------------------------------------------------------------------
+   3) Declaración de TERMINALES (tokens)
+   (Mapeados a los lexemas navideños en tu lexer.jflex)
+---------------------------------------------------------------------- */
+terminal IDENTIFICADOR;
+terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
+terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
+terminal ASIGNA;  // "entrega"
+terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
+// navidad (+), intercambio (-), reyes (/), nochebuena (*), magos (%), adviento (^)
+
+terminal INCREMENTO, DECREMENTO; // quien (++), grinch (--)
+terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
+// snowball (<), evergreen (<=), minstix (>), upatree (>=), mary (==), openslae (!=)
+
+terminal CONJUNCION, DISYUNCION, NEGACION; // melchor (&&), gaspar (||), baltazar (!)
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
+// (elfo, hada, envuelve, duende, varios, historia, ultimo, corta, envia, sigue)
+
+terminal PRINT, READ, MAIN; // narra, escucha, _verano_
+terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
+terminal PUNTO_Y_COMA, COMA, UNKNOWN_TOKEN;
+
+/* ----------------------------------------------------------------------
+   4) Declaración de NO TERMINALES
+---------------------------------------------------------------------- */
+non terminal programa, declaracionesGlobales, globalDeclaracion;
+non terminal bloque, lista_sentencias, sentencia;
+non terminal declaracion, declaracion_aux, asignacion, tipo_dato;
+non terminal control_estructuras, if_estructura, while_estructura, for_estructura, switch_estructura;
+non terminal case_blocks, case_block, default_block;
+non terminal funcion, parametros, lista_parametros, param_dec;
+non terminal expresion;
+
+/*
+   Se eliminaron e_or, e_and, e_cmp, e_cmp_rest, e_cmp_op, e_add, e_add_rest,
+   e_mul, e_mul_rest, e_pow, e_pow_rest, e_unario, e_primario, etc.,
+   porque en la versión final de 'expresion' no se usan.
+*/
+
+/* ----------------------------------------------------------------------
+   5) Precedencia
+   (Puedes dejarlas si deseas que Cup resuelva conflictos,
+    aunque esta gramática es algo recursiva.
+    Aun así, las conservamos para la semántica de "precedence" en Cup).
+---------------------------------------------------------------------- */
+precedence right POTENCIA;          // ^ (derecha-asociativo)
+precedence right NEGACION, RESTA;   // unarios
+precedence left MULTIPLICACION, DIVISION, MODULE; // binarios * / %
+precedence left SUMA, RESTA;        // +, -
+precedence left MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL;
+precedence left IGUALDAD, DIFERENTE;
+precedence left CONJUNCION;         // &&
+precedence left DISYUNCION;         // ||
+
+
+/* ----------------------------------------------------------------------
+   6) Producción inicial
+---------------------------------------------------------------------- */
+start with programa;
+
+/* ----------------------------------------------------------------------
+   7) Reglas de Producción
+---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   A) Estructura del Programa
+---------------------------------------------------------------------- */
+programa ::=
+    declaracionesGlobales MAIN bloque
+       {: System.out.println("Regla 'programa' con declaracionesGlobales + MAIN"); :}
+  | MAIN bloque
+       {: System.out.println("Regla 'programa' con sólo MAIN"); :}
+  ;
+
+/* declaracionesGlobales -> (globalDeclaracion)+ */
+declaracionesGlobales ::=
+    declaracionesGlobales globalDeclaracion
+  | globalDeclaracion
+  ;
+
+/* globalDeclaracion -> declaracion | funcion */
+globalDeclaracion ::=
+    declaracion
+  | funcion
+  ;
+
+/* bloque -> { lista_sentencias } | epsilon */
+bloque ::=
+    ABRECUENTO lista_sentencias CIERRACUENTO
+                    {: System.out.println("Regla 'bloque' ejecutada."); :}
+  | /* epsilon */
+  ;
+
+/* Lista de sentencias (1 o más) */
+lista_sentencias ::=
+    lista_sentencias sentencia
+               {: System.out.println("Regla 'lista_sentencias' procesando lista."); :}
+  | sentencia
+               {: System.out.println("Regla 'lista_sentencias' procesando sentencia."); :}
+  ;
+
+/* ----------------------------------------------------------------------
+   B) Sentencia
+---------------------------------------------------------------------- */
+sentencia ::=
+    declaracion
+  | asignacion
+  | control_estructuras
+  | PRINT ABREREGALO expresion CIERRAREGALO PUNTO_Y_COMA
+  | READ ABREREGALO IDENTIFICADOR CIERRAREGALO PUNTO_Y_COMA
+  | RETURN expresion PUNTO_Y_COMA
+  | BREAK PUNTO_Y_COMA
+  ;
+
+/* ----------------------------------------------------------------------
+   C) Declaraciones (Variables/Arreglos)
+---------------------------------------------------------------------- */
+declaracion ::=
+    tipo_dato:t IDENTIFICADOR:id declaracion_aux:aux
+    {:
+      System.out.println("Declaración detectada:");
+      System.out.println("- Tipo de dato: " + t);
+      System.out.println("- Variable: " + id);
+      System.out.println("- Inicialización: " + (aux != null? aux : "Ninguna"));
+    :}
+  ;
+
+/* declaracion_aux:
+   1) ;
+   2) = expresion ;
+   3) [ L_INTEGER ] ;
+*/
+declaracion_aux ::=
+    PUNTO_Y_COMA
+  | ASIGNA expresion PUNTO_Y_COMA
+  | ABREEMPAQUE L_INTEGER CIERRAEMPAQUE PUNTO_Y_COMA
+  ;
+
+/* tipo_dato -> rodolfo, bromista, trueno, cupido, cometa */
+tipo_dato ::=
+    INTEGER
+  | FLOAT
+  | BOOL
+  | CHAR
+  | STRING
+  ;
+
+/* ----------------------------------------------------------------------
+   D) Asignaciones
+   - var = expr;
+   - var[expr] = expr;
+---------------------------------------------------------------------- */
+asignacion ::=
+    IDENTIFICADOR:idVar ASIGNA expresion PUNTO_Y_COMA
+      {:
+        System.out.println("Asignación simple a variable " + idVar.toString());
+      :}
+  | IDENTIFICADOR:idVar ABREEMPAQUE expresion CIERRAEMPAQUE ASIGNA expresion PUNTO_Y_COMA
+      {:
+        System.out.println("Asignación a arreglo " + idVar.toString());
+      :}
+  ;
+
+/* ----------------------------------------------------------------------
+   E) Declaración de Funciones
+---------------------------------------------------------------------- */
+funcion ::=
+    tipo_dato:t IDENTIFICADOR:id ABREREGALO parametros:p CIERRAREGALO bloque:b
+    {:
+       System.out.println("Función declarada: " + id + " de tipo " + t
+                          + ", con params: " + (p != null ? p : "0")
+                          + " y un bloque.");
+    :}
+  ;
+
+/* parametros -> (lista_parametros)? */
+parametros ::=
+    /* epsilon */
+  | lista_parametros
+  ;
+
+/* lista_parametros -> param_dec (, param_dec)* */
+lista_parametros ::=
+    param_dec
+  | lista_parametros COMA param_dec
+  ;
+
+/* param_dec -> tipo_dato IDENTIFICADOR */
+param_dec ::=
+    tipo_dato:t IDENTIFICADOR:id
+    {:
+       System.out.println("Parametro: " + id + " con tipo " + t);
+    :}
+  ;
+
+/* ----------------------------------------------------------------------
+   F) Estructuras de Control
+   (if, while, for, switch)
+---------------------------------------------------------------------- */
+control_estructuras ::=
+    if_estructura
+  | while_estructura
+  | for_estructura
+  | switch_estructura
+  ;
+
+/* if ( expr ) bloque [ else bloque ] */
+if_estructura ::=
+    IF ABREREGALO expresion CIERRAREGALO bloque
+  | IF ABREREGALO expresion CIERRAREGALO bloque ELSE bloque
+  ;
+
+/* while ( expr ) bloque */
+while_estructura ::=
+    WHILE ABREREGALO expresion CIERRAREGALO bloque
+  ;
+
+/* For con comas -> for ( asignacion, expr, expr ) */
+for_estructura ::=
+    FOR ABREREGALO asignacion COMA expresion COMA expresion CIERRAREGALO bloque
+  ;
+
+/* switch( expr ) { case_blocks } */
+switch_estructura ::=
+    SWITCH ABREREGALO expresion CIERRAREGALO ABRECUENTO case_blocks CIERRACUENTO
+  ;
+
+case_blocks ::=
+    case_blocks case_block
+  | case_block
+  | default_block
+  ;
+
+case_block ::=
+    CASE L_INTEGER DOS_PUNTOS bloque
+  | CASE CHAR_LITERAL DOS_PUNTOS bloque
+  ;
+
+/* default: block */
+default_block ::=
+    DEFAULT DOS_PUNTOS bloque
+  ;
+
+/* ----------------------------------------------------------------------
+   G) Expresión con precedencia (apoyada en las declaraciones 'precedence')
+   Versión final: recursiva, pero confiamos en Cup para la precedencia.
+   Toma tokens navideños y simula un solo no-terminal "expresion".
+---------------------------------------------------------------------- */
+expresion ::=
+      expresion DISYUNCION expresion         // ||
+    | expresion CONJUNCION expresion         // &&
+    | expresion IGUALDAD expresion           // ==
+    | expresion DIFERENTE expresion          // !=
+    | expresion MENOR expresion              // <
+    | expresion MENOROIGUAL expresion        // <=
+    | expresion MAYOR expresion              // >
+    | expresion MAYOROIGUAL expresion        // >=
+    | expresion SUMA expresion               // +
+    | expresion RESTA expresion              // -
+    | expresion MULTIPLICACION expresion     // *
+    | expresion DIVISION expresion           // /
+    | expresion MODULE expresion             // %
+    | expresion POTENCIA expresion           // ^
+    | NEGACION expresion                     // unario: !
+    | RESTA expresion                        // unario: -
+    | IDENTIFICADOR
+    | L_INTEGER
+    | FLOAT_LITERAL
+    | CHAR_LITERAL
+    | STRING_LITERAL
+    | BOOL_LITERAL
+    | IDENTIFICADOR ABREEMPAQUE expresion CIERRAEMPAQUE  // array access
+    | ABREREGALO expresion CIERRAREGALO                  // ( expr )
+  ;
+
+/* ----------------------------------------------------------------------
+   H) Literales
+---------------------------------------------------------------------- */
+literal ::=
+    L_INTEGER
+  | FLOAT_LITERAL
+  | CHAR_LITERAL
+  | STRING_LITERAL
+  | BOOL_LITERAL
+  ;
+
+/* Fin del parser.cup */
