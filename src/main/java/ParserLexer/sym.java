@@ -10,57 +10,57 @@ public class sym {
   /* terminals */
   public static final int STRING_LITERAL = 12;
   public static final int CHAR = 7;
-  public static final int PUNTO_Y_COMA = 50;
+  public static final int PUNTO_Y_COMA = 51;
   public static final int CHAR_LITERAL = 11;
-  public static final int CIERRACUENTO = 45;
-  public static final int CASE = 36;
-  public static final int DIFERENTE = 27;
-  public static final int RESTA = 15;
+  public static final int CIERRACUENTO = 46;
+  public static final int CASE = 37;
+  public static final int DIFERENTE = 28;
+  public static final int RESTA = 18;
   public static final int INTEGER = 3;
-  public static final int DOS_PUNTOS = 40;
-  public static final int CIERRAREGALO = 47;
-  public static final int FOR = 34;
-  public static final int ABREEMPAQUE = 48;
+  public static final int DOS_PUNTOS = 41;
+  public static final int CIERRAREGALO = 48;
+  public static final int FOR = 35;
+  public static final int ABREEMPAQUE = 49;
   public static final int IDENTIFICADOR = 2;
-  public static final int CIERRAEMPAQUE = 49;
-  public static final int IGUALDAD = 26;
+  public static final int CIERRAEMPAQUE = 50;
+  public static final int IGUALDAD = 27;
   public static final int BOOL = 5;
-  public static final int INCREMENTO = 20;
+  public static final int INCREMENTO = 14;
   public static final int ASIGNA = 13;
-  public static final int SUMA = 14;
-  public static final int MAIN = 43;
-  public static final int IF = 31;
+  public static final int SUMA = 17;
+  public static final int MAIN = 44;
+  public static final int IF = 32;
   public static final int EOF = 0;
-  public static final int RETURN = 39;
-  public static final int MAYOROIGUAL = 25;
-  public static final int DECREMENTO = 21;
+  public static final int RETURN = 40;
+  public static final int MAYOROIGUAL = 26;
+  public static final int DECREMENTO = 15;
   public static final int error = 1;
-  public static final int COMA = 51;
-  public static final int ABRECUENTO = 44;
-  public static final int NEGACION = 30;
-  public static final int MENOR = 22;
-  public static final int BREAK = 38;
-  public static final int ABREREGALO = 46;
-  public static final int UNKNOWN_TOKEN = 52;
-  public static final int SWITCH = 35;
-  public static final int MENOROIGUAL = 23;
-  public static final int MAYOR = 24;
-  public static final int MODULE = 18;
-  public static final int POTENCIA = 19;
-  public static final int ELSE = 32;
-  public static final int READ = 42;
-  public static final int WHILE = 33;
-  public static final int DEFAULT = 37;
+  public static final int COMA = 52;
+  public static final int ABRECUENTO = 45;
+  public static final int NEGACION = 31;
+  public static final int MENOR = 23;
+  public static final int BREAK = 39;
+  public static final int ABREREGALO = 47;
+  public static final int SWITCH = 36;
+  public static final int UNKNOWN_TOKEN = 16;
+  public static final int MENOROIGUAL = 24;
+  public static final int MAYOR = 25;
+  public static final int MODULE = 21;
+  public static final int POTENCIA = 22;
+  public static final int ELSE = 33;
+  public static final int READ = 43;
+  public static final int WHILE = 34;
+  public static final int DEFAULT = 38;
   public static final int FLOAT = 4;
-  public static final int CONJUNCION = 28;
+  public static final int CONJUNCION = 29;
   public static final int STRING = 6;
-  public static final int DISYUNCION = 29;
+  public static final int DISYUNCION = 30;
   public static final int FLOAT_LITERAL = 9;
-  public static final int DIVISION = 16;
-  public static final int PRINT = 41;
+  public static final int DIVISION = 19;
+  public static final int PRINT = 42;
   public static final int BOOL_LITERAL = 10;
   public static final int L_INTEGER = 8;
-  public static final int MULTIPLICACION = 17;
+  public static final int MULTIPLICACION = 20;
   public static final String[] terminalNames = new String[] {
   "EOF",
   "error",
@@ -76,14 +76,15 @@ public class sym {
   "CHAR_LITERAL",
   "STRING_LITERAL",
   "ASIGNA",
+  "INCREMENTO",
+  "DECREMENTO",
+  "UNKNOWN_TOKEN",
   "SUMA",
   "RESTA",
   "DIVISION",
   "MULTIPLICACION",
   "MODULE",
   "POTENCIA",
-  "INCREMENTO",
-  "DECREMENTO",
   "MENOR",
   "MENOROIGUAL",
   "MAYOR",
@@ -113,8 +114,7 @@ public class sym {
   "ABREEMPAQUE",
   "CIERRAEMPAQUE",
   "PUNTO_Y_COMA",
-  "COMA",
-  "UNKNOWN_TOKEN"
+  "COMA"
   };
 }
 

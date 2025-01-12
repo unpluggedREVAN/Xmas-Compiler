@@ -1,6 +1,6 @@
 /* ============================================================================
-   parser.cup - Versión "actualizada" para Xmas-Compiler
-   con acciones semánticas que asignan RESULT para evitar null.
+   parser.cup - Xmas-Compiler con modo pánico mínimo, RESULT en expresiones,
+   y tokens INCREMENTO, DECREMENTO, UNKNOWN_TOKEN reintroducidos y usados.
 ============================================================================ */
 package ParserLexer;
 import java_cup.runtime.*;
@@ -12,13 +12,13 @@ parser code {:
     private Lexer s;
     public Parser(Lexer s) { this.s = s; }
 
+    @Override
     public void syntax_error(Symbol sym) {
         System.err.println("Error de sintaxis en línea "
                            + (sym.left + 1) + ", columna " + (sym.right + 1));
         System.err.println("Token inesperado: " + sym.value);
     }
 :}
-
 
 /* ----------------------------------------------------------------------
    2) Conexión con el scanner
@@ -29,16 +29,18 @@ scan with {:
 
 /* ----------------------------------------------------------------------
    3) Declaración de TERMINALES (tokens)
-   (Mapeados a los lexemas navideños en tu lexer.jflex)
 ---------------------------------------------------------------------- */
 terminal IDENTIFICADOR;
 terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
 terminal ASIGNA;  // "entrega"
+
+// Se reintroducen:
+terminal INCREMENTO, DECREMENTO, UNKNOWN_TOKEN;
+
 terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
 // navidad (+), intercambio (-), reyes (/), nochebuena (*), magos (%), adviento (^)
 
-terminal INCREMENTO, DECREMENTO; // quien (++), grinch (--)
 terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
 // snowball (<), evergreen (<=), minstix (>), upatree (>=), mary (==), openslae (!=)
 
@@ -46,9 +48,13 @@ terminal CONJUNCION, DISYUNCION, NEGACION; // melchor (&&), gaspar (||), baltaza
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 // (elfo, hada, envuelve, duende, varios, historia, ultimo, corta, envia, sigue)
 
-terminal PRINT, READ, MAIN; // narra, escucha, _verano_
+terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
-terminal PUNTO_Y_COMA, COMA, UNKNOWN_TOKEN;
+terminal PUNTO_Y_COMA, COMA;
+
+/*
+   No se declara "terminal error;" porque Cup ya provee 'error' internamente
+*/
 
 /* ----------------------------------------------------------------------
    4) Declaración de NO TERMINALES
@@ -61,21 +67,17 @@ non terminal case_blocks, case_block, default_block;
 non terminal funcion, parametros, lista_parametros, param_dec;
 non terminal expresion;
 
-/*
-   Se eliminaron e_or, e_and, e_cmp, etc. ya que no se usan en la producción final de expresion.
-*/
-
 /* ----------------------------------------------------------------------
    5) Precedencia
 ---------------------------------------------------------------------- */
-precedence right POTENCIA;          // ^ (derecha-asociativo)
-precedence right NEGACION, RESTA;   // unarios
-precedence left MULTIPLICACION, DIVISION, MODULE; // * / %
-precedence left SUMA, RESTA;        // + -
+precedence right POTENCIA;
+precedence right NEGACION, RESTA;
+precedence left MULTIPLICACION, DIVISION, MODULE;
+precedence left SUMA, RESTA;
 precedence left MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL;
 precedence left IGUALDAD, DIFERENTE;
-precedence left CONJUNCION;         // &&
-precedence left DISYUNCION;         // ||
+precedence left CONJUNCION;
+precedence left DISYUNCION;
 
 /* ----------------------------------------------------------------------
    6) Producción inicial
@@ -108,23 +110,36 @@ globalDeclaracion ::=
   | funcion
   ;
 
-/* bloque -> { lista_sentencias } | epsilon */
+/* bloque -> { lista_sentencias } | epsilon
+   + Manejo de error: si falla, comer hasta '}'
+*/
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
-                {: System.out.println("Regla 'bloque' ejecutada."); :}
+       {: System.out.println("Regla 'bloque' ejecutada."); :}
   | /* epsilon */
+  | error CIERRACUENTO
+    {:
+      System.err.println("Error en bloque. Se ignoraron tokens hasta '}'.");
+    :}
   ;
 
-/* lista_sentencias -> (sentencia)+ */
+/* lista_sentencias -> (sentencia)+
+   + Manejo de error: si falla, comer hasta ';'
+*/
 lista_sentencias ::=
     lista_sentencias sentencia
       {: System.out.println("Regla 'lista_sentencias' procesando lista."); :}
   | sentencia
       {: System.out.println("Regla 'lista_sentencias' procesando sentencia."); :}
+  | error PUNTO_Y_COMA
+    {:
+      System.err.println("Error en lista de sentencias. Se ignoraron tokens hasta ';'.");
+    :}
   ;
 
 /* ----------------------------------------------------------------------
    B) Sentencia
+   Agregamos una rama para UNKNOWN_TOKEN: con alias (unknown)
 ---------------------------------------------------------------------- */
 sentencia ::=
     declaracion
@@ -143,6 +158,12 @@ sentencia ::=
          System.out.println("Return con expr: " + (String)ret);
       :}
   | BREAK PUNTO_Y_COMA
+
+  /* Manejo de UNKNOWN_TOKEN para evitar "never used" */
+  | UNKNOWN_TOKEN:unk
+      {:
+         System.err.println("Sentencia desconocida: se ignora token " + unk);
+      :}
   ;
 
 /* ----------------------------------------------------------------------
@@ -155,9 +176,6 @@ declaracion ::=
       System.out.println("- Tipo de dato: " + (String)t);
       System.out.println("- Variable: " + id);
       System.out.println("- Inicialización: " + (aux != null? aux : "Ninguna"));
-
-      /* Si deseas, podrías RESULT = "decl("+id+")";
-         pero no es estrictamente necesario si no lo usas arriba */
       RESULT = null;
     :}
   ;
@@ -170,7 +188,7 @@ declaracion ::=
 declaracion_aux ::=
     PUNTO_Y_COMA
      {:
-       RESULT = null; // sin asignación
+       RESULT = null;
      :}
   | ASIGNA expresion:ex PUNTO_Y_COMA
      {:
@@ -182,24 +200,17 @@ declaracion_aux ::=
      :}
   ;
 
-/* tipo_dato -> rodolfo->int, bromista->float, trueno->bool, cupido->char, cometa->string */
+/* rodolfo->int, bromista->float, trueno->bool, cupido->char, cometa->string */
 tipo_dato ::=
-    INTEGER
-      {: RESULT = "int"; :}
-  | FLOAT
-      {: RESULT = "float"; :}
-  | BOOL
-      {: RESULT = "bool"; :}
-  | CHAR
-      {: RESULT = "char"; :}
-  | STRING
-      {: RESULT = "string"; :}
+    INTEGER  {: RESULT = "int";   :}
+  | FLOAT    {: RESULT = "float"; :}
+  | BOOL     {: RESULT = "bool";  :}
+  | CHAR     {: RESULT = "char";  :}
+  | STRING   {: RESULT = "string";:}
   ;
 
 /* ----------------------------------------------------------------------
    D) Asignaciones
-   - var = expr;
-   - var[expr] = expr;
 ---------------------------------------------------------------------- */
 asignacion ::=
     IDENTIFICADOR:idVar ASIGNA expresion:ex PUNTO_Y_COMA
@@ -231,14 +242,8 @@ funcion ::=
 
 /* parametros -> (lista_parametros)? */
 parametros ::=
-    /* epsilon */
-     {:
-       RESULT = "";
-     :}
-  | lista_parametros:p
-     {:
-       RESULT = p;
-     :}
+    /* epsilon */        {: RESULT = ""; :}
+  | lista_parametros:p   {: RESULT = p; :}
   ;
 
 /* lista_parametros -> param_dec (, param_dec)* */
@@ -257,7 +262,6 @@ lista_parametros ::=
 param_dec ::=
     tipo_dato:t IDENTIFICADOR:id
       {:
-         // "char _var_"
          String paramStr = t + " " + id;
          RESULT = paramStr;
          System.out.println("Parametro: " + paramStr);
@@ -265,8 +269,7 @@ param_dec ::=
   ;
 
 /* ----------------------------------------------------------------------
-   F) Estructuras de Control
-   (if, while, for, switch)
+   F) Estructuras de Control (if, while, for, switch)
 ---------------------------------------------------------------------- */
 control_estructuras ::=
     if_estructura
@@ -347,73 +350,96 @@ default_block ::=
 
 /* ----------------------------------------------------------------------
    G) Expresión con precedencia
-   Usa 'precedence' para resolver
+   y manejo de error (si expr falla, comer hasta ')')
 ---------------------------------------------------------------------- */
 expresion ::=
-      expresion:e1 DISYUNCION expresion:e2          // ||
+      expresion:e1 DISYUNCION expresion:e2
         {:
           RESULT = "("+e1+" || "+e2+")";
         :}
-    | expresion:e1 CONJUNCION expresion:e2          // &&
+    | expresion:e1 CONJUNCION expresion:e2
         {:
           RESULT = "("+e1+" && "+e2+")";
         :}
-    | expresion:e1 IGUALDAD expresion:e2            // ==
+    | expresion:e1 IGUALDAD expresion:e2
         {:
           RESULT = "("+e1+" == "+e2+")";
         :}
-    | expresion:e1 DIFERENTE expresion:e2           // !=
+    | expresion:e1 DIFERENTE expresion:e2
         {:
           RESULT = "("+e1+" != "+e2+")";
         :}
-    | expresion:e1 MENOR expresion:e2               // <
+    | expresion:e1 MENOR expresion:e2
         {:
           RESULT = "("+e1+" < "+e2+")";
         :}
-    | expresion:e1 MENOROIGUAL expresion:e2         // <=
+    | expresion:e1 MENOROIGUAL expresion:e2
         {:
           RESULT = "("+e1+" <= "+e2+")";
         :}
-    | expresion:e1 MAYOR expresion:e2               // >
+    | expresion:e1 MAYOR expresion:e2
         {:
           RESULT = "("+e1+" > "+e2+")";
         :}
-    | expresion:e1 MAYOROIGUAL expresion:e2         // >=
+    | expresion:e1 MAYOROIGUAL expresion:e2
         {:
           RESULT = "("+e1+" >= "+e2+")";
         :}
-    | expresion:e1 SUMA expresion:e2                // +
+    | expresion:e1 SUMA expresion:e2
         {:
           RESULT = "("+e1+" + "+e2+")";
         :}
-    | expresion:e1 RESTA expresion:e2               // -
+    | expresion:e1 RESTA expresion:e2
         {:
           RESULT = "("+e1+" - "+e2+")";
         :}
-    | expresion:e1 MULTIPLICACION expresion:e2      // *
+    | expresion:e1 MULTIPLICACION expresion:e2
         {:
           RESULT = "("+e1+" * "+e2+")";
         :}
-    | expresion:e1 DIVISION expresion:e2            // /
+    | expresion:e1 DIVISION expresion:e2
         {:
           RESULT = "("+e1+" / "+e2+")";
         :}
-    | expresion:e1 MODULE expresion:e2              // %
+    | expresion:e1 MODULE expresion:e2
         {:
           RESULT = "("+e1+" % "+e2+")";
         :}
-    | expresion:e1 POTENCIA expresion:e2            // ^
+    | expresion:e1 POTENCIA expresion:e2
         {:
           RESULT = "("+e1+" ^ "+e2+")";
         :}
-    | NEGACION expresion:e                          // unario: !
+    /* unarios prefix */
+    | NEGACION expresion:e
         {:
           RESULT = "!"+e;
         :}
-    | RESTA expresion:e                             // unario: -
+    | RESTA expresion:e
         {:
           RESULT = "-"+e;
         :}
+    /* Manejo de increment/decrement (prefix y postfix) */
+    | INCREMENTO IDENTIFICADOR:id
+        {:
+          RESULT = "++"+id;
+          System.out.println("Expresión: ++" + id);
+        :}
+    | DECREMENTO IDENTIFICADOR:id
+        {:
+          RESULT = "--"+id;
+          System.out.println("Expresión: --" + id);
+        :}
+    | IDENTIFICADOR:id INCREMENTO
+        {:
+          RESULT = id + "++";
+          System.out.println("Expresión: " + id + "++");
+        :}
+    | IDENTIFICADOR:id DECREMENTO
+        {:
+          RESULT = id + "--";
+          System.out.println("Expresión: " + id + "--");
+        :}
+    /* primarios */
     | IDENTIFICADOR:id
         {:
           RESULT = id;
@@ -432,8 +458,6 @@ expresion ::=
         :}
     | STRING_LITERAL:str
         {:
-          /* str ya es un objeto (String).
-             Se envuelve con comillas si quieres. */
           RESULT = "\""+str+"\"";
         :}
     | BOOL_LITERAL:boo
@@ -448,13 +472,14 @@ expresion ::=
         {:
           RESULT = "("+ex+")";
         :}
+    /* Manejo de error en expr: si falla, comer tokens hasta ')' */
+    | error CIERRAREGALO
+      {:
+        System.err.println("Error en expresión. Se ignoraron tokens hasta ')'.");
+        RESULT = null;
+      :}
   ;
 
-/* No modificado, pero lo dejamos por si se usa en algún lado. */
-literal ::=
-    L_INTEGER
-  | FLOAT_LITERAL
-  | CHAR_LITERAL
-  | STRING_LITERAL
-  | BOOL_LITERAL
-  ;
+/*
+// no se define 'literal' pues no se usa
+*/
