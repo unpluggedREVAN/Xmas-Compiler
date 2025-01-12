@@ -28,11 +28,54 @@ scan with {:
 :};
 
 /* ----------------------------------------------------------------------
-   3) Declaración de TERMINALES (tokens)
-   (Mapeados a los lexemas navideños en tu lexer.jflex)
+ Parte de la tabla de símbolos
+-----------------------------------------------------------------------*/
+
+action code {:
+
+  /*
+  NOTA PABLO
+  Aquí es la misma estructura que siguio el profe, el cambio que voy a hacer es a la hora de meter los valores a la tabla
+  */
+
+  HashMap<String, ArrayList>> listaTablaSimbolos = new HashMap<String, ArrayList<String>>();
+  String hashActual;
+
+      public void imprimirTablaSimbolos() {
+        for (String key : listaTablasSimbolos.keySet()) {
+            System.out.println("Tabla de simbolo: " + key);
+            System.out.println("Valores :");
+            for (String item : listaTablasSimbolos.get(key)) {
+                System.out.println(item);
+            }
+            System.out.println("");
+        }
+    }
+
+    /*CODIGO NUEVO*/
+    public void crearTabla(tipo, id) {
+      System.out.println("/++Nueva tabla simbolos funcion o main++/ " + id.toString());
+      String tipoTabla = ""
+      if (id.toString().equals("main")){
+        tipoTabla = "tipo:main:"+tipo.toString();
+      } else {
+        tipoTabla = "tipo:funcion:"+tipo.toString();
+      }
+
+      ArrayList<String> funcionMain = new ArrayList<String>();
+      hashActual = id.toString();
+      funcionMain.add(tipoTabla)
+      listaTablaSimbolos.put(hashActual, funcionMain)
+    }
+:}
+
+
+/* ----------------------------------------------------------------------
+   3) Declaración de TERMINALES
+   (Mapeados a los lexemas navideños según tu lexer.jflex)
 ---------------------------------------------------------------------- */
 terminal IDENTIFICADOR;
-terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
+terminal INTEGER, FLOAT, BOOL, STRING, CHAR; 
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
 terminal ASIGNA;  // "entrega"
 terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
@@ -218,10 +261,17 @@ asignacion ::=
 
 /* ----------------------------------------------------------------------
    E) Declaración de Funciones
+      - Devuelven entero, flotante, char o bool (string si deseas),
+     con parámetros y un bloque.
+   - El enunciado dice "p. Debe permitir la creación y uso de funciones ...
+     separador de parámetros=coma".
+   - Propuesta en la tabla de simbolos, nose se si vaya a funcionar
+---------------------------------------------------------------------- */
 ---------------------------------------------------------------------- */
 funcion ::=
     tipo_dato:t IDENTIFICADOR:id ABREREGALO parametros:p CIERRAREGALO bloque:b
     {:
+      crearTabla(typeFunc, idFunc)
        System.out.println("Función declarada: " + id + " de tipo " + t
                           + ", con params: " + (p != null ? p : "0 params")
                           + " y un bloque.");
