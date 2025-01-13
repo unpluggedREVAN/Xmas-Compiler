@@ -1,24 +1,51 @@
 /* ============================================================================
-   parser.cup - Xmas-Compiler
-   Manejo de errores en modo pánico minimalista (lista_sentencias, bloque, expresion)
-   Reincorpora INCREMENTO, DECREMENTO, UNKNOWN_TOKEN.
-   Soporta arreglos [expr], inicialización con { ... }, etc.
+   parser.cup - Xmas-Compiler con manejo robusto de errores (modo pánico),
+   tokens INCREMENTO, DECREMENTO, UNKNOWN_TOKEN, y arreglo con { ... }.
+   (Versión corregida y depurada de detalles de sintaxis)
 ============================================================================ */
 package ParserLexer;
+
 import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /* ----------------------------------------------------------------------
    1) Sección de código del parser
 ---------------------------------------------------------------------- */
 parser code {:
     private Lexer s;
-    public Parser(Lexer s) { this.s = s; }
+    // Lista donde almacenaremos todos los errores sintácticos encontrados.
+    private List<String> errores = new ArrayList<>();
 
+    public Parser(Lexer s) {
+        this.s = s;
+    }
+
+    // Método para reportar y guardar el error en la lista.
+    public void report_error(String message, Symbol sym) {
+        if (sym != null) {
+            String errorMsg = String.format(
+                "Syntax Error: %s cerca del token '%s' en línea %d, columna %d",
+                message, sym.value, (sym.left + 1), (sym.right + 1)
+            );
+            errores.add(errorMsg);
+            System.err.println(errorMsg);
+        } else {
+            String errorMsg = "Syntax Error: " + message;
+            errores.add(errorMsg);
+            System.err.println(errorMsg);
+        }
+    }
+
+    // Sobrescribimos syntax_error para usar report_error.
     @Override
     public void syntax_error(Symbol sym) {
-        System.err.println("Error de sintaxis en línea "
-                           + (sym.left + 1) + ", columna " + (sym.right + 1));
-        System.err.println("Token inesperado: " + sym.value);
+        report_error("Unexpected token", sym);
+    }
+
+    // Devuelve la lista de errores para quien llame al parser.
+    public List<String> getErrores() {
+        return errores;
     }
 :}
 
@@ -30,14 +57,14 @@ scan with {:
 :};
 
 /* ----------------------------------------------------------------------
-   3) Declaración de TERMINALES (tokens)
+   3) Declaración de TERMINALES
 ---------------------------------------------------------------------- */
+// Tokens obligatorios
 terminal IDENTIFICADOR;
 terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
-terminal ASIGNA;  // "entrega"
-terminal INCREMENTO, DECREMENTO, UNKNOWN_TOKEN; // reintroducidos
-
+terminal ASIGNA;   // "entrega"
+terminal INCREMENTO, DECREMENTO, UNKNOWN_TOKEN; // Reincorporados
 terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
 terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
 terminal CONJUNCION, DISYUNCION, NEGACION;
@@ -46,7 +73,9 @@ terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal PUNTO_Y_COMA, COMA;
 
-/* No declaramos 'terminal error;' porque Cup ya provee 'error' internamente */
+/*
+   No se declara "error;" pues Cup ya lo provee internamente
+*/
 
 /* ----------------------------------------------------------------------
    4) Declaración de NO TERMINALES
@@ -88,9 +117,13 @@ start with programa;
 ---------------------------------------------------------------------- */
 programa ::=
     declaracionesGlobales MAIN bloque
-       {: System.out.println("Regla 'programa' con declaracionesGlobales + MAIN"); :}
+       {:
+         System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
+       :}
   | MAIN bloque
-       {: System.out.println("Regla 'programa' con sólo MAIN"); :}
+       {:
+         System.out.println("Regla 'programa' con sólo MAIN");
+       :}
   ;
 
 /* declaracionesGlobales -> (globalDeclaracion)+ */
@@ -105,32 +138,42 @@ globalDeclaracion ::=
   | funcion
   ;
 
-/* bloque -> { lista_sentencias } | epsilon
-   + Manejo de error minimal: si falla, comer hasta '}'
+/*
+   bloque -> { lista_sentencias } | ε
+   + Manejo de error minimal: si falla, comer tokens hasta '}'
 */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
-       {: System.out.println("Regla 'bloque' ejecutada."); :}
+      {:
+        System.out.println("Regla 'bloque' ejecutada.");
+      :}
   | /* epsilon */
-  /* Modo pánico en bloque: error hasta '}' */
   | error CIERRACUENTO
-    {:
-      System.err.println("Error en bloque. Se ignoraron tokens hasta '}'.");
-    :}
+      {:
+        // Llamamos a report_error y forzamos un valor en RESULT si necesario
+        parser.report_error("Error in block. Recovered until '}'", parser.scan());
+        RESULT = "errorBlock";
+      :}
   ;
 
-/* lista_sentencias -> (sentencia)+
-   + Manejo de error minimal: si falla, comer hasta ';'
+/*
+   lista_sentencias -> (sentencia)+
+   + Manejo de error minimal: si falla, comer tokens hasta ';'
 */
 lista_sentencias ::=
     lista_sentencias sentencia
-      {: System.out.println("Regla 'lista_sentencias' procesando lista."); :}
+      {:
+        System.out.println("Regla 'lista_sentencias' procesando lista.");
+      :}
   | sentencia
-      {: System.out.println("Regla 'lista_sentencias' procesando sentencia."); :}
+      {:
+        System.out.println("Regla 'lista_sentencias' procesando sentencia.");
+      :}
   | error PUNTO_Y_COMA
-    {:
-      System.err.println("Error en lista de sentencias. Se ignoraron tokens hasta ';'.");
-    :}
+      {:
+        parser.report_error("Error in statement list. Recovered until ';'", parser.scan());
+        RESULT = "errorSentList";
+      :}
   ;
 
 /* ----------------------------------------------------------------------
@@ -153,10 +196,11 @@ sentencia ::=
          System.out.println("Return con expr: " + (String)ret);
       :}
   | BREAK PUNTO_Y_COMA
-  /* Manejo de UNKNOWN_TOKEN para no quedar "never used" */
+  /* Manejo de UNKNOWN_TOKEN */
   | UNKNOWN_TOKEN:unk
       {:
-         System.err.println("Sentencia desconocida: se ignora token " + unk);
+         parser.report_error("Sentencia desconocida, token ignorado", parser.scan());
+         System.err.println("Sentencia desconocida: " + unk);
       :}
   ;
 
@@ -175,7 +219,8 @@ declaracion ::=
     :}
   ;
 
-/* declaracion_aux:
+/*
+   declaracion_aux:
    1) ;
    2) = expr ;
    3) [ expresion ] ;
@@ -220,31 +265,41 @@ array_item_list ::=
       :}
   ;
 
-/* array_item -> CHAR_LITERAL | L_INTEGER | FLOAT_LITERAL | IDENTIFICADOR | STRING_LITERAL | BOOL_LITERAL
-   o, si deseas, una 'expresion' completa
-*/
+/* array_item -> CHAR_LITERAL | L_INTEGER | FLOAT_LITERAL | IDENTIFICADOR | STRING_LITERAL | BOOL_LITERAL */
 array_item ::=
     CHAR_LITERAL:ch
-      {: RESULT = "'"+ch+"'"; :}
+      {:
+        RESULT = "'"+ch+"'";
+      :}
   | L_INTEGER:li
-      {: RESULT = li.toString(); :}
+      {:
+        RESULT = li.toString();
+      :}
   | FLOAT_LITERAL:fl
-      {: RESULT = fl.toString(); :}
+      {:
+        RESULT = fl.toString();
+      :}
   | IDENTIFICADOR:id
-      {: RESULT = id; :}
+      {:
+        RESULT = id;
+      :}
   | STRING_LITERAL:st
-      {: RESULT = "\""+st+"\""; :}
+      {:
+        RESULT = "\""+st+"\"";
+      :}
   | BOOL_LITERAL:boo
-      {: RESULT = boo.toString(); :}
+      {:
+        RESULT = boo.toString();
+      :}
   ;
 
 /* rodolfo->int, bromista->float, trueno->bool, cupido->char, cometa->string */
 tipo_dato ::=
-    INTEGER   {: RESULT = "int";    :}
-  | FLOAT     {: RESULT = "float";  :}
-  | BOOL      {: RESULT = "bool";   :}
-  | CHAR      {: RESULT = "char";   :}
-  | STRING    {: RESULT = "string"; :}
+    INTEGER  {: RESULT = "int";   :}
+  | FLOAT    {: RESULT = "float"; :}
+  | BOOL     {: RESULT = "bool";  :}
+  | CHAR     {: RESULT = "char";  :}
+  | STRING   {: RESULT = "string";:}
   ;
 
 /* ----------------------------------------------------------------------
@@ -280,8 +335,14 @@ funcion ::=
 
 /* parametros -> (lista_parametros)? */
 parametros ::=
-    /* epsilon */        {: RESULT = ""; :}
-  | lista_parametros:p   {: RESULT = p; :}
+    /* epsilon */
+      {:
+        RESULT = "";
+      :}
+  | lista_parametros:p
+      {:
+        RESULT = p;
+      :}
   ;
 
 /* lista_parametros -> param_dec (, param_dec)* */
@@ -308,7 +369,7 @@ param_dec ::=
 
 /* ----------------------------------------------------------------------
    F) Estructuras de Control (if, while, for, switch)
-   Sin error expansions para no saturar conflictos
+   Solo recuperaciones mínimas con error, si deseamos
 ---------------------------------------------------------------------- */
 control_estructuras ::=
     if_estructura
@@ -317,7 +378,9 @@ control_estructuras ::=
   | switch_estructura
   ;
 
-/* if ( expr ) bloque [ else bloque ] */
+/* if ( expr ) bloque [ else bloque ]
+   + Opcional: if ( error ) bloque ...
+*/
 if_estructura ::=
     IF ABREREGALO expresion:cond CIERRAREGALO bloque:b
       {:
@@ -327,29 +390,55 @@ if_estructura ::=
       {:
         RESULT = "if("+cond+")"+b1+" else "+b2;
       :}
+  | IF ABREREGALO error CIERRAREGALO bloque:bl
+      {:
+        parser.report_error("Error in 'if' condition. Recovered until ')'", parser.scan());
+        RESULT = "ifError"+bl;
+      :}
   ;
 
-/* while ( expr ) bloque */
+/* while ( expr ) bloque
+   + while ( error ) bloque
+*/
 while_estructura ::=
     WHILE ABREREGALO expresion:cond CIERRAREGALO bloque:bl
       {:
         RESULT = "while("+cond+")"+bl;
       :}
+  | WHILE ABREREGALO error CIERRAREGALO bloque:bl
+      {:
+        parser.report_error("Error in 'while' condition. Recovered until ')'", parser.scan());
+        RESULT = "whileError"+bl;
+      :}
   ;
 
-/* For con comas -> for ( asignacion, expr, expr ) */
+/* For con comas -> for ( asignacion, expr, expr )
+   + for ( error ) block
+*/
 for_estructura ::=
     FOR ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
       {:
         RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
       :}
+  | FOR ABREREGALO error CIERRAREGALO bloque:bl
+      {:
+        parser.report_error("Error in 'for' structure. Recovered until ')'", parser.scan());
+        RESULT = "forError"+bl;
+      :}
   ;
 
-/* switch( expr ) { case_blocks } */
+/* switch( expr ) { case_blocks }
+   + switch ( error ) { case_blocks }
+*/
 switch_estructura ::=
     SWITCH ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
       {:
         RESULT = "switch("+sw+") { "+cs+" }";
+      :}
+  | SWITCH ABREREGALO error CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
+      {:
+        parser.report_error("Error in 'switch' structure. Recovered until ')'", parser.scan());
+        RESULT = "switchError{ "+cs+" }";
       :}
   ;
 
@@ -389,136 +478,134 @@ default_block ::=
 
 /* ----------------------------------------------------------------------
    G) Expresión con precedencia
-   y manejo de error (si expr falla, comer hasta ')')
+   y manejo de error minimal (expresion => error ) => comer hasta ')'
 ---------------------------------------------------------------------- */
 expresion ::=
-      expresion:e1 DISYUNCION expresion:e2
-        {:
-          RESULT = "("+e1+" || "+e2+")";
-        :}
-    | expresion:e1 CONJUNCION expresion:e2
-        {:
-          RESULT = "("+e1+" && "+e2+")";
-        :}
-    | expresion:e1 IGUALDAD expresion:e2
-        {:
-          RESULT = "("+e1+" == "+e2+")";
-        :}
-    | expresion:e1 DIFERENTE expresion:e2
-        {:
-          RESULT = "("+e1+" != "+e2+")";
-        :}
-    | expresion:e1 MENOR expresion:e2
-        {:
-          RESULT = "("+e1+" < "+e2+")";
-        :}
-    | expresion:e1 MENOROIGUAL expresion:e2
-        {:
-          RESULT = "("+e1+" <= "+e2+")";
-        :}
-    | expresion:e1 MAYOR expresion:e2
-        {:
-          RESULT = "("+e1+" > "+e2+")";
-        :}
-    | expresion:e1 MAYOROIGUAL expresion:e2
-        {:
-          RESULT = "("+e1+" >= "+e2+")";
-        :}
-    | expresion:e1 SUMA expresion:e2
-        {:
-          RESULT = "("+e1+" + "+e2+")";
-        :}
-    | expresion:e1 RESTA expresion:e2
-        {:
-          RESULT = "("+e1+" - "+e2+")";
-        :}
-    | expresion:e1 MULTIPLICACION expresion:e2
-        {:
-          RESULT = "("+e1+" * "+e2+")";
-        :}
-    | expresion:e1 DIVISION expresion:e2
-        {:
-          RESULT = "("+e1+" / "+e2+")";
-        :}
-    | expresion:e1 MODULE expresion:e2
-        {:
-          RESULT = "("+e1+" % "+e2+")";
-        :}
-    | expresion:e1 POTENCIA expresion:e2
-        {:
-          RESULT = "("+e1+" ^ "+e2+")";
-        :}
-    /* unarios prefix */
-    | NEGACION expresion:e
-        {:
-          RESULT = "!"+e;
-        :}
-    | RESTA expresion:e
-        {:
-          RESULT = "-"+e;
-        :}
-    /* Manejo de increment/decrement (prefix y postfix) */
-    | INCREMENTO IDENTIFICADOR:id
-        {:
-          RESULT = "++"+id;
-          System.out.println("Expresión: ++" + id);
-        :}
-    | DECREMENTO IDENTIFICADOR:id
-        {:
-          RESULT = "--"+id;
-          System.out.println("Expresión: --" + id);
-        :}
-    | IDENTIFICADOR:id INCREMENTO
-        {:
-          RESULT = id + "++";
-          System.out.println("Expresión: " + id + "++");
-        :}
-    | IDENTIFICADOR:id DECREMENTO
-        {:
-          RESULT = id + "--";
-          System.out.println("Expresión: " + id + "--");
-        :}
-    /* primarios */
-    | IDENTIFICADOR:id
-        {:
-          RESULT = id;
-        :}
-    | L_INTEGER:lint
-        {:
-          RESULT = lint.toString();
-        :}
-    | FLOAT_LITERAL:fli
-        {:
-          RESULT = fli.toString();
-        :}
-    | CHAR_LITERAL:chl
-        {:
-          RESULT = "'"+chl+"'";
-        :}
-    | STRING_LITERAL:str
-        {:
-          RESULT = "\""+str+"\"";
-        :}
-    | BOOL_LITERAL:boo
-        {:
-          RESULT = boo.toString();
-        :}
-    /* Acceso a arreglo: arr[expr] */
-    | IDENTIFICADOR:id ABREEMPAQUE expresion:ex CIERRAEMPAQUE
-        {:
-          RESULT = id + "["+ex+"]";
-        :}
-    /* paréntesis */
-    | ABREREGALO expresion:ex CIERRAREGALO
-        {:
-          RESULT = "("+ex+")";
-        :}
-    /* Manejo de error en expr: si falla, comer tokens hasta ')' */
-    | error CIERRAREGALO
+    expresion:e1 DISYUNCION expresion:e2
       {:
-        System.err.println("Error en expresión. Se ignoraron tokens hasta ')'.");
-        RESULT = null;
+        RESULT = "("+e1+" || "+e2+")";
+      :}
+  | expresion:e1 CONJUNCION expresion:e2
+      {:
+        RESULT = "("+e1+" && "+e2+")";
+      :}
+  | expresion:e1 IGUALDAD expresion:e2
+      {:
+        RESULT = "("+e1+" == "+e2+")";
+      :}
+  | expresion:e1 DIFERENTE expresion:e2
+      {:
+        RESULT = "("+e1+" != "+e2+")";
+      :}
+  | expresion:e1 MENOR expresion:e2
+      {:
+        RESULT = "("+e1+" < "+e2+")";
+      :}
+  | expresion:e1 MENOROIGUAL expresion:e2
+      {:
+        RESULT = "("+e1+" <= "+e2+")";
+      :}
+  | expresion:e1 MAYOR expresion:e2
+      {:
+        RESULT = "("+e1+" > "+e2+")";
+      :}
+  | expresion:e1 MAYOROIGUAL expresion:e2
+      {:
+        RESULT = "("+e1+" >= "+e2+")";
+      :}
+  | expresion:e1 SUMA expresion:e2
+      {:
+        RESULT = "("+e1+" + "+e2+")";
+      :}
+  | expresion:e1 RESTA expresion:e2
+      {:
+        RESULT = "("+e1+" - "+e2+")";
+      :}
+  | expresion:e1 MULTIPLICACION expresion:e2
+      {:
+        RESULT = "("+e1+" * "+e2+")";
+      :}
+  | expresion:e1 DIVISION expresion:e2
+      {:
+        RESULT = "("+e1+" / "+e2+")";
+      :}
+  | expresion:e1 MODULE expresion:e2
+      {:
+        RESULT = "("+e1+" % "+e2+")";
+      :}
+  | expresion:e1 POTENCIA expresion:e2
+      {:
+        RESULT = "("+e1+" ^ "+e2+")";
+      :}
+  /* unarios prefix */
+  | NEGACION expresion:e
+      {:
+        RESULT = "!"+e;
+      :}
+  | RESTA expresion:e
+      {:
+        RESULT = "-"+e;
+      :}
+  /* increment/decrement prefix & postfix */
+  | INCREMENTO IDENTIFICADOR:id
+      {:
+        RESULT = "++"+id;
+        System.out.println("Expresión: ++" + id);
+      :}
+  | DECREMENTO IDENTIFICADOR:id
+      {:
+        RESULT = "--"+id;
+        System.out.println("Expresión: --" + id);
+      :}
+  | IDENTIFICADOR:id INCREMENTO
+      {:
+        RESULT = id+"++";
+        System.out.println("Expresión: " + id + "++");
+      :}
+  | IDENTIFICADOR:id DECREMENTO
+      {:
+        RESULT = id+"--";
+        System.out.println("Expresión: " + id + "--");
+      :}
+  /* primarios */
+  | IDENTIFICADOR:id
+      {:
+        RESULT = id;
+      :}
+  | L_INTEGER:lint
+      {:
+        RESULT = lint.toString();
+      :}
+  | FLOAT_LITERAL:flit
+      {:
+        RESULT = flit.toString();
+      :}
+  | CHAR_LITERAL:chl
+      {:
+        RESULT = "'"+chl+"'";
+      :}
+  | STRING_LITERAL:str
+      {:
+        RESULT = "\""+str+"\"";
+      :}
+  | BOOL_LITERAL:boo
+      {:
+        RESULT = boo.toString();
+      :}
+  | IDENTIFICADOR:id ABREEMPAQUE expresion:ex CIERRAEMPAQUE
+      {:
+        RESULT = id + "["+ex+"]";
+      :}
+  | ABREREGALO expresion:ex CIERRAREGALO
+      {:
+        RESULT = "("+ex+")";
+      :}
+  /* Modo pánico: error => comer tokens hasta ')' */
+  | error CIERRAREGALO
+      {:
+        parser.report_error("Error in expression. Recovered until ')'", parser.scan());
+        RESULT = "errorExpr";
       :}
   ;
 
-/* Fin de parser.cup */
+/* Fin del parser.cup */
