@@ -1,11 +1,7 @@
 /* ============================================================================
    parser.cup - Xmas-Compiler
-   Versión definitiva:
-   - Manejo robusto de errores (modo pánico),
-   - Tablas de Símbolos (por scope),
-   - Identificadores como String,
-   - Funciones y arreglos,
-   - Corrección de sintaxis en "funcion" (separación de acciones semánticas).
+   - Manejo robusto de errores (modo pánico) + Tablas de Símbolos por scope.
+   - Corrige problemas con $id y conversión a String.
 ============================================================================ */
 
 package ParserLexer;
@@ -21,7 +17,7 @@ import java.util.List;
 parser code {:
     private Lexer s;
 
-    // Lista de errores sintácticos:
+    // Lista de errores sintácticos.
     private List<String> errores = new ArrayList<>();
 
     // Tabla de símbolos: scope -> lista de descripciones de símbolos.
@@ -34,12 +30,12 @@ parser code {:
         this.s = s;
     }
 
-    // Método para reportar error y guardarlo en la lista.
+    // Reporta error y lo agrega a la lista.
     public void report_error(String message, Symbol sym) {
         if (sym != null) {
             String errorMsg = String.format(
                 "Syntax Error: %s cerca del token '%s' en línea %d, columna %d",
-                message, sym.value, (sym.left + 1), (sym.right + 1)
+                message, sym.value, sym.left + 1, sym.right + 1
             );
             errores.add(errorMsg);
             System.err.println(errorMsg);
@@ -50,6 +46,7 @@ parser code {:
         }
     }
 
+    // Sobrescribimos syntax_error para usar report_error.
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Unexpected token", sym);
@@ -59,11 +56,13 @@ parser code {:
         return errores;
     }
 
-    // --- Métodos para tabla de símbolos --- //
+    // --- Métodos para manejar tablas de símbolos --- //
 
     // Crea un scope nuevo para la función (o main).
+    // type, nombre, línea y columna.
     public void crearTabla(String type, String funcName, int line, int col) {
         System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
+        // Info inicial en la lista.
         String infoFuncion = "tipoFuncion:" + type + " line:" + line + " col:" + col;
 
         ArrayList<String> nuevaLista = new ArrayList<>();
@@ -96,7 +95,6 @@ parser code {:
             }
         }
     }
-
 :}
 
 /* ----------------------------------------------------------------------
@@ -108,7 +106,7 @@ scan with {:
 
 /* ----------------------------------------------------------------------
    3) Declaración de TERMINALES
-   Declaramos IDENTIFICADOR como String
+   Declaramos IDENTIFICADOR como tipo String
 ---------------------------------------------------------------------- */
 terminal String IDENTIFICADOR;
 terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
@@ -155,7 +153,7 @@ start with programa;
    7) Reglas de Producción
 ---------------------------------------------------------------------- */
 
-/* A) Estructura General del Programa */
+/* A) Programa */
 programa ::=
     declaracionesGlobales MAIN bloque
        {:
@@ -167,7 +165,7 @@ programa ::=
        :}
   ;
 
-/* declaracionesGlobales -> (globalDeclaracion)+ */
+/* declaracionesGlobales */
 declaracionesGlobales ::=
     declaracionesGlobales globalDeclaracion
   | globalDeclaracion
@@ -240,20 +238,23 @@ declaracion ::=
     tipo_dato:t IDENTIFICADOR:myid declaracion_aux:aux
     {:
       System.out.println("Declaración detectada:");
-      System.out.println("- Tipo de dato: " + t);
+      System.out.println("- Tipo de dato: " + (String)t);
       System.out.println("- Variable: " + myid);
       System.out.println("- Inicialización: " + (aux != null ? aux : "Ninguna"));
 
-      // Hacer el casting a String
+      // Registrar símbolo en la tabla
       int line = myidleft + 1;
       int col  = myidright + 1;
-      parser.addSimbolo(parser.currentScope, myid, line, col, (String)t);
+      String typeVal = (String)t; // parse the type
+      String lexeme = myid;
+
+      parser.addSimbolo(parser.currentScope, lexeme, line, col, typeVal);
 
       RESULT = null;
     :}
   ;
 
-/* declaracion_aux -> ; | = expr ; | [ expr ] ; | [ expr ] = array_init ; */
+/* declaracion_aux */
 declaracion_aux ::=
     PUNTO_Y_COMA
       {:
@@ -342,28 +343,32 @@ asignacion ::=
       :}
   ;
 
-/* E) Declaración de Funciones
-   Nota: Debemos separar la acción que crea la tabla y la acción final.
-*/
+/* E) Declaración de Funciones */
 funcion ::=
     tipo_dato:t IDENTIFICADOR:funId
-    {:
+      {:
+        // Al leer "tipo_dato IDENTIFICADOR", creamos la tabla p/ la función
         int line = funIdleft + 1;
         int col  = funIdright + 1;
-        String typeVal = (String)t;  // Hacer el casting a String
-        parser.crearTabla(typeVal, funId, line, col);
-    :}
+        String typeVal = (String)t;
+        String fName = funId; // Guardamos el lexema del ident
+        parser.crearTabla(typeVal, fName, line, col);
+      }
     ABREREGALO parametros:p CIERRAREGALO bloque:b
-    {:
-       System.out.println("Función declarada: " + funId
-                          + " de tipo " + t
-                          + ", con params: " + (p != null ? p : "0 params")
-                          + " y un bloque.");
+      {:
+         String typeVal = (String)t; // casteo del no terminal
+         String fName = funId;       // ya lo guardamos arriba
 
-       parser.currentScope = "global";
+         System.out.println("Función declarada: " + fName
+                            + " de tipo " + typeVal
+                            + ", con params: " + (p != null ? p : "0 params")
+                            + " y un bloque.");
 
-       RESULT = "func["+t+" "+funId+"("+p+")]";
-    :}
+         // Al terminar la función, regresamos a scope "global"
+         parser.currentScope = "global";
+
+         RESULT = "func["+typeVal+" "+fName+"("+p+")]";
+      :}
   ;
 
 /* parametros -> (lista_parametros)? */
@@ -396,7 +401,7 @@ lista_parametros ::=
 param_dec ::=
     tipo_dato:t IDENTIFICADOR:pid
       {:
-        String paramStr = (String)t + " " + pid;  // Hacer el casting a String
+        String paramStr = (String)t + " " + pid;
         System.out.println("Parametro: " + paramStr);
 
         int line = pidleft + 1;
@@ -505,7 +510,7 @@ default_block ::=
       :}
   ;
 
-/* G) Expresión con precedencia */
+/* G) Expresión */
 expresion ::=
     expresion:e1 DISYUNCION expresion:e2
       {:
