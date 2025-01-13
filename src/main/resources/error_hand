@@ -1,0 +1,535 @@
+/* ============================================================================
+   parser.cup - Xmas-Compiler
+   Versión mejorada con manejo robusto de errores en modo pánico
+============================================================================ */
+
+package ParserLexer;
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+
+/* ----------------------------------------------------------------------
+   1) Sección de código del parser
+---------------------------------------------------------------------- */
+parser code {:
+    private Lexer s;
+    private List<String> errores = new ArrayList<>();
+    private HashMap<String, ArrayList<String>> tablaSimbolos = new HashMap<>();
+    public String currentScope = "global";
+
+    public Parser(Lexer s) {
+        this.s = s;
+    }
+
+    public void report_error(String message, Symbol sym) {
+        if (sym != null) {
+            String errorMsg = String.format(
+                "Error Sintáctico: %s cerca del token '%s' en línea %d, columna %d",
+                message, sym.value, (sym.left + 1), (sym.right + 1)
+            );
+            errores.add(errorMsg);
+            System.err.println(errorMsg);
+        } else {
+            String errorMsg = "Error Sintáctico: " + message;
+            errores.add(errorMsg);
+            System.err.println(errorMsg);
+        }
+    }
+
+    public void syntax_error(Symbol sym) {
+        report_error("Token inesperado", sym);
+    }
+
+    // Modificado para implementar modo pánico
+    public void unrecovered_syntax_error(Symbol sym) throws Exception {
+        report_error("Error irrecuperable - continuando análisis", sym);
+        // No lanzamos excepción para permitir continuar
+    }
+
+    public List<String> getErrores() {
+        return errores;
+    }
+
+    // --- Métodos para tabla de símbolos --- //
+    public void crearTabla(String type, String funcName, int line, int col) {
+        System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
+        String infoFuncion = "tipoFuncion:" + type + " line:" + line + " col:" + col;
+
+        ArrayList<String> nuevaLista = new ArrayList<>();
+        nuevaLista.add(infoFuncion);
+
+        currentScope = funcName;
+        tablaSimbolos.put(currentScope, nuevaLista);
+    }
+
+    public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
+        if (!tablaSimbolos.containsKey(scope)) {
+            tablaSimbolos.put(scope, new ArrayList<String>());
+        }
+        String info = "line:" + line + " col:" + col
+                   + " lex:" + lexeme
+                   + " scope:" + scope
+                   + " type:" + type;
+        tablaSimbolos.get(scope).add(info);
+        System.out.println("Se agregó símbolo -> " + info);
+    }
+
+    public void imprimirTablaSimbolos() {
+        System.out.println("\n--- Tablas de Símbolos ---");
+        for (String scopeKey : tablaSimbolos.keySet()) {
+            System.out.println("Scope: " + scopeKey);
+            for (String symInfo : tablaSimbolos.get(scopeKey)) {
+                System.out.println("  " + symInfo);
+            }
+        }
+    }
+
+    // Método auxiliar para sincronización
+    private Symbol sync_until(HashSet<Integer> syncSet) {
+        Symbol s;
+        do {
+            s = scan();
+            if (s.sym == EOF || syncSet.contains(s.sym)) {
+                return s;
+            }
+        } while (true);
+    }
+:}
+
+/* ----------------------------------------------------------------------
+   2) Conexión con el scanner
+---------------------------------------------------------------------- */
+scan with {:
+    return s.next_token();
+:};
+
+/* ----------------------------------------------------------------------
+   3) Declaración de TERMINALES
+---------------------------------------------------------------------- */
+terminal String IDENTIFICADOR;
+terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
+terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
+terminal ASIGNA;
+terminal INCREMENTO, DECREMENTO, UNKNOWN_TOKEN;
+terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
+terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
+terminal CONJUNCION, DISYUNCION, NEGACION;
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
+terminal PRINT, READ, MAIN;
+terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
+terminal PUNTO_Y_COMA, COMA;
+terminal EOF;
+
+/* ----------------------------------------------------------------------
+   4) Declaración de NO TERMINALES
+---------------------------------------------------------------------- */
+non terminal programa, declaracionesGlobales, globalDeclaracion;
+non terminal bloque, lista_sentencias, sentencia;
+non terminal declaracion, declaracion_aux, asignacion, tipo_dato;
+non terminal control_estructuras, if_estructura, while_estructura, for_estructura, switch_estructura;
+non terminal case_blocks, case_block, default_block;
+non terminal funcion, parametros, lista_parametros, param_dec;
+non terminal expresion, array_init, array_item, array_item_list;
+
+/* ----------------------------------------------------------------------
+   5) Precedencia
+---------------------------------------------------------------------- */
+precedence right POTENCIA;
+precedence right NEGACION, RESTA;
+precedence left MULTIPLICACION, DIVISION, MODULE;
+precedence left SUMA, RESTA;
+precedence left MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL;
+precedence left IGUALDAD, DIFERENTE;
+precedence left CONJUNCION;
+precedence left DISYUNCION;
+
+/* ----------------------------------------------------------------------
+   6) Producción inicial
+---------------------------------------------------------------------- */
+start with programa;
+
+/* ----------------------------------------------------------------------
+   7) Reglas de Producción con manejo de errores mejorado
+---------------------------------------------------------------------- */
+
+programa ::=
+    declaracionesGlobales MAIN bloque
+    {: System.out.println("Programa con declaraciones globales procesado"); :}
+    | MAIN bloque
+    {: System.out.println("Programa sin declaraciones globales procesado"); :}
+    | error bloque
+    {:
+        parser.report_error("Error en declaraciones globales - continuando con el programa", parser.scan());
+        System.out.println("Recuperación de error a nivel de programa");
+    :}
+    ;
+
+declaracionesGlobales ::=
+    declaracionesGlobales globalDeclaracion
+    | globalDeclaracion
+    | error PUNTO_Y_COMA
+    {: parser.report_error("Error en declaración global - continuando", parser.scan()); :}
+    ;
+
+globalDeclaracion ::=
+    declaracion
+    | funcion
+    ;
+
+bloque ::=
+    ABRECUENTO lista_sentencias CIERRACUENTO
+    {: System.out.println("Bloque procesado correctamente"); :}
+    | ABRECUENTO CIERRACUENTO
+    {: System.out.println("Bloque vacío procesado"); :}
+    | ABRECUENTO error CIERRACUENTO
+    {:
+        parser.report_error("Error en bloque - recuperando", parser.scan());
+        System.out.println("Recuperación de error en bloque");
+    :}
+    ;
+
+lista_sentencias ::=
+    lista_sentencias sentencia
+    | sentencia
+    | error PUNTO_Y_COMA
+    {:
+        parser.report_error("Error en sentencia - continuando después de ';'", parser.scan());
+        System.out.println("Recuperación de error en sentencia");
+    :}
+    ;
+
+sentencia ::=
+    declaracion
+    | asignacion
+    | control_estructuras
+    | PRINT ABREREGALO expresion:e CIERRAREGALO PUNTO_Y_COMA
+    {: System.out.println("Print statement: " + e); :}
+    | READ ABREREGALO IDENTIFICADOR:id CIERRAREGALO PUNTO_Y_COMA
+    {: System.out.println("Read statement para: " + id); :}
+    | RETURN expresion:ret PUNTO_Y_COMA
+    {: System.out.println("Return statement: " + ret); :}
+    | BREAK PUNTO_Y_COMA
+    | error PUNTO_Y_COMA
+    {: parser.report_error("Error en sentencia - recuperando", parser.scan()); :}
+    ;
+
+declaracion ::=
+    tipo_dato:t IDENTIFICADOR:myid declaracion_aux:aux
+    {:
+        System.out.println("Declaración detectada:");
+        System.out.println("- Tipo: " + t);
+        System.out.println("- ID: " + myid);
+        System.out.println("- Init: " + (aux != null ? aux : "None"));
+
+        int line = myidleft + 1;
+        int col = myidright + 1;
+        parser.addSimbolo(parser.currentScope, myid, line, col, (String)t);
+
+        RESULT = null;
+    :}
+    | tipo_dato error PUNTO_Y_COMA
+    {: parser.report_error("Error en declaración - continuando", parser.scan()); :}
+    ;
+
+declaracion_aux ::=
+    PUNTO_Y_COMA
+    {: RESULT = null; :}
+    | ASIGNA expresion:ex PUNTO_Y_COMA
+    {: RESULT = " = " + ex; :}
+    | ABREEMPAQUE expresion:idx CIERRAEMPAQUE PUNTO_Y_COMA
+    {: RESULT = "[" + idx + "]"; :}
+    | ABREEMPAQUE expresion:idx CIERRAEMPAQUE ASIGNA array_init:ai PUNTO_Y_COMA
+    {: RESULT = "[" + idx + "] = " + ai; :}
+    | error PUNTO_Y_COMA
+    {:
+        parser.report_error("Error en inicialización - continuando", parser.scan());
+        RESULT = "error";
+    :}
+    ;
+
+array_init ::=
+    ABRECUENTO array_item_list:ail CIERRACUENTO
+    {: RESULT = "{" + ail + "}"; :}
+    | ABRECUENTO error CIERRACUENTO
+    {:
+        parser.report_error("Error en inicialización de array - continuando", parser.scan());
+        RESULT = "{error}";
+    :}
+    ;
+
+array_item_list ::=
+    array_item:ai
+    {: RESULT = ai; :}
+    | array_item_list:ail COMA array_item:ai
+    {: RESULT = ail + ", " + ai; :}
+    ;
+
+array_item ::=
+    CHAR_LITERAL:ch    {: RESULT = "'" + ch + "'"; :}
+    | L_INTEGER:li     {: RESULT = li.toString(); :}
+    | FLOAT_LITERAL:fl {: RESULT = fl.toString(); :}
+    | IDENTIFICADOR:id {: RESULT = id; :}
+    | STRING_LITERAL:st{: RESULT = "\"" + st + "\""; :}
+    | BOOL_LITERAL:boo {: RESULT = boo.toString(); :}
+    ;
+
+tipo_dato ::=
+    INTEGER  {: RESULT = "int"; :}
+    | FLOAT  {: RESULT = "float"; :}
+    | BOOL   {: RESULT = "bool"; :}
+    | CHAR   {: RESULT = "char"; :}
+    | STRING {: RESULT = "string"; :}
+    ;
+
+asignacion ::=
+    IDENTIFICADOR:idVar ASIGNA expresion:ex PUNTO_Y_COMA
+    {:
+        System.out.println("Asignación a: " + idVar + " = " + ex);
+        RESULT = "assign(" + idVar + "=" + ex + ")";
+    :}
+    | IDENTIFICADOR:idVar ABREEMPAQUE expresion:pos CIERRAEMPAQUE ASIGNA expresion:rhs PUNTO_Y_COMA
+    {:
+        System.out.println("Asignación array: " + idVar + "[" + pos + "] = " + rhs);
+        RESULT = "assignArr(" + idVar + "[" + pos + "]=" + rhs + ")";
+    :}
+    | error PUNTO_Y_COMA
+    {:
+        parser.report_error("Error en asignación - continuando", parser.scan());
+        RESULT = "assignError";
+    :}
+    ;
+
+funcion ::=
+    tipo_dato:t IDENTIFICADOR:funId
+    {:
+        int line = funIdleft + 1;
+        int col = funIdright + 1;
+        parser.crearTabla((String)t, funId, line, col);
+    :}
+    ABREREGALO parametros:p CIERRAREGALO bloque:b
+    {:
+        System.out.println("Función: " + funId + " tipo:" + t + " params:" + p);
+        parser.currentScope = "global";
+        RESULT = "func[" + t + " " + funId + "(" + p + ")]";
+    :}
+    | tipo_dato error CIERRACUENTO
+    {:
+        parser.report_error("Error en declaración de función - recuperando", parser.scan());
+        parser.currentScope = "global";
+    :}
+    ;
+
+parametros ::=
+    /* epsilon */     {: RESULT = ""; :}
+    | lista_parametros:pp {: RESULT = pp; :}
+    ;
+
+lista_parametros ::=
+    param_dec:pd
+    {: RESULT = pd; :}
+    | lista_parametros:lp COMA param_dec:pd
+    {: RESULT = lp + ", " + pd; :}
+    | error CIERRAREGALO
+    {:
+        parser.report_error("Error en lista de parámetros - continuando", parser.scan());
+        RESULT = "error";
+    :}
+    ;
+
+param_dec ::=
+    tipo_dato:t IDENTIFICADOR:pid
+    {:
+        System.out.println("Parámetro: " + t + " " + pid);
+        int line = pidleft + 1;
+        int col = pidright + 1;
+        parser.addSimbolo(parser.currentScope, pid, line, col, (String)t);
+        RESULT = t + " " + pid;
+    :}
+    ;
+
+control_estructuras ::=
+    if_estructura
+    | while_estructura
+    | for_estructura
+    | switch_estructura
+    ;
+
+if_estructura ::=
+    IF ABREREGALO expresion:cond CIERRAREGALO bloque:b
+    {: RESULT = "if(" + cond + ")" + b; :}
+    | IF ABREREGALO expresion:cond CIERRAREGALO bloque:b1 ELSE bloque:b2
+    {: RESULT = "if(" + cond + ")" + b1 + " else " + b2; :}
+    | IF error bloque:bl
+    {:
+        parser.report_error("Error en estructura if - continuando con el bloque", parser.scan());
+        RESULT = "ifError" + bl;
+    :}
+    ;
+
+while_estructura ::=
+    WHILE ABREREGALO expresion:cond CIERRAREGALO bloque:bl
+    {:
+        RESULT = "while(" + cond + ")" + bl;
+        System.out.println("Estructura while procesada con condición: " + cond);
+    :}
+    | WHILE error bloque:bl
+    {:
+        parser.report_error("Error en estructura while - continuando con el bloque", parser.scan());
+        System.out.println("Recuperación de error en while - continuando con el bloque");
+        RESULT = "whileError" + bl;
+    :}
+    | WHILE ABREREGALO error CIERRAREGALO bloque:bl
+    {:
+        parser.report_error("Error en condición del while - continuando", parser.scan());
+        System.out.println("Recuperación de error en condición while");
+        RESULT = "while(error)" + bl;
+    :}
+    ;
+
+{: RESULT = "while(" + cond + ")" + bl; :}
+    | WHILE error bloque:bl
+    {:
+        parser.report_error("Error en estructura while - continuando con el bloque", parser.scan());
+        RESULT = "whileError" + bl;
+    :}
+    ;
+
+for_estructura ::=
+    FOR ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
+    {: RESULT = "for(" + ini + ", " + cond + ", " + step + ")" + bl; :}
+    | FOR error bloque:bl
+    {:
+        parser.report_error("Error en estructura for - continuando con el bloque", parser.scan());
+        RESULT = "forError" + bl;
+    :}
+    ;
+
+switch_estructura ::=
+    SWITCH ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
+    {: RESULT = "switch(" + sw + ") {" + cs + "}"; :}
+    | SWITCH error CIERRACUENTO
+    {:
+        parser.report_error("Error en estructura switch - recuperando", parser.scan());
+        RESULT = "switchError{}";
+    :}
+    ;
+
+case_blocks ::=
+    case_blocks:prev case_block:cb
+    {: RESULT = prev + " " + cb; :}
+    | case_block:cb
+    {: RESULT = cb; :}
+    | default_block:db
+    {: RESULT = db; :}
+    | error case_block:cb
+    {:
+        parser.report_error("Error en bloques case - continuando", parser.scan());
+        RESULT = "error " + cb;
+    :}
+    ;
+
+case_block ::=
+    CASE L_INTEGER:li DOS_PUNTOS bloque:bl
+    {: RESULT = "case " + li + ": " + bl; :}
+    | CASE CHAR_LITERAL:ch DOS_PUNTOS bloque:bl
+    {: RESULT = "case '" + ch + "': " + bl; :}
+    | CASE error bloque:bl
+    {:
+        parser.report_error("Error en case - continuando con el bloque", parser.scan());
+        RESULT = "caseError: " + bl;
+    :}
+    ;
+
+default_block ::=
+    DEFAULT DOS_PUNTOS bloque:bl
+    {: RESULT = "default: " + bl; :}
+    | DEFAULT error CIERRACUENTO
+    {:
+        parser.report_error("Error en bloque default - recuperando", parser.scan());
+        RESULT = "defaultError";
+    :}
+    ;
+
+expresion ::=
+    expresion:e1 DISYUNCION expresion:e2
+    {: RESULT = "(" + e1 + " || " + e2 + ")"; :}
+    | expresion:e1 CONJUNCION expresion:e2
+    {: RESULT = "(" + e1 + " && " + e2 + ")"; :}
+    | expresion:e1 IGUALDAD expresion:e2
+    {: RESULT = "(" + e1 + " == " + e2 + ")"; :}
+    | expresion:e1 DIFERENTE expresion:e2
+    {: RESULT = "(" + e1 + " != " + e2 + ")"; :}
+    | expresion:e1 MENOR expresion:e2
+    {: RESULT = "(" + e1 + " < " + e2 + ")"; :}
+    | expresion:e1 MENOROIGUAL expresion:e2
+    {: RESULT = "(" + e1 + " <= " + e2 + ")"; :}
+    | expresion:e1 MAYOR expresion:e2
+    {: RESULT = "(" + e1 + " > " + e2 + ")"; :}
+    | expresion:e1 MAYOROIGUAL expresion:e2
+    {: RESULT = "(" + e1 + " >= " + e2 + ")"; :}
+    | expresion:e1 SUMA expresion:e2
+    {: RESULT = "(" + e1 + " + " + e2 + ")"; :}
+    | expresion:e1 RESTA expresion:e2
+    {: RESULT = "(" + e1 + " - " + e2 + ")"; :}
+    | expresion:e1 MULTIPLICACION expresion:e2
+    {: RESULT = "(" + e1 + " * " + e2 + ")"; :}
+    | expresion:e1 DIVISION expresion:e2
+    {: RESULT = "(" + e1 + " / " + e2 + ")"; :}
+    | expresion:e1 MODULE expresion:e2
+    {: RESULT = "(" + e1 + " % " + e2 + ")"; :}
+    | expresion:e1 POTENCIA expresion:e2
+    {: RESULT = "(" + e1 + " ^ " + e2 + ")"; :}
+    | NEGACION expresion:e
+    {: RESULT = "!" + e; :}
+    | RESTA expresion:e
+    {: RESULT = "-" + e; :}
+    | INCREMENTO IDENTIFICADOR:id
+    {:
+        RESULT = "++" + id;
+        System.out.println("Incremento prefijo: ++" + id);
+    :}
+    | DECREMENTO IDENTIFICADOR:id
+    {:
+        RESULT = "--" + id;
+        System.out.println("Decremento prefijo: --" + id);
+    :}
+    | IDENTIFICADOR:id INCREMENTO
+    {:
+        RESULT = id + "++";
+        System.out.println("Incremento postfijo: " + id + "++");
+    :}
+    | IDENTIFICADOR:id DECREMENTO
+    {:
+        RESULT = id + "--";
+        System.out.println("Decremento postfijo: " + id + "--");
+    :}
+    | IDENTIFICADOR:id
+    {: RESULT = id; :}
+    | L_INTEGER:lint
+    {: RESULT = lint.toString(); :}
+    | FLOAT_LITERAL:flit
+    {: RESULT = flit.toString(); :}
+    | CHAR_LITERAL:chl
+    {: RESULT = "'" + chl + "'"; :}
+    | STRING_LITERAL:str
+    {: RESULT = "\"" + str + "\""; :}
+    | BOOL_LITERAL:boo
+    {: RESULT = boo.toString(); :}
+    | IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
+    {: RESULT = arr + "[" + ex + "]"; :}
+    | ABREREGALO expresion:ex CIERRAREGALO
+    {: RESULT = "(" + ex + ")"; :}
+    | error CIERRAREGALO
+    {:
+        parser.report_error("Error en expresión - recuperando hasta ')'", parser.scan());
+        RESULT = "errorExpr";
+    :}
+    | error PUNTO_Y_COMA
+    {:
+        parser.report_error("Error en expresión - recuperando hasta ';'", parser.scan());
+        RESULT = "errorExpr";
+    :}
+    ;
