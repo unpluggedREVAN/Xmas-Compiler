@@ -78,7 +78,7 @@ parser code {:
         if (!tablaSimbolos.containsKey(scope)) {
             tablaSimbolos.put(scope, new ArrayList<String>());
         }
-        String info = "line:" + line + " col:" + col
+        String info = "line:" + line - 1 + " col:" + col - 1
                     + " lex:" + lexeme
                     + " scope:" + scope
                     + " type:" + type;
