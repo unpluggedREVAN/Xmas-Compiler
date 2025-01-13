@@ -603,6 +603,20 @@ public class Parser extends java_cup.runtime.lr_parser {
     // MÉTODOS PARA MANEJO DE ERRORES
     // ---------------------------------------------------------------------
 
+    /*
+    @Override
+    public Symbol parse() throws Exception {
+        Symbol tok;
+        // Modificación para imprimir cada token procesado
+        while ((tok = s.next_token()).sym != sym.EOF) {
+            System.out.println("Token procesado: " + tok.value + " (sym: " + tok.sym + ")");
+            // Procesa el token normalmente
+            super.parse();
+        }
+        return null; // Para cumplir con el contrato de `parse()`
+    }
+    */
+
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Unexpected token", sym);
@@ -652,32 +666,34 @@ public class Parser extends java_cup.runtime.lr_parser {
     private void recover_until_sync_point() {
         try {
             Symbol tok;
-            // Lista de tokens de sincronización
             Set<Integer> sync_tokens = new HashSet<>(Arrays.asList(
-                sym.PUNTO_Y_COMA,    // ;
-                sym.CIERRACUENTO,    // }
-                sym.CIERRAREGALO,    // )
-                sym.FINREGALO,       // statement terminator
-                sym.ELSE,            // tokens de control
-                sym.CASE,
-                sym.DEFAULT
+                sym.PUNTO_Y_COMA, sym.CIERRACUENTO, sym.CIERRAREGALO, sym.FINREGALO, sym.ELSE, sym.CASE, sym.DEFAULT
             ));
+            int count = 0;
 
             do {
                 tok = s.next_token();
-                // Continuar hasta encontrar un token de sincronización o EOF
-                if (tok.sym == sym.EOF) {
-                    System.err.println("Reached end of file during error recovery");
+                System.out.println("Token leído durante recuperación: " + (tok != null ? tok.value : "null"));
+
+                if (tok == null) {
+                    System.err.println("Error: Escáner devolvió null. ¿Token no reconocido?");
                     return;
                 }
-            } while (!sync_tokens.contains(tok.sym));
 
-            System.out.println("Recovered at synchronization point: " + tok.value);
+                if (count++ > 100) {
+                    System.err.println("Warning: Límite de recuperación alcanzado");
+                    return;
+                }
+            } while (tok.sym != sym.EOF && !sync_tokens.contains(tok.sym));
 
+            if (tok != null) {
+                System.out.println("Recovered at synchronization point: " + tok.value);
+            }
         } catch (Exception e) {
             System.err.println("Error during recovery: " + e.getMessage());
         }
     }
+
 
     // Mejorar el método sync_until_token existente
     public void sync_until_token(int syncToken) {
