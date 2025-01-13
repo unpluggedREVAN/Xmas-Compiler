@@ -10,8 +10,9 @@ public class sym {
   /* terminals */
   public static final int STRING_LITERAL = 12;
   public static final int CHAR = 7;
-  public static final int PUNTO_Y_COMA = 51;
+  public static final int PUNTO_Y_COMA = 52;
   public static final int CHAR_LITERAL = 11;
+  public static final int FINREGALO = 51;
   public static final int CIERRACUENTO = 46;
   public static final int CASE = 37;
   public static final int DIFERENTE = 28;
@@ -35,7 +36,7 @@ public class sym {
   public static final int MAYOROIGUAL = 26;
   public static final int DECREMENTO = 15;
   public static final int error = 1;
-  public static final int COMA = 52;
+  public static final int COMA = 53;
   public static final int ABRECUENTO = 45;
   public static final int NEGACION = 31;
   public static final int MENOR = 23;
@@ -113,6 +114,7 @@ public class sym {
   "CIERRAREGALO",
   "ABREEMPAQUE",
   "CIERRAEMPAQUE",
+  "FINREGALO",
   "PUNTO_Y_COMA",
   "COMA"
   };

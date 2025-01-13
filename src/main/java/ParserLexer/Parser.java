@@ -9,6 +9,9 @@ import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 import java_cup.runtime.XMLElement;
 
 /** CUP v0.11b 20160615 (GIT 4ac7450) generated parser.
@@ -82,7 +85,7 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\ufffc\010\ufffc\011\ufffc\056\ufffc\001\002\000\016\005\ufffd" +
     "\006\ufffd\007\ufffd\010\ufffd\011\ufffd\056\ufffd\001\002\000" +
     "\004\004\020\001\002\000\004\004\uffdb\001\002\000\004" +
-    "\004\uffdd\001\002\000\012\017\025\061\uffd7\063\022\065" +
+    "\004\uffdd\001\002\000\012\017\025\061\uffd7\063\022\066" +
     "\024\001\002\000\004\061\136\001\002\000\032\003\031" +
     "\004\042\012\040\013\032\014\026\015\035\016\027\020" +
     "\034\021\036\024\037\041\041\061\033\001\002\000\044" +
@@ -96,42 +99,42 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\034\021\036\024\037\041\041\061\033\001\002\000\046" +
     "\023\uffa4\024\uffa4\025\uffa4\026\uffa4\027\uffa4\030\uffa4\031" +
     "\uffa4\032\uffa4\033\uffa4\034\uffa4\035\uffa4\036\uffa4\037\uffa4" +
-    "\040\uffa4\062\uffa4\064\uffa4\065\uffa4\066\uffa4\001\002\000" +
+    "\040\uffa4\062\uffa4\064\uffa4\066\uffa4\067\uffa4\001\002\000" +
     "\046\023\uffa5\024\uffa5\025\uffa5\026\uffa5\027\uffa5\030\uffa5" +
     "\031\uffa5\032\uffa5\033\uffa5\034\uffa5\035\uffa5\036\uffa5\037" +
-    "\uffa5\040\uffa5\062\uffa5\064\uffa5\065\uffa5\066\uffa5\001\002" +
+    "\uffa5\040\uffa5\062\uffa5\064\uffa5\066\uffa5\067\uffa5\001\002" +
     "\000\040\023\055\024\063\025\062\026\056\027\051\030" +
     "\053\031\054\032\047\033\061\034\052\035\050\036\064" +
-    "\037\057\040\060\065\113\001\002\000\004\062\112\001" +
+    "\037\057\040\060\066\113\001\002\000\004\062\112\001" +
     "\002\000\046\023\uffa7\024\uffa7\025\uffa7\026\uffa7\027\uffa7" +
     "\030\uffa7\031\uffa7\032\uffa7\033\uffa7\034\uffa7\035\uffa7\036" +
-    "\uffa7\037\uffa7\040\uffa7\062\uffa7\064\uffa7\065\uffa7\066\uffa7" +
+    "\uffa7\037\uffa7\040\uffa7\062\uffa7\064\uffa7\066\uffa7\067\uffa7" +
     "\001\002\000\032\003\031\004\042\012\040\013\032\014" +
     "\026\015\035\016\027\020\034\021\036\024\037\041\041" +
     "\061\033\001\002\000\004\004\107\001\002\000\046\023" +
     "\uffa6\024\uffa6\025\uffa6\026\uffa6\027\uffa6\030\uffa6\031\uffa6" +
     "\032\uffa6\033\uffa6\034\uffa6\035\uffa6\036\uffa6\037\uffa6\040" +
-    "\uffa6\062\uffa6\064\uffa6\065\uffa6\066\uffa6\001\002\000\004" +
+    "\uffa6\062\uffa6\064\uffa6\066\uffa6\067\uffa6\001\002\000\004" +
     "\004\106\001\002\000\032\003\031\004\042\012\040\013" +
     "\032\014\026\015\035\016\027\020\034\021\036\024\037" +
     "\041\041\061\033\001\002\000\046\023\uffa8\024\uffa8\025" +
     "\uffa8\026\uffa8\027\uffa8\030\uffa8\031\uffa8\032\uffa8\033\uffa8" +
     "\034\uffa8\035\uffa8\036\uffa8\037\uffa8\040\uffa8\062\uffa8\064" +
-    "\uffa8\065\uffa8\066\uffa8\001\002\000\032\003\031\004\042" +
+    "\uffa8\066\uffa8\067\uffa8\001\002\000\032\003\031\004\042" +
     "\012\040\013\032\014\026\015\035\016\027\020\034\021" +
     "\036\024\037\041\041\061\033\001\002\000\054\020\045" +
     "\021\043\023\uffa9\024\uffa9\025\uffa9\026\uffa9\027\uffa9\030" +
     "\uffa9\031\uffa9\032\uffa9\033\uffa9\034\uffa9\035\uffa9\036\uffa9" +
-    "\037\uffa9\040\uffa9\062\uffa9\063\044\064\uffa9\065\uffa9\066" +
+    "\037\uffa9\040\uffa9\062\uffa9\063\044\064\uffa9\066\uffa9\067" +
     "\uffa9\001\002\000\046\023\uffaa\024\uffaa\025\uffaa\026\uffaa" +
     "\027\uffaa\030\uffaa\031\uffaa\032\uffaa\033\uffaa\034\uffaa\035" +
-    "\uffaa\036\uffaa\037\uffaa\040\uffaa\062\uffaa\064\uffaa\065\uffaa" +
-    "\066\uffaa\001\002\000\032\003\031\004\042\012\040\013" +
+    "\uffaa\036\uffaa\037\uffaa\040\uffaa\062\uffaa\064\uffaa\066\uffaa" +
+    "\067\uffaa\001\002\000\032\003\031\004\042\012\040\013" +
     "\032\014\026\015\035\016\027\020\034\021\036\024\037" +
     "\041\041\061\033\001\002\000\046\023\uffab\024\uffab\025" +
     "\uffab\026\uffab\027\uffab\030\uffab\031\uffab\032\uffab\033\uffab" +
     "\034\uffab\035\uffab\036\uffab\037\uffab\040\uffab\062\uffab\064" +
-    "\uffab\065\uffab\066\uffab\001\002\000\040\023\055\024\063" +
+    "\uffab\066\uffab\067\uffab\001\002\000\040\023\055\024\063" +
     "\025\062\026\056\027\051\030\053\031\054\032\047\033" +
     "\061\034\052\035\050\036\064\037\057\040\060\064\065" +
     "\001\002\000\032\003\031\004\042\012\040\013\032\014" +
@@ -166,98 +169,98 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\026\015\035\016\027\020\034\021\036\024\037\041\041" +
     "\061\033\001\002\000\046\023\uffa3\024\uffa3\025\uffa3\026" +
     "\uffa3\027\uffa3\030\uffa3\031\uffa3\032\uffa3\033\uffa3\034\uffa3" +
-    "\035\uffa3\036\uffa3\037\uffa3\040\uffa3\062\uffa3\064\uffa3\065" +
-    "\uffa3\066\uffa3\001\002\000\046\023\uffba\024\uffba\025\uffba" +
+    "\035\uffa3\036\uffa3\037\uffa3\040\uffa3\062\uffa3\064\uffa3\066" +
+    "\uffa3\067\uffa3\001\002\000\046\023\uffba\024\uffba\025\uffba" +
     "\026\uffba\027\uffba\030\uffba\031\uffba\032\uffba\033\uffba\034" +
     "\uffba\035\uffba\036\uffba\037\057\040\060\062\uffba\064\uffba" +
-    "\065\uffba\066\uffba\001\002\000\046\023\uffb4\024\uffb4\025" +
+    "\066\uffba\067\uffba\001\002\000\046\023\uffb4\024\uffb4\025" +
     "\uffb4\026\uffb4\027\uffb4\030\uffb4\031\054\032\047\033\061" +
     "\034\052\035\050\036\064\037\057\040\060\062\uffb4\064" +
-    "\uffb4\065\uffb4\066\uffb4\001\002\000\046\023\055\024\063" +
+    "\uffb4\066\uffb4\067\uffb4\001\002\000\046\023\055\024\063" +
     "\025\uffb2\026\uffb2\027\uffb2\030\uffb2\031\054\032\047\033" +
     "\061\034\052\035\050\036\064\037\057\040\060\062\uffb2" +
-    "\064\uffb2\065\uffb2\066\uffb2\001\002\000\046\023\uffb7\024" +
+    "\064\uffb2\066\uffb2\067\uffb2\001\002\000\046\023\uffb7\024" +
     "\uffb7\025\uffb7\026\uffb7\027\uffb7\030\uffb7\031\uffb7\032\uffb7" +
     "\033\uffb7\034\uffb7\035\050\036\064\037\057\040\060\062" +
-    "\uffb7\064\uffb7\065\uffb7\066\uffb7\001\002\000\046\023\uffbd" +
+    "\uffb7\064\uffb7\066\uffb7\067\uffb7\001\002\000\046\023\uffbd" +
     "\024\uffbd\025\uffbd\026\uffbd\027\uffbd\030\uffbd\031\uffbd\032" +
     "\uffbd\033\uffbd\034\uffbd\035\uffbd\036\uffbd\037\uffbd\040\uffbd" +
-    "\062\uffbd\064\uffbd\065\uffbd\066\uffbd\001\002\000\046\023" +
+    "\062\uffbd\064\uffbd\066\uffbd\067\uffbd\001\002\000\046\023" +
     "\uffbc\024\uffbc\025\uffbc\026\uffbc\027\uffbc\030\uffbc\031\uffbc" +
     "\032\uffbc\033\uffbc\034\uffbc\035\uffbc\036\uffbc\037\uffbc\040" +
-    "\060\062\uffbc\064\uffbc\065\uffbc\066\uffbc\001\002\000\046" +
+    "\060\062\uffbc\064\uffbc\066\uffbc\067\uffbc\001\002\000\046" +
     "\023\055\024\063\025\uffb3\026\uffb3\027\uffb3\030\uffb3\031" +
     "\054\032\047\033\061\034\052\035\050\036\064\037\057" +
-    "\040\060\062\uffb3\064\uffb3\065\uffb3\066\uffb3\001\002\000" +
+    "\040\060\062\uffb3\064\uffb3\066\uffb3\067\uffb3\001\002\000" +
     "\046\023\uffb5\024\uffb5\025\uffb5\026\uffb5\027\uffb5\030\uffb5" +
     "\031\054\032\047\033\061\034\052\035\050\036\064\037" +
-    "\057\040\060\062\uffb5\064\uffb5\065\uffb5\066\uffb5\001\002" +
+    "\057\040\060\062\uffb5\064\uffb5\066\uffb5\067\uffb5\001\002" +
     "\000\046\023\uffb9\024\uffb9\025\uffb9\026\uffb9\027\uffb9\030" +
     "\uffb9\031\uffb9\032\uffb9\033\uffb9\034\uffb9\035\050\036\064" +
-    "\037\057\040\060\062\uffb9\064\uffb9\065\uffb9\066\uffb9\001" +
+    "\037\057\040\060\062\uffb9\064\uffb9\066\uffb9\067\uffb9\001" +
     "\002\000\046\023\055\024\063\025\062\026\056\027\051" +
     "\030\053\031\054\032\047\033\061\034\052\035\050\036" +
-    "\064\037\057\040\060\062\uffb0\064\uffb0\065\uffb0\066\uffb0" +
+    "\064\037\057\040\060\062\uffb0\064\uffb0\066\uffb0\067\uffb0" +
     "\001\002\000\046\023\uffb6\024\uffb6\025\uffb6\026\uffb6\027" +
     "\uffb6\030\uffb6\031\uffb6\032\uffb6\033\uffb6\034\uffb6\035\050" +
-    "\036\064\037\057\040\060\062\uffb6\064\uffb6\065\uffb6\066" +
+    "\036\064\037\057\040\060\062\uffb6\064\uffb6\066\uffb6\067" +
     "\uffb6\001\002\000\046\023\055\024\063\025\uffb1\026\uffb1" +
     "\027\uffb1\030\uffb1\031\054\032\047\033\061\034\052\035" +
-    "\050\036\064\037\057\040\060\062\uffb1\064\uffb1\065\uffb1" +
-    "\066\uffb1\001\002\000\046\023\uffbb\024\uffbb\025\uffbb\026" +
+    "\050\036\064\037\057\040\060\062\uffb1\064\uffb1\066\uffb1" +
+    "\067\uffb1\001\002\000\046\023\uffbb\024\uffbb\025\uffbb\026" +
     "\uffbb\027\uffbb\030\uffbb\031\uffbb\032\uffbb\033\uffbb\034\uffbb" +
-    "\035\uffbb\036\uffbb\037\057\040\060\062\uffbb\064\uffbb\065" +
-    "\uffbb\066\uffbb\001\002\000\046\023\uffb8\024\uffb8\025\uffb8" +
+    "\035\uffbb\036\uffbb\037\057\040\060\062\uffbb\064\uffbb\066" +
+    "\uffbb\067\uffbb\001\002\000\046\023\uffb8\024\uffb8\025\uffb8" +
     "\026\uffb8\027\uffb8\030\uffb8\031\uffb8\032\uffb8\033\uffb8\034" +
     "\uffb8\035\050\036\064\037\057\040\060\062\uffb8\064\uffb8" +
-    "\065\uffb8\066\uffb8\001\002\000\046\023\055\024\063\025" +
+    "\066\uffb8\067\uffb8\001\002\000\046\023\055\024\063\025" +
     "\062\026\056\027\051\030\uffaf\031\054\032\047\033\061" +
     "\034\052\035\050\036\064\037\057\040\060\062\uffaf\064" +
-    "\uffaf\065\uffaf\066\uffaf\001\002\000\046\023\uffae\024\uffae" +
+    "\uffaf\066\uffaf\067\uffaf\001\002\000\046\023\uffae\024\uffae" +
     "\025\uffae\026\uffae\027\uffae\030\uffae\031\054\032\047\033" +
     "\061\034\052\035\050\036\064\037\057\040\060\062\uffae" +
-    "\064\uffae\065\uffae\066\uffae\001\002\000\046\023\uffac\024" +
+    "\064\uffae\066\uffae\067\uffae\001\002\000\046\023\uffac\024" +
     "\uffac\025\uffac\026\uffac\027\uffac\030\uffac\031\uffac\032\uffac" +
     "\033\uffac\034\uffac\035\uffac\036\uffac\037\uffac\040\uffac\062" +
-    "\uffac\064\uffac\065\uffac\066\uffac\001\002\000\046\023\uffad" +
+    "\uffac\064\uffac\066\uffac\067\uffac\001\002\000\046\023\uffad" +
     "\024\uffad\025\uffad\026\uffad\027\uffad\030\uffad\031\uffad\032" +
     "\uffad\033\uffad\034\uffad\035\uffad\036\uffad\037\uffad\040\uffad" +
-    "\062\uffad\064\uffad\065\uffad\066\uffad\001\002\000\040\023" +
+    "\062\uffad\064\uffad\066\uffad\067\uffad\001\002\000\040\023" +
     "\055\024\063\025\062\026\056\027\051\030\053\031\054" +
     "\032\047\033\061\034\052\035\050\036\064\037\057\040" +
     "\060\062\111\001\002\000\046\023\uffa2\024\uffa2\025\uffa2" +
     "\026\uffa2\027\uffa2\030\uffa2\031\uffa2\032\uffa2\033\uffa2\034" +
     "\uffa2\035\uffa2\036\uffa2\037\uffa2\040\uffa2\062\uffa2\064\uffa2" +
-    "\065\uffa2\066\uffa2\001\002\000\046\023\uffa1\024\uffa1\025" +
+    "\066\uffa2\067\uffa2\001\002\000\046\023\uffa1\024\uffa1\025" +
     "\uffa1\026\uffa1\027\uffa1\030\uffa1\031\uffa1\032\uffa1\033\uffa1" +
     "\034\uffa1\035\uffa1\036\uffa1\037\uffa1\040\uffa1\062\uffa1\064" +
-    "\uffa1\065\uffa1\066\uffa1\001\002\000\044\004\uffea\005\uffea" +
+    "\uffa1\066\uffa1\067\uffa1\001\002\000\044\004\uffea\005\uffea" +
     "\006\uffea\007\uffea\010\uffea\011\uffea\022\uffea\042\uffea\044" +
     "\uffea\045\uffea\046\uffea\051\uffea\052\uffea\054\uffea\055\uffea" +
     "\056\uffea\060\uffea\001\002\000\040\023\055\024\063\025" +
     "\062\026\056\027\051\030\053\031\054\032\047\033\061" +
     "\034\052\035\050\036\064\037\057\040\060\064\115\001" +
-    "\002\000\006\017\117\065\116\001\002\000\044\004\uffe9" +
+    "\002\000\006\017\117\066\116\001\002\000\044\004\uffe9" +
     "\005\uffe9\006\uffe9\007\uffe9\010\uffe9\011\uffe9\022\uffe9\042" +
     "\uffe9\044\uffe9\045\uffe9\046\uffe9\051\uffe9\052\uffe9\054\uffe9" +
     "\055\uffe9\056\uffe9\060\uffe9\001\002\000\004\057\121\001" +
-    "\002\000\004\065\135\001\002\000\016\004\125\012\122" +
+    "\002\000\004\066\135\001\002\000\016\004\125\012\122" +
     "\013\126\014\127\015\124\016\131\001\002\000\006\060" +
-    "\uffe3\066\uffe3\001\002\000\006\060\133\066\132\001\002" +
-    "\000\006\060\uffe4\066\uffe4\001\002\000\006\060\uffe1\066" +
-    "\uffe1\001\002\000\006\060\uffe2\066\uffe2\001\002\000\006" +
-    "\060\uffdf\066\uffdf\001\002\000\006\060\uffe6\066\uffe6\001" +
-    "\002\000\006\060\uffe0\066\uffe0\001\002\000\016\004\125" +
+    "\uffe3\067\uffe3\001\002\000\006\060\133\067\132\001\002" +
+    "\000\006\060\uffe4\067\uffe4\001\002\000\006\060\uffe1\067" +
+    "\uffe1\001\002\000\006\060\uffe2\067\uffe2\001\002\000\006" +
+    "\060\uffdf\067\uffdf\001\002\000\006\060\uffe6\067\uffe6\001" +
+    "\002\000\006\060\uffe0\067\uffe0\001\002\000\016\004\125" +
     "\012\122\013\126\014\127\015\124\016\131\001\002\000" +
-    "\004\065\uffe7\001\002\000\006\060\uffe5\066\uffe5\001\002" +
+    "\004\066\uffe7\001\002\000\006\060\uffe5\067\uffe5\001\002" +
     "\000\044\004\uffe8\005\uffe8\006\uffe8\007\uffe8\010\uffe8\011" +
     "\uffe8\022\uffe8\042\uffe8\044\uffe8\045\uffe8\046\uffe8\051\uffe8" +
     "\052\uffe8\054\uffe8\055\uffe8\056\uffe8\060\uffe8\001\002\000" +
     "\016\005\005\006\017\007\006\010\012\011\016\062\uffd5" +
-    "\001\002\000\006\062\uffd3\066\uffd3\001\002\000\004\004" +
+    "\001\002\000\006\062\uffd3\067\uffd3\001\002\000\004\004" +
     "\312\001\002\000\004\062\145\001\002\000\006\062\uffd4" +
-    "\066\143\001\002\000\014\005\005\006\017\007\006\010" +
-    "\012\011\016\001\002\000\006\062\uffd2\066\uffd2\001\002" +
+    "\067\143\001\002\000\014\005\005\006\017\007\006\010" +
+    "\012\011\016\001\002\000\006\062\uffd2\067\uffd2\001\002" +
     "\000\022\003\146\005\ufff9\006\ufff9\007\ufff9\010\ufff9\011" +
     "\ufff9\056\ufff9\057\150\001\002\000\004\060\311\001\002" +
     "\000\016\005\uffd6\006\uffd6\007\uffd6\010\uffd6\011\uffd6\056" +
@@ -290,21 +293,21 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\ufff6\052\ufff6\054\ufff6\055\ufff6\060\ufff6\001\002\000\042" +
     "\004\ufff2\005\ufff2\006\ufff2\007\ufff2\010\ufff2\011\ufff2\022" +
     "\ufff2\042\ufff2\044\ufff2\045\ufff2\046\ufff2\051\ufff2\052\ufff2" +
-    "\054\ufff2\055\ufff2\060\ufff2\001\002\000\004\065\227\001" +
+    "\054\ufff2\055\ufff2\060\ufff2\001\002\000\004\066\227\001" +
     "\002\000\042\004\uffed\005\uffed\006\uffed\007\uffed\010\uffed" +
     "\011\uffed\022\uffed\042\uffed\044\uffed\045\uffed\046\uffed\051" +
     "\uffed\052\uffed\054\uffed\055\uffed\060\uffed\001\002\000\042" +
     "\004\uffce\005\uffce\006\uffce\007\uffce\010\uffce\011\uffce\022" +
     "\uffce\042\uffce\044\uffce\045\uffce\046\uffce\051\uffce\052\uffce" +
-    "\054\uffce\055\uffce\060\uffce\001\002\000\004\065\226\001" +
+    "\054\uffce\055\uffce\060\uffce\001\002\000\004\066\226\001" +
     "\002\000\004\061\222\001\002\000\006\017\212\063\211" +
     "\001\002\000\004\061\176\001\002\000\006\003\177\004" +
-    "\174\001\002\000\004\062\207\001\002\000\004\066\201" +
+    "\174\001\002\000\004\062\207\001\002\000\004\067\201" +
     "\001\002\000\032\003\031\004\042\012\040\013\032\014" +
     "\026\015\035\016\027\020\034\021\036\024\037\041\041" +
     "\061\033\001\002\000\040\023\055\024\063\025\062\026" +
     "\056\027\051\030\053\031\054\032\047\033\061\034\052" +
-    "\035\050\036\064\037\057\040\060\066\203\001\002\000" +
+    "\035\050\036\064\037\057\040\060\067\203\001\002\000" +
     "\032\003\031\004\042\012\040\013\032\014\026\015\035" +
     "\016\027\020\034\021\036\024\037\041\041\061\033\001" +
     "\002\000\040\023\055\024\063\025\062\026\056\027\051" +
@@ -328,9 +331,9 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\036\024\037\041\041\061\033\001\002\000\040\023\055" +
     "\024\063\025\062\026\056\027\051\030\053\031\054\032" +
     "\047\033\061\034\052\035\050\036\064\037\057\040\060" +
-    "\065\214\001\002\000\044\004\uffd9\005\uffd9\006\uffd9\007" +
+    "\066\214\001\002\000\044\004\uffd9\005\uffd9\006\uffd9\007" +
     "\uffd9\010\uffd9\011\uffd9\022\uffd9\042\uffd9\044\uffd9\045\uffd9" +
-    "\046\uffd9\051\uffd9\052\uffd9\054\uffd9\055\uffd9\060\uffd9\066" +
+    "\046\uffd9\051\uffd9\052\uffd9\054\uffd9\055\uffd9\060\uffd9\067" +
     "\uffd9\001\002\000\040\023\055\024\063\025\062\026\056" +
     "\027\051\030\053\031\054\032\047\033\061\034\052\035" +
     "\050\036\064\037\057\040\060\064\216\001\002\000\004" +
@@ -338,15 +341,15 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\032\014\026\015\035\016\027\020\034\021\036\024\037" +
     "\041\041\061\033\001\002\000\040\023\055\024\063\025" +
     "\062\026\056\027\051\030\053\031\054\032\047\033\061" +
-    "\034\052\035\050\036\064\037\057\040\060\065\221\001" +
+    "\034\052\035\050\036\064\037\057\040\060\066\221\001" +
     "\002\000\044\004\uffd8\005\uffd8\006\uffd8\007\uffd8\010\uffd8" +
     "\011\uffd8\022\uffd8\042\uffd8\044\uffd8\045\uffd8\046\uffd8\051" +
-    "\uffd8\052\uffd8\054\uffd8\055\uffd8\060\uffd8\066\uffd8\001\002" +
+    "\uffd8\052\uffd8\054\uffd8\055\uffd8\060\uffd8\067\uffd8\001\002" +
     "\000\032\003\031\004\042\012\040\013\032\014\026\015" +
     "\035\016\027\020\034\021\036\024\037\041\041\061\033" +
     "\001\002\000\040\023\055\024\063\025\062\026\056\027" +
     "\051\030\053\031\054\032\047\033\061\034\052\035\050" +
-    "\036\064\037\057\040\060\062\224\001\002\000\004\065" +
+    "\036\064\037\057\040\060\062\224\001\002\000\004\066" +
     "\225\001\002\000\042\004\ufff1\005\ufff1\006\ufff1\007\ufff1" +
     "\010\ufff1\011\ufff1\022\ufff1\042\ufff1\044\ufff1\045\ufff1\046" +
     "\ufff1\051\ufff1\052\ufff1\054\ufff1\055\ufff1\060\ufff1\001\002" +
@@ -356,7 +359,7 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\uffee\005\uffee\006\uffee\007\uffee\010\uffee\011\uffee\022\uffee" +
     "\042\uffee\044\uffee\045\uffee\046\uffee\051\uffee\052\uffee\054" +
     "\uffee\055\uffee\060\uffee\001\002\000\010\017\025\063\022" +
-    "\065\024\001\002\000\032\003\233\004\042\012\040\013" +
+    "\066\024\001\002\000\032\003\233\004\042\012\040\013" +
     "\032\014\026\015\035\016\027\020\034\021\036\024\037" +
     "\041\041\061\033\001\002\000\040\023\055\024\063\025" +
     "\062\026\056\027\051\030\053\031\054\032\047\033\061" +
@@ -408,7 +411,7 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\uffc5\042\uffc5\044\uffc5\045\uffc5\046\uffc5\051\uffc5\052\uffc5" +
     "\054\uffc5\055\uffc5\060\uffc5\001\002\000\040\023\055\024" +
     "\063\025\062\026\056\027\051\030\053\031\054\032\047" +
-    "\033\061\034\052\035\050\036\064\037\057\040\060\065" +
+    "\033\061\034\052\035\050\036\064\037\057\040\060\066" +
     "\273\001\002\000\042\004\uffef\005\uffef\006\uffef\007\uffef" +
     "\010\uffef\011\uffef\022\uffef\042\uffef\044\uffef\045\uffef\046" +
     "\uffef\051\uffef\052\uffef\054\uffef\055\uffef\060\uffef\001\002" +
@@ -438,14 +441,14 @@ public class Parser extends java_cup.runtime.lr_parser {
     "\uffc9\006\uffc9\007\uffc9\010\uffc9\011\uffc9\022\uffc9\042\uffc9" +
     "\044\uffc9\045\uffc9\046\uffc9\051\uffc9\052\uffc9\054\uffc9\055" +
     "\uffc9\060\uffc9\001\002\000\004\004\306\001\002\000\004" +
-    "\062\307\001\002\000\004\065\310\001\002\000\042\004" +
+    "\062\307\001\002\000\004\066\310\001\002\000\042\004" +
     "\ufff0\005\ufff0\006\ufff0\007\ufff0\010\ufff0\011\ufff0\022\ufff0" +
     "\042\ufff0\044\ufff0\045\ufff0\046\ufff0\051\ufff0\052\ufff0\054" +
     "\ufff0\055\ufff0\060\ufff0\001\002\000\052\002\ufff8\004\ufff8" +
     "\005\ufff8\006\ufff8\007\ufff8\010\ufff8\011\ufff8\022\ufff8\042" +
     "\ufff8\043\ufff8\044\ufff8\045\ufff8\046\ufff8\047\ufff8\051\ufff8" +
     "\052\ufff8\054\ufff8\055\ufff8\056\ufff8\060\ufff8\001\002\000" +
-    "\006\062\uffd1\066\uffd1\001\002\000\010\002\ufff9\003\146" +
+    "\006\062\uffd1\067\uffd1\001\002\000\010\002\ufff9\003\146" +
     "\057\150\001\002\000\016\005\ufffe\006\ufffe\007\ufffe\010" +
     "\ufffe\011\ufffe\056\ufffe\001\002\000\004\002\000\001\002" +
     "\000\004\002\uffff\001\002\000\004\002\001\001\002" });
@@ -601,14 +604,22 @@ public class Parser extends java_cup.runtime.lr_parser {
     // ---------------------------------------------------------------------
 
     @Override
+    public void syntax_error(Symbol sym) {
+        report_error("Unexpected token", sym);
+        // Intentar recuperación después de reportar el error
+        recover_until_sync_point();
+    }
+
+    @Override
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        System.err.println("**Unrecoverable syntax error** en token: "
+        // Log the error but don't throw exception
+        System.err.println("Attempting to recover from unrecovered syntax error at token: "
                            + cur_token.value
                            + " (linea " + (cur_token.left+1)
                            + ", col " + (cur_token.right+1) + ")");
-        // Sincronizar hasta EOF
-        sync_until_token(sym.EOF);
-        // No se lanza excepción => se intenta continuar
+
+        // Try to recover by skipping tokens until a synchronization point
+        recover_until_sync_point();
     }
 
     @Override
@@ -616,10 +627,10 @@ public class Parser extends java_cup.runtime.lr_parser {
         if (info instanceof Symbol) {
             report_error(message, (Symbol)info);
         } else {
-            System.err.println("Fatal error: " + message);
+            System.err.println("Attempting to recover from fatal error: " + message);
         }
-        // Sincronizar hasta EOF
-        sync_until_token(sym.EOF);
+        // Try to recover instead of stopping
+        recover_until_sync_point();
     }
 
     public void report_error(String message, Symbol sym) {
@@ -637,20 +648,61 @@ public class Parser extends java_cup.runtime.lr_parser {
         }
     }
 
-    @Override
-    public void syntax_error(Symbol sym) {
-        report_error("Unexpected token", sym);
-    }
-
-    // Consumir tokens hasta encontrar 'syncToken' o EOF
-    public void sync_until_token(int syncToken) {
-        Symbol tok;
+    // Nuevo método para recuperación mejorada
+    private void recover_until_sync_point() {
         try {
+            Symbol tok;
+            // Lista de tokens de sincronización
+            Set<Integer> sync_tokens = new HashSet<>(Arrays.asList(
+                sym.PUNTO_Y_COMA,    // ;
+                sym.CIERRACUENTO,    // }
+                sym.CIERRAREGALO,    // )
+                sym.FINREGALO,       // statement terminator
+                sym.ELSE,            // tokens de control
+                sym.CASE,
+                sym.DEFAULT
+            ));
+
             do {
                 tok = s.next_token();
-            } while (tok.sym != syncToken && tok.sym != sym.EOF);
+                // Continuar hasta encontrar un token de sincronización o EOF
+                if (tok.sym == sym.EOF) {
+                    System.err.println("Reached end of file during error recovery");
+                    return;
+                }
+            } while (!sync_tokens.contains(tok.sym));
+
+            System.out.println("Recovered at synchronization point: " + tok.value);
+
         } catch (Exception e) {
-            System.err.println("Error en sync_until_token: " + e.getMessage());
+            System.err.println("Error during recovery: " + e.getMessage());
+        }
+    }
+
+    // Mejorar el método sync_until_token existente
+    public void sync_until_token(int syncToken) {
+        try {
+            Symbol tok;
+            int skippedTokens = 0;
+            do {
+                tok = s.next_token();
+                skippedTokens++;
+
+                if (skippedTokens > 100) {  // Límite de seguridad
+                    System.err.println("Warning: Skipped too many tokens during recovery");
+                    return;
+                }
+
+                if (tok.sym == sym.EOF) {
+                    System.err.println("Reached EOF during sync");
+                    return;
+                }
+            } while (tok.sym != syncToken);
+
+            System.out.println("Successfully synchronized to token: " + tok.value);
+
+        } catch (Exception e) {
+            System.err.println("Error in sync_until_token: " + e.getMessage());
         }
     }
 

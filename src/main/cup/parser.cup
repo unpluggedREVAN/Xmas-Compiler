@@ -15,6 +15,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
+
 parser code {:
     private Lexer s;
 
@@ -36,14 +40,22 @@ parser code {:
     // ---------------------------------------------------------------------
 
     @Override
+    public void syntax_error(Symbol sym) {
+        report_error("Unexpected token", sym);
+        // Intentar recuperación después de reportar el error
+        recover_until_sync_point();
+    }
+
+    @Override
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        System.err.println("**Unrecoverable syntax error** en token: "
+        // Log the error but don't throw exception
+        System.err.println("Attempting to recover from unrecovered syntax error at token: "
                            + cur_token.value
                            + " (linea " + (cur_token.left+1)
                            + ", col " + (cur_token.right+1) + ")");
-        // Sincronizar hasta EOF
-        sync_until_token(sym.EOF);
-        // No se lanza excepción => se intenta continuar
+
+        // Try to recover by skipping tokens until a synchronization point
+        recover_until_sync_point();
     }
 
     @Override
@@ -51,10 +63,10 @@ parser code {:
         if (info instanceof Symbol) {
             report_error(message, (Symbol)info);
         } else {
-            System.err.println("Fatal error: " + message);
+            System.err.println("Attempting to recover from fatal error: " + message);
         }
-        // Sincronizar hasta EOF
-        sync_until_token(sym.EOF);
+        // Try to recover instead of stopping
+        recover_until_sync_point();
     }
 
     public void report_error(String message, Symbol sym) {
@@ -72,20 +84,61 @@ parser code {:
         }
     }
 
-    @Override
-    public void syntax_error(Symbol sym) {
-        report_error("Unexpected token", sym);
-    }
-
-    // Consumir tokens hasta encontrar 'syncToken' o EOF
-    public void sync_until_token(int syncToken) {
-        Symbol tok;
+    // Nuevo método para recuperación mejorada
+    private void recover_until_sync_point() {
         try {
+            Symbol tok;
+            // Lista de tokens de sincronización
+            Set<Integer> sync_tokens = new HashSet<>(Arrays.asList(
+                sym.PUNTO_Y_COMA,    // ;
+                sym.CIERRACUENTO,    // }
+                sym.CIERRAREGALO,    // )
+                sym.FINREGALO,       // statement terminator
+                sym.ELSE,            // tokens de control
+                sym.CASE,
+                sym.DEFAULT
+            ));
+
             do {
                 tok = s.next_token();
-            } while (tok.sym != syncToken && tok.sym != sym.EOF);
+                // Continuar hasta encontrar un token de sincronización o EOF
+                if (tok.sym == sym.EOF) {
+                    System.err.println("Reached end of file during error recovery");
+                    return;
+                }
+            } while (!sync_tokens.contains(tok.sym));
+
+            System.out.println("Recovered at synchronization point: " + tok.value);
+
         } catch (Exception e) {
-            System.err.println("Error en sync_until_token: " + e.getMessage());
+            System.err.println("Error during recovery: " + e.getMessage());
+        }
+    }
+
+    // Mejorar el método sync_until_token existente
+    public void sync_until_token(int syncToken) {
+        try {
+            Symbol tok;
+            int skippedTokens = 0;
+            do {
+                tok = s.next_token();
+                skippedTokens++;
+
+                if (skippedTokens > 100) {  // Límite de seguridad
+                    System.err.println("Warning: Skipped too many tokens during recovery");
+                    return;
+                }
+
+                if (tok.sym == sym.EOF) {
+                    System.err.println("Reached EOF during sync");
+                    return;
+                }
+            } while (tok.sym != syncToken);
+
+            System.out.println("Successfully synchronized to token: " + tok.value);
+
+        } catch (Exception e) {
+            System.err.println("Error in sync_until_token: " + e.getMessage());
         }
     }
 
@@ -152,7 +205,7 @@ terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
 terminal CONJUNCION, DISYUNCION, NEGACION;
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 terminal PRINT, READ, MAIN;
-terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
+terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE, FINREGALO;
 terminal PUNTO_Y_COMA, COMA;
 
 /* ----------------------------------------------------------------------
