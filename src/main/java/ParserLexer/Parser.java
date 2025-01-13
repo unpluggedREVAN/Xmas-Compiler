@@ -596,12 +596,37 @@ public class Parser extends java_cup.runtime.lr_parser {
         this.s = s;
     }
 
-    // Método para reportar error y guardarlo en la lista.
+    // ---------------------------------------------------------------------
+    // MÉTODOS PARA MANEJO DE ERRORES
+    // ---------------------------------------------------------------------
+
+    @Override
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        System.err.println("**Unrecoverable syntax error** en token: "
+                           + cur_token.value
+                           + " (linea " + (cur_token.left+1)
+                           + ", col " + (cur_token.right+1) + ")");
+        // Sincronizar hasta EOF
+        sync_until_token(sym.EOF);
+        // No se lanza excepción => se intenta continuar
+    }
+
+    @Override
+    public void report_fatal_error(String message, Object info) {
+        if (info instanceof Symbol) {
+            report_error(message, (Symbol)info);
+        } else {
+            System.err.println("Fatal error: " + message);
+        }
+        // Sincronizar hasta EOF
+        sync_until_token(sym.EOF);
+    }
+
     public void report_error(String message, Symbol sym) {
         if (sym != null) {
             String errorMsg = String.format(
                 "Syntax Error: %s cerca del token '%s' en línea %d, columna %d",
-                message, sym.value, (sym.left + 1), (sym.right + 1)
+                message, sym.value, sym.left + 1, sym.right + 1
             );
             errores.add(errorMsg);
             System.err.println(errorMsg);
@@ -617,13 +642,26 @@ public class Parser extends java_cup.runtime.lr_parser {
         report_error("Unexpected token", sym);
     }
 
+    // Consumir tokens hasta encontrar 'syncToken' o EOF
+    public void sync_until_token(int syncToken) {
+        Symbol tok;
+        try {
+            do {
+                tok = s.next_token();
+            } while (tok.sym != syncToken && tok.sym != sym.EOF);
+        } catch (Exception e) {
+            System.err.println("Error en sync_until_token: " + e.getMessage());
+        }
+    }
+
     public List<String> getErrores() {
         return errores;
     }
 
-    // --- Métodos para tabla de símbolos --- //
+    // ---------------------------------------------------------------------
+    // MÉTODOS PARA TABLA DE SÍMBOLOS
+    // ---------------------------------------------------------------------
 
-    // Crea un scope nuevo para la función (o main).
     public void crearTabla(String type, String funcName, int line, int col) {
         System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
         String infoFuncion = "tipoFuncion:" + type + " line:" + line + " col:" + col;
@@ -635,12 +673,12 @@ public class Parser extends java_cup.runtime.lr_parser {
         tablaSimbolos.put(currentScope, nuevaLista);
     }
 
-    // Agrega un símbolo de variable a la tabla (scope actual).
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
             tablaSimbolos.put(scope, new ArrayList<String>());
         }
-        String info = "line:" + line + " col:" + col
+        String info = "line:" + line
+                    + " col:" + col
                     + " lex:" + lexeme
                     + " scope:" + scope
                     + " type:" + type;
@@ -648,7 +686,6 @@ public class Parser extends java_cup.runtime.lr_parser {
         System.out.println("Se agregó símbolo -> " + info);
     }
 
-    // Imprimir todas las tablas.
     public void imprimirTablaSimbolos() {
         System.out.println("\n--- Tablas de Símbolos ---");
         for (String scopeKey : tablaSimbolos.keySet()) {
@@ -658,7 +695,6 @@ public class Parser extends java_cup.runtime.lr_parser {
             }
         }
     }
-
 
 
 /** Cup generated class to encapsulate user supplied action code.*/
@@ -920,9 +956,9 @@ class CUP$Parser$actions {
           case 21: // declaracion ::= tipo_dato IDENTIFICADOR declaracion_aux 
             {
               Object RESULT =null;
-		int tleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).left;
-		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
-		Object t = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
+		int tdleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).left;
+		int tdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
+		Object td = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		int myidleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
 		int myidright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		String myid = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
@@ -930,15 +966,16 @@ class CUP$Parser$actions {
 		int auxright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object aux = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
+      String t = (String) td; // convertilo a String
+
       System.out.println("Declaración detectada:");
       System.out.println("- Tipo de dato: " + t);
       System.out.println("- Variable: " + myid);
       System.out.println("- Inicialización: " + (aux != null ? aux : "Ninguna"));
 
-      // Hacer el casting a String
       int line = myidleft + 1;
       int col  = myidright + 1;
-      parser.addSimbolo(parser.currentScope, myid, line, col, (String)t);
+      parser.addSimbolo(parser.currentScope, myid, line, col, t);
 
       RESULT = null;
     
@@ -1219,17 +1256,19 @@ class CUP$Parser$actions {
           case 42: // NT$0 ::= 
             {
               Object RESULT =null;
-		int tleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
-		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
-		Object t = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
+		int tdleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
+		int tdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
+		Object td = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		int funIdleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).left;
 		int funIdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String funId = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 
+        // Convertir a string
+        String t = (String) td;
+
         int line = funIdleft + 1;
         int col  = funIdright + 1;
-        String typeVal = (String)t;  // Hacer el casting a String
-        parser.crearTabla(typeVal, funId, line, col);
+        parser.crearTabla(t, funId, line, col);
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$0",26, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1241,9 +1280,9 @@ class CUP$Parser$actions {
               Object RESULT =null;
               // propagate RESULT from NT$0
                 RESULT = (Object) ((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-4)).value;
-		int tleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)).left;
-		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)).right;
-		Object t = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-6)).value;
+		int tdleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)).left;
+		int tdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)).right;
+		Object td = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-6)).value;
 		int funIdleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-5)).left;
 		int funIdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-5)).right;
 		String funId = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-5)).value;
@@ -1254,14 +1293,20 @@ class CUP$Parser$actions {
 		int bright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object b = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
+       // p es Object => lo convertimos
+       String pStr = (String)p;
+       if (pStr.isEmpty()) pStr = "0 params";
+
+       String t = (String) td;
+
        System.out.println("Función declarada: " + funId
                           + " de tipo " + t
-                          + ", con params: " + (p != null ? p : "0 params")
+                          + ", con params: " + pStr
                           + " y un bloque.");
 
        parser.currentScope = "global";
 
-       RESULT = "func["+t+" "+funId+"("+p+")]";
+       RESULT = "func["+t+" "+funId+"("+pStr+")]";
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("funcion",18, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1327,19 +1372,20 @@ class CUP$Parser$actions {
           case 48: // param_dec ::= tipo_dato IDENTIFICADOR 
             {
               Object RESULT =null;
-		int tleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
-		int tright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
-		Object t = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
+		int tdleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
+		int tdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
+		Object td = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		int pidleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).left;
 		int pidright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String pid = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        String paramStr = (String)t + " " + pid;  // Hacer el casting a String
+        String t = (String) td;
+        String paramStr = t + " " + pid;
         System.out.println("Parametro: " + paramStr);
 
         int line = pidleft + 1;
         int col  = pidright + 1;
-        parser.addSimbolo(parser.currentScope, pid, line, col, (String)t);
+        parser.addSimbolo(parser.currentScope, pid, line, col, t);
 
         RESULT = paramStr;
       
@@ -2051,6 +2097,8 @@ class CUP$Parser$actions {
 		int exright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		Object ex = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
+        // ojo: si tu token se llama CIERRAEMPAQUE, usarlo
+        // en tu ejemplo: cierraempaque
         RESULT = arr + "["+ex+"]";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",22, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
