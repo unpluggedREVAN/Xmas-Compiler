@@ -1,11 +1,12 @@
 /* ============================================================================
    parser.cup - Xmas-Compiler
-   Versión final con:
-   - Recuperación de errores (modo pánico),
-   - Sin excepciones fatales (unrecovered_syntax_error y report_fatal_error),
-   - Sin conflictos cruciales,
-   - Conversión Object->String corregida,
-   - Manejo robusto de Tablas de Símbolos (scope).
+   Versión refinada con:
+   - Eliminación de bloque ::= error CIERRACUENTO (remueve shift/reduce),
+   - No uso de FINREGALO,
+   - Manejo de errores con customError en sentencias,
+   - Recuperación en expresiones con error CIERRAREGALO,
+   - No abortar en unrecovered_syntax_error,
+   - Tablas de símbolos.
 ============================================================================ */
 
 package ParserLexer;
@@ -15,17 +16,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
-
+/* ----------------------------------------------------------------------
+   1) Sección de código del parser
+---------------------------------------------------------------------- */
 parser code {:
     private Lexer s;
 
     // Lista de errores sintácticos:
     private List<String> errores = new ArrayList<>();
 
-    // Tabla de símbolos: scope -> lista de descripciones de símbolos.
+    // Tabla de símbolos: scope -> lista de entradas.
     private HashMap<String, ArrayList<String>> tablaSimbolos = new HashMap<>();
 
     // Scope actual (por defecto "global").
@@ -35,27 +35,23 @@ parser code {:
         this.s = s;
     }
 
-    // ---------------------------------------------------------------------
-    // MÉTODOS PARA MANEJO DE ERRORES
-    // ---------------------------------------------------------------------
-
+    /* ----------------------------------------------------------------------
+       Sobrescritura de métodos de error-recovery
+    ---------------------------------------------------------------------- */
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Unexpected token", sym);
-        // Intentar recuperación después de reportar el error
-        recover_until_sync_point();
+        // Queda a tu criterio si deseas forzar una sync aquí
     }
 
     @Override
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        // Log the error but don't throw exception
-        System.err.println("Attempting to recover from unrecovered syntax error at token: "
+        // Evitamos lanzar excepción.
+        System.err.println("**Unrecoverable syntax error** en token: "
                            + cur_token.value
-                           + " (linea " + (cur_token.left+1)
-                           + ", col " + (cur_token.right+1) + ")");
-
-        // Try to recover by skipping tokens until a synchronization point
-        recover_until_sync_point();
+                           + " (linea " + (cur_token.left + 1)
+                           + ", col " + (cur_token.right + 1) + ")");
+        // No abortamos. Continuamos parseo.
     }
 
     @Override
@@ -63,10 +59,9 @@ parser code {:
         if (info instanceof Symbol) {
             report_error(message, (Symbol)info);
         } else {
-            System.err.println("Attempting to recover from fatal error: " + message);
+            System.err.println("Fatal error: " + message);
         }
-        // Try to recover instead of stopping
-        recover_until_sync_point();
+        // No abortamos
     }
 
     public void report_error(String message, Symbol sym) {
@@ -84,77 +79,20 @@ parser code {:
         }
     }
 
-    // Nuevo método para recuperación mejorada
-    private void recover_until_sync_point() {
-        try {
-            Symbol tok;
-            Set<Integer> sync_tokens = new HashSet<>(Arrays.asList(
-                sym.PUNTO_Y_COMA, sym.CIERRACUENTO, sym.CIERRAREGALO, sym.FINREGALO, sym.ELSE, sym.CASE, sym.DEFAULT
-            ));
-            int count = 0;
-
-            do {
-                tok = s.next_token();
-                System.out.println("Token leído durante recuperación: " + (tok != null ? tok.value : "null"));
-
-                if (tok == null) {
-                    System.err.println("Error: Escáner devolvió null. ¿Token no reconocido?");
-                    return;
-                }
-
-                if (count++ > 100) {
-                    System.err.println("Warning: Límite de recuperación alcanzado");
-                    return;
-                }
-            } while (tok.sym != sym.EOF && !sync_tokens.contains(tok.sym));
-
-            if (tok != null) {
-                System.out.println("Recovered at synchronization point: " + tok.value);
-            }
-        } catch (Exception e) {
-            System.err.println("Error during recovery: " + e.getMessage());
-        }
-    }
-
-
-    // Mejorar el método sync_until_token existente
-    public void sync_until_token(int syncToken) {
-        try {
-            Symbol tok;
-            int skippedTokens = 0;
-            do {
-                tok = s.next_token();
-                skippedTokens++;
-
-                if (skippedTokens > 100) {  // Límite de seguridad
-                    System.err.println("Warning: Skipped too many tokens during recovery");
-                    return;
-                }
-
-                if (tok.sym == sym.EOF) {
-                    System.err.println("Reached EOF during sync");
-                    return;
-                }
-            } while (tok.sym != syncToken);
-
-            System.out.println("Successfully synchronized to token: " + tok.value);
-
-        } catch (Exception e) {
-            System.err.println("Error in sync_until_token: " + e.getMessage());
-        }
-    }
-
     public List<String> getErrores() {
         return errores;
     }
 
-    // ---------------------------------------------------------------------
-    // MÉTODOS PARA TABLA DE SÍMBOLOS
-    // ---------------------------------------------------------------------
+    /* ----------------------------------------------------------------------
+       Manejo de tablas de símbolos
+    ---------------------------------------------------------------------- */
 
+    // Crear nuevo scope (función)
     public void crearTabla(String type, String funcName, int line, int col) {
         System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
-        String infoFuncion = "tipoFuncion:" + type + " line:" + line + " col:" + col;
+        String infoFuncion = "tipoFuncion:" + type
+                           + " line:" + line
+                           + " col:" + col;
 
         ArrayList<String> nuevaLista = new ArrayList<>();
         nuevaLista.add(infoFuncion);
@@ -163,6 +101,7 @@ parser code {:
         tablaSimbolos.put(currentScope, nuevaLista);
     }
 
+    // Agregar símbolo (var o param) a la tabla
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
             tablaSimbolos.put(scope, new ArrayList<String>());
@@ -197,10 +136,11 @@ scan with {:
 /* ----------------------------------------------------------------------
    3) Declaración de TERMINALES
 ---------------------------------------------------------------------- */
+// Nota: se elimina FINREGALO porque no se usa
 terminal String IDENTIFICADOR;
 terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
-terminal ASIGNA;   // "entrega"
+terminal ASIGNA;
 terminal INCREMENTO, DECREMENTO, UNKNOWN_TOKEN;
 terminal SUMA, RESTA, DIVISION, MULTIPLICACION, MODULE, POTENCIA;
 terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
@@ -209,6 +149,12 @@ terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE, FINREGALO;
 terminal PUNTO_Y_COMA, COMA;
+
+/*
+   Para la sugerencia de CUP:
+   stmt ::= expr SEMI | ... | customError SEMI ;
+   customError ::= customError error | error ;
+*/
 
 /* ----------------------------------------------------------------------
    4) Declaración de NO TERMINALES
@@ -220,6 +166,7 @@ non terminal control_estructuras, if_estructura, while_estructura, for_estructur
 non terminal case_blocks, case_block, default_block;
 non terminal funcion, parametros, lista_parametros, param_dec;
 non terminal expresion, array_init, array_item, array_item_list;
+non terminal customError; // Para manejo recursivo de error
 
 /* ----------------------------------------------------------------------
    5) Precedencia
@@ -242,7 +189,7 @@ start with programa;
    7) Reglas de Producción
 ---------------------------------------------------------------------- */
 
-/* A) Programa */
+/* A) Estructura General del Programa */
 programa ::=
     declaracionesGlobales MAIN bloque
        {:
@@ -266,20 +213,18 @@ globalDeclaracion ::=
   | funcion
   ;
 
-/* B) Bloque y lista_sentencias */
+/* B) Bloque
+   Removemos "bloque ::= error CIERRACUENTO" para evitar shift/reduce
+*/
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
       {:
         System.out.println("Regla 'bloque' ejecutada.");
       :}
   | /* epsilon */
-  | error CIERRACUENTO
-      {:
-        parser.report_error("Error in block. Recovered until '}'", parser.scan());
-        RESULT = "errorBlock";
-      :}
   ;
 
+/* lista_sentencias: una o más sentencias */
 lista_sentencias ::=
     lista_sentencias sentencia
       {:
@@ -289,14 +234,12 @@ lista_sentencias ::=
       {:
         System.out.println("Regla 'lista_sentencias' procesando sentencia.");
       :}
-  | error PUNTO_Y_COMA
-      {:
-        parser.report_error("Error in statement list. Recovered until ';'", parser.scan());
-        RESULT = "errorSentList";
-      :}
   ;
 
-/* C) Sentencia */
+/* ----------------------------------------------------------------------
+   C) Sentencia
+   Inyectamos la producción con customError para absorber 'error'
+---------------------------------------------------------------------- */
 sentencia ::=
     declaracion
   | asignacion
@@ -314,6 +257,14 @@ sentencia ::=
          System.out.println("Return con expr: " + ret);
       :}
   | BREAK PUNTO_Y_COMA
+
+  /* Manejo de error con la idea CUP: customError SEMI */
+  | customError PUNTO_Y_COMA
+      {:
+         System.err.println("Recuperado un error en sentencia con customError;");
+         RESULT = "errStmt";
+      :}
+
   | UNKNOWN_TOKEN:unk
       {:
          parser.report_error("Sentencia desconocida, token ignorado", parser.scan());
@@ -321,11 +272,26 @@ sentencia ::=
       :}
   ;
 
-/* D) Declaraciones */
+/* customError ::= customError error | error ; */
+customError ::=
+    customError error
+      {:
+        System.err.println("Absorbiendo otro token 'error' en customError");
+      :}
+  | error
+      {:
+        System.err.println("Detectado token 'error' en customError");
+        RESULT = "customErrBase";
+      :}
+  ;
+
+/* ----------------------------------------------------------------------
+   D) Declaraciones
+---------------------------------------------------------------------- */
 declaracion ::=
     tipo_dato:td IDENTIFICADOR:myid declaracion_aux:aux
     {:
-      String t = (String) td; // convertilo a String
+      String t = (String) td;
 
       System.out.println("Declaración detectada:");
       System.out.println("- Tipo de dato: " + t);
@@ -405,7 +371,7 @@ array_item ::=
       :}
   ;
 
-/* tipos base */
+/* Tipos base */
 tipo_dato ::=
     INTEGER  {: RESULT = "int";   :}
   | FLOAT    {: RESULT = "float"; :}
@@ -414,7 +380,9 @@ tipo_dato ::=
   | STRING   {: RESULT = "string";:}
   ;
 
-/* E) Asignaciones */
+/* ----------------------------------------------------------------------
+   E) Asignaciones
+---------------------------------------------------------------------- */
 asignacion ::=
     IDENTIFICADOR:idVar ASIGNA expresion:ex PUNTO_Y_COMA
       {:
@@ -428,21 +396,21 @@ asignacion ::=
       :}
   ;
 
-/* F) Declaración de Funciones */
+/* ----------------------------------------------------------------------
+   F) Declaración de Funciones
+---------------------------------------------------------------------- */
 funcion ::=
     tipo_dato:td IDENTIFICADOR:funId
     {:
-        // Convertir a string
+        // Convertimos a string
         String t = (String) td;
-
         int line = funIdleft + 1;
         int col  = funIdright + 1;
         parser.crearTabla(t, funId, line, col);
     :}
     ABREREGALO parametros:p CIERRAREGALO bloque:b
     {:
-       // p es Object => lo convertimos
-       String pStr = (String)p;
+       String pStr = (String) p;
        if (pStr.isEmpty()) pStr = "0 params";
 
        String t = (String) td;
@@ -498,7 +466,9 @@ param_dec ::=
       :}
   ;
 
-/* G) Estructuras de Control */
+/* ----------------------------------------------------------------------
+   G) Estructuras de Control
+---------------------------------------------------------------------- */
 control_estructuras ::=
     if_estructura
   | while_estructura
@@ -596,7 +566,10 @@ default_block ::=
       :}
   ;
 
-/* H) Expresión con precedencia */
+/* ----------------------------------------------------------------------
+   H) Expresión con precedencia
+   error => re-sincronizar con ')'
+---------------------------------------------------------------------- */
 expresion ::=
     expresion:e1 DISYUNCION expresion:e2
       {:
@@ -709,8 +682,6 @@ expresion ::=
       :}
   | IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
       {:
-        // ojo: si tu token se llama CIERRAEMPAQUE, usarlo
-        // en tu ejemplo: cierraempaque
         RESULT = arr + "["+ex+"]";
       :}
   | ABREREGALO expresion:ex CIERRAREGALO

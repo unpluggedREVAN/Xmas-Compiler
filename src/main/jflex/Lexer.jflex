@@ -86,68 +86,68 @@ MultiLineComment = "\\_"([^\\_]|\\n|\\r)*"_/"
 {MultiLineComment}     { /* ignorar */ }
 
 /* apertura y cierre */
-"abreregalo"          { return symbol(sym.ABREREGALO); }
-"cierraregalo"        { return symbol(sym.CIERRAREGALO); }
-"abrecuento"          { return symbol(sym.ABRECUENTO); }
-"cierracuento"        { return symbol(sym.CIERRACUENTO); }
-"abreempaque"         { return symbol(sym.ABREEMPAQUE); }
-"cierraempaque"       { return symbol(sym.CIERRAEMPAQUE); }
+"abreregalo"          { return symbol(sym.ABREREGALO, yytext()); }
+"cierraregalo"        { return symbol(sym.CIERRAREGALO, yytext()); }
+"abrecuento"          { return symbol(sym.ABRECUENTO, yytext()); }
+"cierracuento"        { return symbol(sym.CIERRACUENTO, yytext()); }
+"abreempaque"         { return symbol(sym.ABREEMPAQUE, yytext()); }
+"cierraempaque"       { return symbol(sym.CIERRAEMPAQUE, yytext()); }
 
 /* Palabras clave de tipos */
-"rodolfo"             { return symbol(sym.INTEGER); }
-"bromista"            { return symbol(sym.FLOAT); }
-"trueno"              { return symbol(sym.BOOL); }
-"cupido"              { return symbol(sym.CHAR); }
-"cometa"              { return symbol(sym.STRING); }
+"rodolfo"             { return symbol(sym.INTEGER, yytext()); }
+"bromista"            { return symbol(sym.FLOAT, yytext()); }
+"trueno"              { return symbol(sym.BOOL, yytext()); }
+"cupido"              { return symbol(sym.CHAR, yytext()); }
+"cometa"              { return symbol(sym.STRING, yytext()); }
 
 /* main */
 "_verano_"            { return symbol(sym.MAIN); }
 
 /* Estructuras de control */
-"elfo"                { return symbol(sym.IF); }
-"hada"                { return symbol(sym.ELSE); }
-"envuelve"            { return symbol(sym.WHILE); }
-"duende"              { return symbol(sym.FOR); }
-"varios"              { return symbol(sym.SWITCH); }
-"historia"            { return symbol(sym.CASE); }
-"ultimo"              { return symbol(sym.DEFAULT); }
-"corta"               { return symbol(sym.BREAK); }
-"envia"               { return symbol(sym.RETURN); }
-"sigue"               { return symbol(sym.DOS_PUNTOS); }
+"elfo"                { return symbol(sym.IF, yytext()); }
+"hada"                { return symbol(sym.ELSE, yytext()); }
+"envuelve"            { return symbol(sym.WHILE, yytext()); }
+"duende"              { return symbol(sym.FOR, yytext()); }
+"varios"              { return symbol(sym.SWITCH, yytext()); }
+"historia"            { return symbol(sym.CASE, yytext()); }
+"ultimo"              { return symbol(sym.DEFAULT, yytext()); }
+"corta"               { return symbol(sym.BREAK, yytext()); }
+"envia"               { return symbol(sym.RETURN, yytext()); }
+"sigue"               { return symbol(sym.DOS_PUNTOS, yytext()); }
 
 /* Entrada/Salida */
-"narra"               { return symbol(sym.PRINT); }
-"escucha"             { return symbol(sym.READ); }
+"narra"               { return symbol(sym.PRINT, yytext()); }
+"escucha"             { return symbol(sym.READ, yytext()); }
 
 /* Operadores aritméticos binarios */
-"entrega"             { return symbol(sym.ASIGNA); }      // =
-"navidad"             { return symbol(sym.SUMA); }        // +
-"intercambio"         { return symbol(sym.RESTA); }       // -
-"reyes"               { return symbol(sym.DIVISION); }    // /
-"nochebuena"          { return symbol(sym.MULTIPLICACION); } // *
-"magos"               { return symbol(sym.MODULE); }      // %
-"adviento"            { return symbol(sym.POTENCIA); }    // ^
+"entrega"             { return symbol(sym.ASIGNA, yytext()); }      // =
+"navidad"             { return symbol(sym.SUMA, yytext()); }        // +
+"intercambio"         { return symbol(sym.RESTA, yytext()); }       // -
+"reyes"               { return symbol(sym.DIVISION, yytext()); }    // /
+"nochebuena"          { return symbol(sym.MULTIPLICACION, yytext()); } // *
+"magos"               { return symbol(sym.MODULE, yytext()); }      // %
+"adviento"            { return symbol(sym.POTENCIA, yytext()); }    // ^
 
 /* Operadores unarios */
-"quien"               { return symbol(sym.INCREMENTO); }  // ++
-"grinch"              { return symbol(sym.DECREMENTO); }  // --
+"quien"               { return symbol(sym.INCREMENTO, yytext()); }  // ++
+"grinch"              { return symbol(sym.DECREMENTO, yytext()); }  // --
 
 /* Operadores relacionales */
-"snowball"            { return symbol(sym.MENOR); }       // <
-"evergreen"           { return symbol(sym.MENOROIGUAL); } // <=
-"minstix"             { return symbol(sym.MAYOR); }       // >
-"upatree"             { return symbol(sym.MAYOROIGUAL); } // >=
-"mary"                { return symbol(sym.IGUALDAD); }    // ==
-"openslae"            { return symbol(sym.DIFERENTE); }   // !=
+"snowball"            { return symbol(sym.MENOR, yytext()); }    // <
+"evergreen"           { return symbol(sym.MENOROIGUAL, yytext()); } // <=
+"minstix"             { return symbol(sym.MAYOR, yytext()); }       // >
+"upatree"             { return symbol(sym.MAYOROIGUAL, yytext()); } // >=
+"mary"                { return symbol(sym.IGUALDAD, yytext()); }    // ==
+"openslae"            { return symbol(sym.DIFERENTE, yytext()); }   // !=
 
 /* Operadores lógicos */
-"melchor"             { return symbol(sym.CONJUNCION); }  // &&
-"gaspar"              { return symbol(sym.DISYUNCION); }  // ||
-"baltazar"            { return symbol(sym.NEGACION); }    // !
+"melchor"             { return symbol(sym.CONJUNCION, yytext()); }  // &&
+"gaspar"              { return symbol(sym.DISYUNCION, yytext()); }  // ||
+"baltazar"            { return symbol(sym.NEGACION, yytext()); }    // !
 
 /* otros símbolos */
-"finregalo"           { return symbol(sym.PUNTO_Y_COMA); }  // ;
-","                   { return symbol(sym.COMA); }
+"finregalo"           { return symbol(sym.PUNTO_Y_COMA, yytext()); }  // ;
+","                   { return symbol(sym.COMA, yytext()); }
 
 /* Identificadores */
 {Identifier}          { return symbol(sym.IDENTIFICADOR, yytext()); }
