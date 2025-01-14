@@ -1,12 +1,9 @@
 /* ============================================================================
    parser.cup - Xmas-Compiler
-   Versión refinada con:
-   - Eliminación de bloque ::= error CIERRACUENTO (remueve shift/reduce),
-   - No uso de FINREGALO,
-   - Manejo de errores con customError en sentencias,
-   - Recuperación en expresiones con error CIERRAREGALO,
-   - No abortar en unrecovered_syntax_error,
-   - Tablas de símbolos.
+   Ajustado para:
+   1) Permitir funciones tanto a nivel global como dentro de un bloque.
+   2) Recuperación de errores en modo pánico al final de la línea.
+   3) Corrección del "Unexpected token 'abreregalo'" en sentencias.
 ============================================================================ */
 
 package ParserLexer;
@@ -41,7 +38,6 @@ parser code {:
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Unexpected token", sym);
-        // Podrías forzar una sincronización manual aquí si lo deseas
     }
 
     @Override
@@ -86,8 +82,6 @@ parser code {:
     /* ----------------------------------------------------------------------
        Manejo de tablas de símbolos
     ---------------------------------------------------------------------- */
-
-    // Crear nuevo scope (por ejemplo, al entrar en una función)
     public void crearTabla(String type, String funcName, int line, int col) {
         System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
         String infoFuncion = "tipoFuncion:" + type
@@ -101,7 +95,6 @@ parser code {:
         tablaSimbolos.put(currentScope, nuevaLista);
     }
 
-    // Agregar símbolo (variable o parámetro) a la tabla
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
             tablaSimbolos.put(scope, new ArrayList<String>());
@@ -136,7 +129,6 @@ scan with {:
 /* ----------------------------------------------------------------------
    3) Declaración de TERMINALES
 ---------------------------------------------------------------------- */
-// Nota: se elimina FINREGALO porque no se usa
 terminal String IDENTIFICADOR;
 terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
@@ -150,12 +142,6 @@ terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal PUNTO_Y_COMA, COMA;
 
-/*
-   Para la sugerencia de CUP:
-   stmt ::= expr SEMI | ... | customError SEMI ;
-   customError ::= customError error | error ;
-*/
-
 /* ----------------------------------------------------------------------
    4) Declaración de NO TERMINALES
 ---------------------------------------------------------------------- */
@@ -164,9 +150,9 @@ non terminal bloque, lista_sentencias, sentencia;
 non terminal declaracion, declaracion_aux, asignacion, tipo_dato;
 non terminal control_estructuras, if_estructura, while_estructura, for_estructura, switch_estructura;
 non terminal case_blocks, case_block, default_block;
-non terminal funcion, parametros, lista_parametros, param_dec;
+non terminal /* ! */ funcion /* ! */, parametros, lista_parametros, param_dec;
 non terminal expresion, array_init, array_item, array_item_list;
-non terminal customError; // Para manejo recursivo de error
+non terminal customError;
 
 /* ----------------------------------------------------------------------
    5) Precedencia
@@ -189,16 +175,19 @@ start with programa;
    7) Reglas de Producción
 ---------------------------------------------------------------------- */
 
-/* A) Estructura General del Programa */
+/* A) Estructura General del Programa
+   Se acepta que haya 0 o más declaracionesGlobales (incluyendo funciones),
+   seguido de MAIN y un bloque que define el cuerpo principal.
+*/
 programa ::=
     declaracionesGlobales MAIN bloque
-       {:
-         System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
-       :}
+      {:
+        System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
+      :}
   | MAIN bloque
-       {:
-         System.out.println("Regla 'programa' con sólo MAIN");
-       :}
+      {:
+        System.out.println("Regla 'programa' con sólo MAIN");
+      :}
   ;
 
 /* declaracionesGlobales -> (globalDeclaracion)+ */
@@ -213,8 +202,8 @@ globalDeclaracion ::=
   | funcion
   ;
 
-/* B) Bloque
-   Se elimina "bloque ::= error CIERRACUENTO" para evitar shift/reduce
+/* B) Bloque (abrecuento ... cierracuento)
+   Permitimos también un bloque vacío.
 */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
@@ -236,36 +225,36 @@ lista_sentencias ::=
       :}
   ;
 
-/* ----------------------------------------------------------------------
-   C) Sentencia
-   Inyectamos la producción con customError para absorber 'error'
----------------------------------------------------------------------- */
+/* C) Sentencia
+   Aquí añadimos | funcion para permitir funciones dentro de bloques.
+*/
 sentencia ::=
     declaracion
   | asignacion
   | control_estructuras
+  | funcion                 /* <--- NUEVO: función como sentencia */
   | PRINT ABREREGALO expresion:e CIERRAREGALO PUNTO_Y_COMA
       {:
-         System.out.println("Imprimiendo la expresión: " + e);
+        System.out.println("Imprimiendo la expresión: " + e);
       :}
   | READ ABREREGALO IDENTIFICADOR:id CIERRAREGALO PUNTO_Y_COMA
       {:
-         System.out.println("Leyendo a variable: " + id);
+        System.out.println("Leyendo a variable: " + id);
       :}
   | RETURN expresion:ret PUNTO_Y_COMA
       {:
-         System.out.println("Return con expr: " + ret);
+        System.out.println("Return con expr: " + ret);
       :}
   | BREAK PUNTO_Y_COMA
 
-  /* Manejo de error con la idea CUP: customError SEMI */
+  /* Manejo de error en modo pánico: customError PUNTO_Y_COMA */
   | customError PUNTO_Y_COMA
       {:
          System.err.println("Recuperado un error en sentencia con customError;");
          RESULT = "errStmt";
       :}
 
-  /* Producción para token desconocido, si el lexer retorna UNKNOWN_TOKEN */
+  /* Token desconocido */
   | UNKNOWN_TOKEN:unk
       {:
          parser.report_error("Sentencia desconocida, token ignorado", parser.scan());
@@ -273,12 +262,11 @@ sentencia ::=
       :}
   ;
 
-/* customError ::= customError error | error ; */
+/* customError => absorbe tokens 'error' hasta que aparezca un PUNTO_Y_COMA. */
 customError ::=
     customError error
       {:
         System.err.println("Absorbiendo otro token 'error' en customError");
-        // CUP internamente seguirá intentando re-sincronizar.
       :}
   | error
       {:
@@ -287,14 +275,11 @@ customError ::=
       :}
   ;
 
-/* ----------------------------------------------------------------------
-   D) Declaraciones
----------------------------------------------------------------------- */
+/* D) Declaraciones de variables */
 declaracion ::=
     tipo_dato:td IDENTIFICADOR:myid declaracion_aux:aux
     {:
       String t = (String) td;
-
       System.out.println("Declaración detectada:");
       System.out.println("- Tipo de dato: " + t);
       System.out.println("- Variable: " + myid);
@@ -382,9 +367,7 @@ tipo_dato ::=
   | STRING   {: RESULT = "string";:}
   ;
 
-/* ----------------------------------------------------------------------
-   E) Asignaciones
----------------------------------------------------------------------- */
+/* E) Asignaciones */
 asignacion ::=
     IDENTIFICADOR:idVar ASIGNA expresion:ex PUNTO_Y_COMA
       {:
@@ -398,13 +381,12 @@ asignacion ::=
       :}
   ;
 
-/* ----------------------------------------------------------------------
-   F) Declaración de Funciones
----------------------------------------------------------------------- */
+/* F) Declaración de Funciones
+   Ahora también puede aparecer en 'sentencia' (ver arriba).
+*/
 funcion ::=
     tipo_dato:td IDENTIFICADOR:funId
     {:
-        // Convertimos a string
         String t = (String) td;
         int line = funIdleft + 1;
         int col  = funIdright + 1;
@@ -422,8 +404,7 @@ funcion ::=
                           + ", con params: " + pStr
                           + " y un bloque.");
 
-       // Al terminar, regresamos el scope al global.
-       parser.currentScope = "global";
+       parser.currentScope = "global"; // Volver al scope global
 
        RESULT = "func["+t+" "+funId+"("+pStr+")]";
     :}
@@ -469,9 +450,7 @@ param_dec ::=
       :}
   ;
 
-/* ----------------------------------------------------------------------
-   G) Estructuras de Control
----------------------------------------------------------------------- */
+/* G) Estructuras de Control */
 control_estructuras ::=
     if_estructura
   | while_estructura
@@ -569,10 +548,7 @@ default_block ::=
       :}
   ;
 
-/* ----------------------------------------------------------------------
-   H) Expresión con precedencia
-   error => re-sincronizar con ')'
----------------------------------------------------------------------- */
+/* H) Expresión con precedencia */
 expresion ::=
     expresion:e1 DISYUNCION expresion:e2
       {:
@@ -630,6 +606,7 @@ expresion ::=
       {:
         RESULT = "("+e1+" ^ "+e2+")";
       :}
+  /* unarios */
   | NEGACION expresion:e
       {:
         RESULT = "!"+e;
@@ -638,6 +615,7 @@ expresion ::=
       {:
         RESULT = "-"+e;
       :}
+  /* post/pre inc/dec */
   | INCREMENTO IDENTIFICADOR:id
       {:
         RESULT = "++"+id;
@@ -683,14 +661,17 @@ expresion ::=
       {:
         RESULT = boo.toString();
       :}
+  /* arreglos */
   | IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
       {:
         RESULT = arr + "["+ex+"]";
       :}
+  /* paréntesis */
   | ABREREGALO expresion:ex CIERRAREGALO
       {:
         RESULT = "("+ex+")";
       :}
+  /* error en ( ) */
   | error CIERRAREGALO
       {:
         parser.report_error("Error in expression. Recovered until ')'", parser.scan());

@@ -14,7 +14,6 @@ _verano_ abrecuento
         envia _resultado_ finregalo                          # return _resultado_;
     cierracuento
 
-    # Llamada a la función
     rodolfo _resultadoFinal_ entrega _suma_ abreregalo 5, 7 cierraregalo finregalo
     narra abreregalo "Resultado = " cierraregalo finregalo
     narra abreregalo _resultadoFinal_ cierraregalo finregalo
