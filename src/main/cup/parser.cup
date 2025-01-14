@@ -41,17 +41,17 @@ parser code {:
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Unexpected token", sym);
-        // Queda a tu criterio si deseas forzar una sync aquí
+        // Podrías forzar una sincronización manual aquí si lo deseas
     }
 
     @Override
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        // Evitamos lanzar excepción.
+        // Evitamos lanzar excepción y no abortamos.
         System.err.println("**Unrecoverable syntax error** en token: "
-                           + cur_token.value
-                           + " (linea " + (cur_token.left + 1)
-                           + ", col " + (cur_token.right + 1) + ")");
-        // No abortamos. Continuamos parseo.
+                           + (cur_token != null ? cur_token.value : "null")
+                           + " (linea " + (cur_token != null ? (cur_token.left + 1) : -1)
+                           + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
+        // Continuamos parseo.
     }
 
     @Override
@@ -87,7 +87,7 @@ parser code {:
        Manejo de tablas de símbolos
     ---------------------------------------------------------------------- */
 
-    // Crear nuevo scope (función)
+    // Crear nuevo scope (por ejemplo, al entrar en una función)
     public void crearTabla(String type, String funcName, int line, int col) {
         System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
         String infoFuncion = "tipoFuncion:" + type
@@ -101,7 +101,7 @@ parser code {:
         tablaSimbolos.put(currentScope, nuevaLista);
     }
 
-    // Agregar símbolo (var o param) a la tabla
+    // Agregar símbolo (variable o parámetro) a la tabla
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
             tablaSimbolos.put(scope, new ArrayList<String>());
@@ -147,7 +147,7 @@ terminal MENOR, MENOROIGUAL, MAYOR, MAYOROIGUAL, IGUALDAD, DIFERENTE;
 terminal CONJUNCION, DISYUNCION, NEGACION;
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 terminal PRINT, READ, MAIN;
-terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE, FINREGALO;
+terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal PUNTO_Y_COMA, COMA;
 
 /*
@@ -214,7 +214,7 @@ globalDeclaracion ::=
   ;
 
 /* B) Bloque
-   Removemos "bloque ::= error CIERRACUENTO" para evitar shift/reduce
+   Se elimina "bloque ::= error CIERRACUENTO" para evitar shift/reduce
 */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
@@ -265,6 +265,7 @@ sentencia ::=
          RESULT = "errStmt";
       :}
 
+  /* Producción para token desconocido, si el lexer retorna UNKNOWN_TOKEN */
   | UNKNOWN_TOKEN:unk
       {:
          parser.report_error("Sentencia desconocida, token ignorado", parser.scan());
@@ -277,6 +278,7 @@ customError ::=
     customError error
       {:
         System.err.println("Absorbiendo otro token 'error' en customError");
+        // CUP internamente seguirá intentando re-sincronizar.
       :}
   | error
       {:
@@ -420,6 +422,7 @@ funcion ::=
                           + ", con params: " + pStr
                           + " y un bloque.");
 
+       // Al terminar, regresamos el scope al global.
        parser.currentScope = "global";
 
        RESULT = "func["+t+" "+funId+"("+pStr+")]";

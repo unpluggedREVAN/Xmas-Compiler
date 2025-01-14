@@ -1,3 +1,46 @@
 _verano_ abrecuento
-    rodolfo _y_ entrega 10 finregalo
+    # Declaraciones simples
+    rodolfo _x_ finregalo                  # int _x_;
+    rodolfo _y_ entrega 10 finregalo       # int _y_ = 10;
+    bromista _pi_ entrega 3.14 finregalo   # float _pi_ = 3.14;
+
+    # Operaciones aritméticas y lógicas
+    _x_ entrega _y_ nochebuena 2 finregalo # _x_ = _y_ * 2;
+    trueno _flag_ entrega _x_ mary 20 finregalo # bool _flag_ = _x_ == 20;
+
+    # Función simple
+    rodolfo _suma_ abreregalo rodolfo _a_, rodolfo _b_ cierraregalo abrecuento
+        rodolfo _resultado_ entrega _a_ navidad _b_ finregalo # _resultado_ = _a_ + _b_;
+        envia _resultado_ finregalo                          # return _resultado_;
+    cierracuento
+
+    # Llamada a la función
+    rodolfo _resultadoFinal_ entrega _suma_ abreregalo 5, 7 cierraregalo finregalo
+    narra abreregalo "Resultado = " cierraregalo finregalo
+    narra abreregalo _resultadoFinal_ cierraregalo finregalo
+
+    # Ciclo for
+    duende abreregalo rodolfo _i_ entrega 0, _i_ snowball 10, _i_ quien cierraregalo abrecuento
+        narra abreregalo _i_ cierraregalo finregalo
+    cierracuento
+
+    # Estructura if-else
+    elfo abreregalo _x_ minstix 20 cierraregalo abrecuento
+        narra abreregalo "X es mayor que 20" cierraregalo finregalo
+    cierracuento hada abrecuento
+        narra abreregalo "X es menor o igual a 20" cierraregalo finregalo
+    cierracuento
+
+    # Declaración de arreglo y acceso
+    rodolfo _arr_ abreempaque 5 cierraempaque finregalo # int _arr_[5];
+    _arr_ abreempaque 0 cierraempaque entrega 1 finregalo
+    _arr_ abreempaque 1 cierraempaque entrega 2 finregalo
+    _arr_ abreempaque 2 cierraempaque entrega 3 finregalo
+    _arr_ abreempaque 3 cierraempaque entrega 4 finregalo
+    _arr_ abreempaque 4 cierraempaque entrega 5 finregalo
+
+    # Iteración sobre el arreglo
+    duende abreregalo rodolfo _i_ entrega 0, _i_ snowball 5, _i_ quien cierraregalo abrecuento
+        narra abreregalo _arr_ abreempaque _i_ cierraempaque cierraregalo finregalo
+    cierracuento
 cierracuento
