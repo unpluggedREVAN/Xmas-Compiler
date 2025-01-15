@@ -649,13 +649,6 @@ public class Parser extends java_cup.runtime.lr_parser {
         // throw new RuntimeException("Unrecoverable syntax error");
     }
 
-    /*
-    @Override
-    public Symbol scan() throws java.lang.Exception {
-        return lexer.next_token();
-    }
-    */
-
     /* -------------------------------------------------------------------
        Funciones para manejo de Tabla de Símbolos
     ------------------------------------------------------------------- */
