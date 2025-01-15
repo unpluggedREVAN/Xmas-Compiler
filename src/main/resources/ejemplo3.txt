@@ -9,7 +9,7 @@ _verano_ abrecuento
     trueno _flag_ entrega _x_ mary 20 finregalo # bool _flag_ = _x_ == 20;
 
     # Función simple
-    rodolfo _suma_ abreregalo rodolfo _a_, rodolfo _b_ cierraregalo abrecuento
+    rodolfo _suma_ abreregalo rodolfo _a_, rodolfo _b_ cierraregalo abrecuento // int suma (int a, int b) {
         rodolfo _resultado_ entrega _a_ navidad _b_ finregalo # _resultado_ = _a_ + _b_;
         envia _resultado_ finregalo                          # return _resultado_;
     cierracuento

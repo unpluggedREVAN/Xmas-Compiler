@@ -9,90 +9,82 @@ package ParserLexer;
 public class sym {
   /* terminals */
   public static final int STRING_LITERAL = 12;
-  public static final int CHAR = 5;
-  public static final int PUNTO_Y_COMA = 21;
+  public static final int CHAR = 7;
+  public static final int PUNTO_Y_COMA = 51;
   public static final int CHAR_LITERAL = 11;
-  public static final int CASE = 45;
-  public static final int DIFERENTE = 36;
-  public static final int CIERRACUENTO = 15;
-  public static final int RESTA = 24;
-  public static final int INTEGER = 2;
-  public static final int DOS_PUNTOS = 49;
-  public static final int FOR = 43;
-  public static final int CIERRAREGALO = 17;
-  public static final int ABREEMPAQUE = 18;
-  public static final int IDENTIFICADOR = 7;
-  public static final int CIERRAEMPAQUE = 19;
-  public static final int IGUALDAD = 35;
-  public static final int BOOL = 4;
-  public static final int INCREMENTO = 29;
-  public static final int ASIGNA = 20;
-  public static final int SUMA = 23;
-  public static final int IF = 40;
-  public static final int MAIN = 13;
+  public static final int CIERRACUENTO = 46;
+  public static final int CASE = 37;
+  public static final int DIFERENTE = 28;
+  public static final int RESTA = 18;
+  public static final int INTEGER = 3;
+  public static final int DOS_PUNTOS = 41;
+  public static final int CIERRAREGALO = 48;
+  public static final int FOR = 35;
+  public static final int ABREEMPAQUE = 49;
+  public static final int IDENTIFICADOR = 2;
+  public static final int CIERRAEMPAQUE = 50;
+  public static final int IGUALDAD = 27;
+  public static final int BOOL = 5;
+  public static final int INCREMENTO = 14;
+  public static final int ASIGNA = 13;
+  public static final int SUMA = 17;
+  public static final int MAIN = 44;
+  public static final int IF = 32;
   public static final int EOF = 0;
-  public static final int RETURN = 48;
-  public static final int MAYOROIGUAL = 34;
-  public static final int DECREMENTO = 30;
+  public static final int RETURN = 40;
+  public static final int MAYOROIGUAL = 26;
+  public static final int DECREMENTO = 15;
   public static final int error = 1;
-  public static final int COMA = 22;
-  public static final int NEGACION = 39;
-  public static final int ABRECUENTO = 14;
-  public static final int MENOR = 31;
-  public static final int BREAK = 47;
-  public static final int ABREREGALO = 16;
-  public static final int UNKNOWN_TOKEN = 52;
-  public static final int SWITCH = 44;
-  public static final int MENOROIGUAL = 32;
-  public static final int MAYOR = 33;
-  public static final int MODULE = 27;
-  public static final int POTENCIA = 28;
-  public static final int ELSE = 41;
-  public static final int READ = 51;
-  public static final int WHILE = 42;
-  public static final int DEFAULT = 46;
-  public static final int FLOAT = 3;
-  public static final int CONJUNCION = 37;
+  public static final int COMA = 52;
+  public static final int ABRECUENTO = 45;
+  public static final int NEGACION = 31;
+  public static final int MENOR = 23;
+  public static final int BREAK = 39;
+  public static final int ABREREGALO = 47;
+  public static final int SWITCH = 36;
+  public static final int UNKNOWN_TOKEN = 16;
+  public static final int MENOROIGUAL = 24;
+  public static final int MAYOR = 25;
+  public static final int MODULE = 21;
+  public static final int POTENCIA = 22;
+  public static final int ELSE = 33;
+  public static final int READ = 43;
+  public static final int WHILE = 34;
+  public static final int DEFAULT = 38;
+  public static final int FLOAT = 4;
+  public static final int CONJUNCION = 29;
   public static final int STRING = 6;
-  public static final int DISYUNCION = 38;
+  public static final int DISYUNCION = 30;
   public static final int FLOAT_LITERAL = 9;
-  public static final int DIVISION = 25;
-  public static final int PRINT = 50;
+  public static final int DIVISION = 19;
+  public static final int PRINT = 42;
   public static final int BOOL_LITERAL = 10;
   public static final int L_INTEGER = 8;
-  public static final int MULTIPLICACION = 26;
+  public static final int MULTIPLICACION = 20;
   public static final String[] terminalNames = new String[] {
   "EOF",
   "error",
+  "IDENTIFICADOR",
   "INTEGER",
   "FLOAT",
   "BOOL",
-  "CHAR",
   "STRING",
-  "IDENTIFICADOR",
+  "CHAR",
   "L_INTEGER",
   "FLOAT_LITERAL",
   "BOOL_LITERAL",
   "CHAR_LITERAL",
   "STRING_LITERAL",
-  "MAIN",
-  "ABRECUENTO",
-  "CIERRACUENTO",
-  "ABREREGALO",
-  "CIERRAREGALO",
-  "ABREEMPAQUE",
-  "CIERRAEMPAQUE",
   "ASIGNA",
-  "PUNTO_Y_COMA",
-  "COMA",
+  "INCREMENTO",
+  "DECREMENTO",
+  "UNKNOWN_TOKEN",
   "SUMA",
   "RESTA",
   "DIVISION",
   "MULTIPLICACION",
   "MODULE",
   "POTENCIA",
-  "INCREMENTO",
-  "DECREMENTO",
   "MENOR",
   "MENOROIGUAL",
   "MAYOR",
@@ -114,7 +106,15 @@ public class sym {
   "DOS_PUNTOS",
   "PRINT",
   "READ",
-  "UNKNOWN_TOKEN"
+  "MAIN",
+  "ABRECUENTO",
+  "CIERRACUENTO",
+  "ABREREGALO",
+  "CIERRAREGALO",
+  "ABREEMPAQUE",
+  "CIERRAEMPAQUE",
+  "PUNTO_Y_COMA",
+  "COMA"
   };
 }
 

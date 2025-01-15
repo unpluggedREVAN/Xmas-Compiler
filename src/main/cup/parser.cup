@@ -1,14 +1,5 @@
 /* ***********************************************************************************
- * parser.cup - Parser para un lenguaje C-like con tokens "rodolfo", "bromista", etc.
- *
- * CORRECCIONES:
- *  - Eliminado el uso de UNKNOWN_TOKEN que no se requería.
- *  - Reestructurado 'block' y 'stmt_list' para evitar conflictos reduce/reduce.
- *  - Se mantiene la idea de 'pushScope' y 'popScope' al abrir/cerrar llaves,
- *    pero concentrando dichas acciones al comienzo y final del 'block'.
- *  - Uso de una producción "opt_stmt_list" para manejar la opción de cero o más
- *    sentencias dentro de un bloque.
- *
+ * parser.cup
  * ***********************************************************************************/
 
 package ParserLexer;
