@@ -1,45 +1,37 @@
-_verano_ abrecuento
-    # Declaraciones simples
-    rodolfo _x_ finregalo                  # int _x_;
-    rodolfo _y_ entrega 10 finregalo       # int _y_ = 10;
-    bromista _pi_ entrega 3.14 finregalo   # float _pi_ = 3.14;
+# Comentario de una línea
 
-    # Operaciones aritméticas y lógicas
-    _x_ entrega _y_ nochebuena 2 finregalo # _x_ = _y_ * 2;
-    trueno _flag_ entrega _x_ mary 20 finregalo # bool _flag_ = _x_ == 20;
+rodolfo _edad_ entrega 25 finregalo
+bromista _altura_ entrega 175.5 finregalo
+trueno _activo_ entrega true finregalo
+cupido _letra_ entrega 'A' finregalo
+cometa _saludo_ entrega "¡Hola, mundo!" finregalo
 
-    # Función simple
-    rodolfo _suma_ abreregalo rodolfo _a_, rodolfo _b_ cierraregalo abrecuento // int suma (int a, int b) {
-        rodolfo _resultado_ entrega _a_ navidad _b_ finregalo # _resultado_ = _a_ + _b_;
-        envia _resultado_ finregalo                          # return _resultado_;
-    cierracuento
-
-    rodolfo _resultadoFinal_ entrega _suma_ abreregalo 5, 7 cierraregalo finregalo
-    narra abreregalo "Resultado = " cierraregalo finregalo
-    narra abreregalo _resultadoFinal_ cierraregalo finregalo
-
-    # Ciclo for
-    duende abreregalo rodolfo _i_ entrega 0, _i_ snowball 10, _i_ quien cierraregalo abrecuento
-        narra abreregalo _i_ cierraregalo finregalo
-    cierracuento
+_verano_
+abrecuento
+    rodolfo _contador_ entrega 0 finregalo
 
     # Estructura if-else
-    elfo abreregalo _x_ minstix 20 cierraregalo abrecuento
-        narra abreregalo "X es mayor que 20" cierraregalo finregalo
-    cierracuento hada abrecuento
-        narra abreregalo "X es menor o igual a 20" cierraregalo finregalo
+    elfo abreregalo _activo_ cierraregalo
+    abrecuento
+        narra abreregalo "El sistema está activo." cierraregalo finregalo
+    cierracuento
+    hada
+    abrecuento
+        narra abreregalo "El sistema está inactivo." cierraregalo finregalo
     cierracuento
 
-    # Declaración de arreglo y acceso
-    rodolfo _arr_ abreempaque 5 cierraempaque finregalo # int _arr_[5];
-    _arr_ abreempaque 0 cierraempaque entrega 1 finregalo
-    _arr_ abreempaque 1 cierraempaque entrega 2 finregalo
-    _arr_ abreempaque 2 cierraempaque entrega 3 finregalo
-    _arr_ abreempaque 3 cierraempaque entrega 4 finregalo
-    _arr_ abreempaque 4 cierraempaque entrega 5 finregalo
-
-    # Iteración sobre el arreglo
-    duende abreregalo rodolfo _i_ entrega 0, _i_ snowball 5, _i_ quien cierraregalo abrecuento
-        narra abreregalo _arr_ abreempaque _i_ cierraempaque cierraregalo finregalo
+    # Bucle while
+    envuelve abreregalo _contador_ menor 3 cierraregalo
+    abrecuento
+        narra abreregalo "Contador actual: " navidad _contador_ cierraregalo finregalo
+        _contador_ entrega _contador_ navidad 1 finregalo
     cierracuento
+
+    # Operaciones con arreglos
+    rodolfo _valores_ entrega [ 10, 20, 30 ] finregalo
+    narra abreregalo "Valor en índice 1: " navidad _valores_ abreempaque 1 cierraempaque cierraregalo finregalo
+    _valores_ abreempaque 2 cierraempaque entrega 100 finregalo
+    narra abreregalo "Nuevo valor en índice 2: " navidad _valores_ abreempaque 2 cierraempaque cierraregalo finregalo
+
+    envia finregalo
 cierracuento
