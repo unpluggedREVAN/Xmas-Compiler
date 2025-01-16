@@ -45,8 +45,8 @@ public class Test {
 
             // Ejecutar el análisis sintáctico
             System.out.println("\nIniciando el análisis...");
-            //parser.parse();
-            parser.debug_parse();
+            parser.parse();
+            //parser.debug_parse();
             System.out.println("Análisis completado exitosamente.");
 
         } catch (Exception e) {

@@ -1,0 +1,50 @@
+rodolfo _globalVar1_ finregalo
+bromista _globalPi_ entrega 3.1415 finregalo
+trueno _isEnabled_ entrega true finregalo
+
+\_ Definición de la función 'printMessage' _/
+rodolfo _printMessage_ abreregalo cometa _msg_ cierraregalo abrecuento
+    narra abreregalo _msg_ cierraregalo finregalo
+    envia 0 finregalo
+cierracuento
+
+\_ Definición de la función 'addNumbers' _/
+rodolfo _addNumbers_ abreregalo rodolfo _x_, rodolfo _y_ cierraregalo abrecuento
+    rodolfo _result_ finregalo
+    _result_ entrega _x_ navidad _y_ finregalo
+    envia _result_ finregalo
+cierracuento
+
+\_ Definición de la función 'multiplyNumbers' _/
+rodolfo _multiplyNumbers_ abreregalo rodolfo _x_, rodolfo _y_ cierraregalo abrecuento
+    rodolfo _product_ finregalo
+    _product_ entrega _x_ nochebuena _y_ finregalo
+    envia _product_ finregalo
+cierracuento
+
+\_ Función Principal _/
+rodolfo _verano_ abreregalo cierraregalo abrecuento
+    rodolfo _counter_ finregalo
+    _counter_ entrega 10 finregalo
+
+    rodolfo _msgCounter_ entrega "Contador inicializado." finregalo
+    narra abreregalo _msgCounter_ cierraregalo finregalo
+
+    rodolfo _sum_ finregalo
+    _sum_ entrega _addNumbers_ abreregalo 5, 7 cierraregalo finregalo
+    narra abreregalo _sum_ cierraregalo finregalo
+
+    rodolfo _flag_ finregalo
+    _flag_ entrega true finregalo
+
+    rodolfo _msgFlagTrue_ entrega "Flag está activado." finregalo
+    rodolfo _msgFlagFalse_ entrega "Flag está desactivado." finregalo
+
+    elfo abreregalo _flag_ cierraregalo abrecuento
+        narra abreregalo _msgFlagTrue_ cierraregalo finregalo
+    cierracuento hada abrecuento
+        narra abreregalo _msgFlagFalse_ cierraregalo finregalo
+    cierracuento
+
+    envia 0 finregalo
+cierracuento

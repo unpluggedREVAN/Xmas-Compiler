@@ -1,28 +1,22 @@
 # Comentario de una línea
-
 rodolfo _edad_ entrega 25 finregalo
 bromista _altura_ entrega 175.5 finregalo
 trueno _activo_ entrega true finregalo
 cupido _letra_ entrega 'A' finregalo
 cometa _saludo_ entrega "¡Hola, mundo!" finregalo
 
-_verano_
-abrecuento
+rodolfo _verano_ abreregalo cierraregalo abrecuento
     rodolfo _contador_ entrega 0 finregalo
 
     # Estructura if-else
-    elfo abreregalo _activo_ cierraregalo
-    abrecuento
+    elfo abreregalo _activo_ cierraregalo abrecuento
         narra abreregalo "El sistema está activo." cierraregalo finregalo
-    cierracuento
-    hada
-    abrecuento
+    cierracuento hada abrecuento
         narra abreregalo "El sistema está inactivo." cierraregalo finregalo
     cierracuento
 
     # Bucle while
-    envuelve abreregalo _contador_ menor 3 cierraregalo
-    abrecuento
+    envuelve abreregalo _contador_ menor 3 cierraregalo abrecuento
         narra abreregalo "Contador actual: " navidad _contador_ cierraregalo finregalo
         _contador_ entrega _contador_ navidad 1 finregalo
     cierracuento
@@ -33,5 +27,5 @@ abrecuento
     _valores_ abreempaque 2 cierraempaque entrega 100 finregalo
     narra abreregalo "Nuevo valor en índice 2: " navidad _valores_ abreempaque 2 cierraempaque cierraregalo finregalo
 
-    envia finregalo
+    envia 0 finregalo
 cierracuento
