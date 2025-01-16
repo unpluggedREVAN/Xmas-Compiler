@@ -9,6 +9,7 @@ import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Stack;
 import java_cup.runtime.XMLElement;
 
 /** CUP v0.11b 20160615 (GIT 4ac7450) generated parser.
@@ -610,110 +611,204 @@ public class Parser extends java_cup.runtime.lr_parser {
     }
 
 
-    private Lexer s;
+    /*
+     * Clase interna para manejar la información de cada símbolo en la Tabla.
+     * Similar al SymbolData del parser "de copia".
+     */
+    public static class SymbolData {
+        String lexeme;
+        String type;
+        int line;
+        int column;
+        String scope;
+        Object value;
 
-    // Lista de errores sintácticos:
+        public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
+            this.lexeme = lexeme;
+            this.type = type;
+            this.line = line;
+            this.column = column;
+            this.scope = scope;
+            this.value = value;
+        }
+    }
+
+    // Lista de errores sintácticos (similar a 'syntaxErrors' del parser de copia):
     private List<String> errores = new ArrayList<>();
 
-    // Tabla de símbolos: scope -> lista de entradas.
-    private HashMap<String, ArrayList<String>> tablaSimbolos = new HashMap<>();
+    // Estructura para almacenar scopes y símbolos (similar a 'symbolTable'):
+    private HashMap<String, ArrayList<SymbolData>> tablaSimbolos = new HashMap<>();
 
-    // Scope actual (por defecto "global").
+    // Pila de scopes (similar a 'scopeStack'):
+    private Stack<String> scopeStack = new Stack<>();
+
+    // Scope actual. Iniciamos en 'global'.
     public String currentScope = "global";
 
+    // Lista opcional para estructuras de control, si se desea rastrear (análogo a controlStructures):
+    private List<String> estructurasControl = new ArrayList<>();
+
+    // Contador para crear scopes anónimos (bloques), si se necesita:
+    private int blockCounter = 0;
+
+    // Referencia a nuestro lexer
+    private Lexer s;
+
+    /* ----------------------------------------------------------------------
+       Constructor
+    ---------------------------------------------------------------------- */
     public Parser(Lexer s) {
         this.s = s;
+        scopeStack.push("global");  // Primer scope
     }
 
     /* ----------------------------------------------------------------------
-       Sobrescritura de métodos de error-recovery
+       Sobrescritura de métodos de error-recovery y reporte
+       (adaptando estilo del parser de copia)
     ---------------------------------------------------------------------- */
     @Override
     public void syntax_error(Symbol sym) {
-        report_error("Unexpected token", sym);
-        // Podrías forzar una sincronización manual aquí si lo deseas
+        // Llamamos a nuestra propia función de reporte
+        report_error("Token inesperado", sym);
     }
 
     @Override
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        // Evitamos lanzar excepción y no abortamos.
-        System.err.println("**Unrecoverable syntax error** en token: "
-                           + (cur_token != null ? cur_token.value : "null")
-                           + " (linea " + (cur_token != null ? (cur_token.left + 1) : -1)
-                           + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
-        // Continuamos parseo.
+        errores.add("** Error sintáctico irrecuperable ** en token: "
+                    + (cur_token != null ? cur_token.value : "null")
+                    + " (línea " + (cur_token != null ? (cur_token.left + 1) : -1)
+                    + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
+        // No lanzamos excepción para no abortar, pero CUP por defecto lo haría.
+        // Si quisiéramos abortar, podríamos descomentar:
+        // throw new RuntimeException("Unrecoverable syntax error");
     }
 
     @Override
     public void report_fatal_error(String message, Object info) {
+        // Similar a la estrategia del parser de copia
+        report_error(message, info);
+        // Podemos dejar que continúe o forzar la excepción.
+        // throw new RuntimeException("Fatal error: " + message);
+    }
+
+    @Override
+    public void report_error(String message, Object info) {
         if (info instanceof Symbol) {
-            report_error(message, (Symbol)info);
-        } else {
-            System.err.println("Fatal error: " + message);
-        }
-        // No abortamos
-    }
-
-    public void report_error(String message, Symbol sym) {
-        if (sym != null) {
-            String errorMsg = String.format(
-                "Syntax Error: %s cerca del token '%s' en línea %d, columna %d",
-                message, sym.value, sym.left + 1, sym.right + 1
-            );
+            Symbol sym = (Symbol) info;
+            String errorMsg = "Error: " + message
+                              + " cerca del token '" + sym.value + "' "
+                              + "(línea " + (sym.left + 1) + ", col " + (sym.right + 1) + ")";
             errores.add(errorMsg);
             System.err.println(errorMsg);
         } else {
-            String errorMsg = "Syntax Error: " + message;
+            String errorMsg = "Error: " + message;
             errores.add(errorMsg);
             System.err.println(errorMsg);
         }
-    }
-
-    public List<String> getErrores() {
-        return errores;
     }
 
     /* ----------------------------------------------------------------------
-       Manejo de tablas de símbolos
+       Manejo de Tabla de Símbolos y scopes
     ---------------------------------------------------------------------- */
-
-    // Crear nuevo scope (por ejemplo, al entrar en una función)
-    public void crearTabla(String type, String funcName, int line, int col) {
-        System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
-        String infoFuncion = "tipoFuncion:" + type
-                           + " line:" + line
-                           + " col:" + col;
-
-        ArrayList<String> nuevaLista = new ArrayList<>();
-        nuevaLista.add(infoFuncion);
-
-        currentScope = funcName;
-        tablaSimbolos.put(currentScope, nuevaLista);
+    // Empujar un nuevo scope a la pila
+    private void pushScope(String newScope) {
+        scopeStack.push(newScope);
+        currentScope = newScope;
+        if (!tablaSimbolos.containsKey(currentScope)) {
+            tablaSimbolos.put(currentScope, new ArrayList<SymbolData>());
+        }
     }
 
-    // Agregar símbolo (variable o parámetro) a la tabla
+    // Retirar scope de la pila
+    private void popScope() {
+        if (!scopeStack.isEmpty()) {
+            scopeStack.pop();
+            currentScope = scopeStack.isEmpty() ? "global" : scopeStack.peek();
+        }
+    }
+
+    // Crear tabla (similar a la idea de crear un scope al entrar en función):
+    public void crearTabla(String type, String funcName, int line, int col) {
+        // Emulamos lo que hacíamos antes, pero usando pushScope
+        System.out.println("Se crea nuevo scope para función: " + funcName);
+        pushScope(funcName);
+
+        // Si quisiéramos guardar metadata de la función como símbolo, lo hacemos:
+        SymbolData funcData = new SymbolData(funcName, "funcType:" + type, line, col, currentScope, null);
+        tablaSimbolos.get(currentScope).add(funcData);
+    }
+
+    // Agregar símbolo a la tabla
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
-            tablaSimbolos.put(scope, new ArrayList<String>());
+            tablaSimbolos.put(scope, new ArrayList<SymbolData>());
         }
-        String info = "line:" + line
-                    + " col:" + col
-                    + " lex:" + lexeme
-                    + " scope:" + scope
-                    + " type:" + type;
-        tablaSimbolos.get(scope).add(info);
-        System.out.println("Se agregó símbolo -> " + info);
+        SymbolData data = new SymbolData(lexeme, type, line, col, scope, null);
+        tablaSimbolos.get(scope).add(data);
+        System.out.println("Símbolo agregado -> "
+                           + "lex:'" + lexeme + "', tipo:'" + type
+                           + "', scope:'" + scope + "', línea:" + line + ", col:" + col);
     }
 
+    // Para cuando terminamos un bloque, si quisiéramos:
+    private void closeCurrentScope() {
+        popScope();
+    }
+
+    // Método para impresión final al concluir el parseo (similar a printSummary):
     public void imprimirTablaSimbolos() {
-        System.out.println("\n--- Tablas de Símbolos ---");
+        System.out.println("\n--- 1) TABLAS DE SÍMBOLOS ---");
+        System.out.println("Lexema\tTipo\tLínea\tCol\tScope\tValor");
+        System.out.println("---------------------------------------------");
         for (String scopeKey : tablaSimbolos.keySet()) {
-            System.out.println("Scope: " + scopeKey);
-            for (String symInfo : tablaSimbolos.get(scopeKey)) {
-                System.out.println("  " + symInfo);
+            for (SymbolData sd : tablaSimbolos.get(scopeKey)) {
+                System.out.printf("%s\t%s\t%d\t%d\t%s\t%s\n",
+                                  sd.lexeme,
+                                  sd.type,
+                                  sd.line,
+                                  sd.column,
+                                  sd.scope,
+                                  (sd.value != null ? sd.value.toString() : "null"));
             }
         }
+
+        System.out.println("\n--- 2) ERRORES SINTÁCTICOS ---");
+        if (errores.isEmpty()) {
+            System.out.println("No se encontraron errores sintácticos.");
+        } else {
+            for (String err : errores) {
+                System.out.println("* " + err);
+            }
+        }
+
+        // Si quisiéramos mostrar estructuras de control, similar al "parser de copia":
+        if (!estructurasControl.isEmpty()) {
+            System.out.println("\n--- 3) ESTRUCTURAS DE CONTROL DETECTADAS ---");
+            for (String info : estructurasControl) {
+                System.out.println("- " + info);
+            }
+        } else {
+            System.out.println("\n--- 3) ESTRUCTURAS DE CONTROL DETECTADAS ---");
+            System.out.println("No se detectaron estructuras de control.");
+        }
+
+        System.out.println("\n--- 4) RESUMEN GENERAL ---");
+        if (errores.isEmpty()) {
+            System.out.println("Estado del archivo: VÁLIDO");
+            System.out.println("Errores encontrados: 0");
+        } else {
+            System.out.println("Estado del archivo: INVÁLIDO");
+            System.out.println("Errores encontrados: " + errores.size());
+        }
+
+        System.out.println("\nFin del reporte.\n");
     }
+
+    // Por si deseamos rastrear alguna estructura de control (while, for, if, etc.)
+    public void addControlStructure(String info) {
+        estructurasControl.add(info);
+    }
+
 
 
 /** Cup generated class to encapsulate user supplied action code.*/
@@ -760,6 +855,8 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
          System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
+         // Al finalizar el parseo, imprimimos el reporte:
+         parser.imprimirTablaSimbolos();
        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("programa",0, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -771,6 +868,8 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
          System.out.println("Regla 'programa' con sólo MAIN");
+         // Al finalizar el parseo, imprimimos el reporte:
+         parser.imprimirTablaSimbolos();
        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("programa",0, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1001,7 +1100,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         System.err.println("Absorbiendo otro token 'error' en customError");
-        // CUP internamente seguirá intentando re-sincronizar.
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("customError",27, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1330,7 +1428,7 @@ class CUP$Parser$actions {
 		int funIdright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String funId = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 
-        // Convertimos a string
+        // Al reconocer la función, creamos un nuevo scope
         String t = (String) td;
         int line = funIdleft + 1;
         int col  = funIdright + 1;
@@ -1369,8 +1467,9 @@ class CUP$Parser$actions {
                           + ", con params: " + pStr
                           + " y un bloque.");
 
-       // Al terminar, regresamos el scope al global.
+       // Al terminar la función, regresamos scope al global (o popScope):
        parser.currentScope = "global";
+       parser.popScope();
 
        RESULT = "func["+t+" "+funId+"("+pStr+")]";
     
@@ -1507,6 +1606,7 @@ class CUP$Parser$actions {
 		Object b = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         RESULT = "if("+cond+")"+b;
+        parser.addControlStructure("Se detectó un 'if' con condición: " + cond);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1527,6 +1627,7 @@ class CUP$Parser$actions {
 		Object b2 = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         RESULT = "if("+cond+")"+b1+" else "+b2;
+        parser.addControlStructure("Se detectó un 'if-else' con condición: " + cond);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1540,7 +1641,7 @@ class CUP$Parser$actions {
 		int blright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        parser.report_error("Error in 'if' condition. Recovered until ')'", parser.scan());
+        parser.report_error("Error en condición de 'if'", parser.scan());
         RESULT = "ifError"+bl;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1559,6 +1660,7 @@ class CUP$Parser$actions {
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         RESULT = "while("+cond+")"+bl;
+        parser.addControlStructure("Se detectó un 'while' con condición: " + cond);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("while_estructura",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1572,7 +1674,7 @@ class CUP$Parser$actions {
 		int blright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        parser.report_error("Error in 'while' condition. Recovered until ')'", parser.scan());
+        parser.report_error("Error en condición de 'while'", parser.scan());
         RESULT = "whileError"+bl;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("while_estructura",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1597,6 +1699,9 @@ class CUP$Parser$actions {
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
+        parser.addControlStructure("Se detectó un 'for' con inicialización: " + ini
+                                   + ", condición: " + cond
+                                   + ", step: " + step);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("for_estructura",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-8)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1610,7 +1715,7 @@ class CUP$Parser$actions {
 		int blright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        parser.report_error("Error in 'for' structure. Recovered until ')'", parser.scan());
+        parser.report_error("Error en 'for'", parser.scan());
         RESULT = "forError"+bl;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("for_estructura",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1629,6 +1734,7 @@ class CUP$Parser$actions {
 		Object cs = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
         RESULT = "switch("+sw+") { "+cs+" }";
+        parser.addControlStructure("Se detectó un 'switch' con expresión: " + sw);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("switch_estructura",15, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1642,7 +1748,7 @@ class CUP$Parser$actions {
 		int csright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		Object cs = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-        parser.report_error("Error in 'switch' structure. Recovered until ')'", parser.scan());
+        parser.report_error("Error en 'switch'", parser.scan());
         RESULT = "switchError{ "+cs+" }";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("switch_estructura",15, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -2206,7 +2312,7 @@ class CUP$Parser$actions {
             {
               Object RESULT =null;
 		
-        parser.report_error("Error in expression. Recovered until ')'", parser.scan());
+        parser.report_error("Error en expresión. Recuperado hasta ')'", parser.scan());
         RESULT = "errorExpr";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",23, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -2218,8 +2324,8 @@ class CUP$Parser$actions {
             {
               Object RESULT =null;
 		
-          RESULT = "";
-        
+        RESULT = "";
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("argumentos",28, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -2232,8 +2338,8 @@ class CUP$Parser$actions {
 		int laright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object la = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-          RESULT = la;
-        
+        RESULT = la;
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("argumentos",28, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -2246,8 +2352,8 @@ class CUP$Parser$actions {
 		int expright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object exp = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-          RESULT = exp;
-        
+        RESULT = exp;
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_argumentos",29, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -2263,8 +2369,8 @@ class CUP$Parser$actions {
 		int expright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object exp = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-          RESULT = (String)la + ", " + exp;
-        
+        RESULT = (String)la + ", " + exp;
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_argumentos",29, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;

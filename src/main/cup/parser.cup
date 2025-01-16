@@ -1,5 +1,5 @@
 /* ============================================================================
-   parser.cup - Xmas-Compile
+   parser.cup - Xmas-Compile (adaptado con estilo de output similar al parser de copia)
 ============================================================================ */
 
 package ParserLexer;
@@ -8,115 +8,210 @@ import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Stack;
 
 /* ----------------------------------------------------------------------
    1) Sección de código del parser
 ---------------------------------------------------------------------- */
 parser code {:
-    private Lexer s;
+    /*
+     * Clase interna para manejar la información de cada símbolo en la Tabla.
+     * Similar al SymbolData del parser "de copia".
+     */
+    public static class SymbolData {
+        String lexeme;
+        String type;
+        int line;
+        int column;
+        String scope;
+        Object value;
 
-    // Lista de errores sintácticos:
+        public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
+            this.lexeme = lexeme;
+            this.type = type;
+            this.line = line;
+            this.column = column;
+            this.scope = scope;
+            this.value = value;
+        }
+    }
+
+    // Lista de errores sintácticos (similar a 'syntaxErrors' del parser de copia):
     private List<String> errores = new ArrayList<>();
 
-    // Tabla de símbolos: scope -> lista de entradas.
-    private HashMap<String, ArrayList<String>> tablaSimbolos = new HashMap<>();
+    // Estructura para almacenar scopes y símbolos (similar a 'symbolTable'):
+    private HashMap<String, ArrayList<SymbolData>> tablaSimbolos = new HashMap<>();
 
-    // Scope actual (por defecto "global").
+    // Pila de scopes (similar a 'scopeStack'):
+    private Stack<String> scopeStack = new Stack<>();
+
+    // Scope actual. Iniciamos en 'global'.
     public String currentScope = "global";
 
+    // Lista opcional para estructuras de control, si se desea rastrear (análogo a controlStructures):
+    private List<String> estructurasControl = new ArrayList<>();
+
+    // Contador para crear scopes anónimos (bloques), si se necesita:
+    private int blockCounter = 0;
+
+    // Referencia a nuestro lexer
+    private Lexer s;
+
+    /* ----------------------------------------------------------------------
+       Constructor
+    ---------------------------------------------------------------------- */
     public Parser(Lexer s) {
         this.s = s;
+        scopeStack.push("global");  // Primer scope
     }
 
     /* ----------------------------------------------------------------------
-       Sobrescritura de métodos de error-recovery
+       Sobrescritura de métodos de error-recovery y reporte
+       (adaptando estilo del parser de copia)
     ---------------------------------------------------------------------- */
     @Override
     public void syntax_error(Symbol sym) {
-        report_error("Unexpected token", sym);
-        // Podrías forzar una sincronización manual aquí si lo deseas
+        // Llamamos a nuestra propia función de reporte
+        report_error("Token inesperado", sym);
     }
 
     @Override
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        // Evitamos lanzar excepción y no abortamos.
-        System.err.println("**Unrecoverable syntax error** en token: "
-                           + (cur_token != null ? cur_token.value : "null")
-                           + " (linea " + (cur_token != null ? (cur_token.left + 1) : -1)
-                           + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
-        // Continuamos parseo.
+        errores.add("** Error sintáctico irrecuperable ** en token: "
+                    + (cur_token != null ? cur_token.value : "null")
+                    + " (línea " + (cur_token != null ? (cur_token.left + 1) : -1)
+                    + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
+        // No lanzamos excepción para no abortar, pero CUP por defecto lo haría.
+        // Si quisiéramos abortar, podríamos descomentar:
+        // throw new RuntimeException("Unrecoverable syntax error");
     }
 
     @Override
     public void report_fatal_error(String message, Object info) {
+        // Similar a la estrategia del parser de copia
+        report_error(message, info);
+        // Podemos dejar que continúe o forzar la excepción.
+        // throw new RuntimeException("Fatal error: " + message);
+    }
+
+    @Override
+    public void report_error(String message, Object info) {
         if (info instanceof Symbol) {
-            report_error(message, (Symbol)info);
-        } else {
-            System.err.println("Fatal error: " + message);
-        }
-        // No abortamos
-    }
-
-    public void report_error(String message, Symbol sym) {
-        if (sym != null) {
-            String errorMsg = String.format(
-                "Syntax Error: %s cerca del token '%s' en línea %d, columna %d",
-                message, sym.value, sym.left + 1, sym.right + 1
-            );
+            Symbol sym = (Symbol) info;
+            String errorMsg = "Error: " + message
+                              + " cerca del token '" + sym.value + "' "
+                              + "(línea " + (sym.left + 1) + ", col " + (sym.right + 1) + ")";
             errores.add(errorMsg);
             System.err.println(errorMsg);
         } else {
-            String errorMsg = "Syntax Error: " + message;
+            String errorMsg = "Error: " + message;
             errores.add(errorMsg);
             System.err.println(errorMsg);
         }
-    }
-
-    public List<String> getErrores() {
-        return errores;
     }
 
     /* ----------------------------------------------------------------------
-       Manejo de tablas de símbolos
+       Manejo de Tabla de Símbolos y scopes
     ---------------------------------------------------------------------- */
-
-    // Crear nuevo scope (por ejemplo, al entrar en una función)
-    public void crearTabla(String type, String funcName, int line, int col) {
-        System.out.println("/++Nueva tabla de símbolos++/ " + funcName);
-        String infoFuncion = "tipoFuncion:" + type
-                           + " line:" + line
-                           + " col:" + col;
-
-        ArrayList<String> nuevaLista = new ArrayList<>();
-        nuevaLista.add(infoFuncion);
-
-        currentScope = funcName;
-        tablaSimbolos.put(currentScope, nuevaLista);
+    // Empujar un nuevo scope a la pila
+    private void pushScope(String newScope) {
+        scopeStack.push(newScope);
+        currentScope = newScope;
+        if (!tablaSimbolos.containsKey(currentScope)) {
+            tablaSimbolos.put(currentScope, new ArrayList<SymbolData>());
+        }
     }
 
-    // Agregar símbolo (variable o parámetro) a la tabla
+    // Retirar scope de la pila
+    private void popScope() {
+        if (!scopeStack.isEmpty()) {
+            scopeStack.pop();
+            currentScope = scopeStack.isEmpty() ? "global" : scopeStack.peek();
+        }
+    }
+
+    // Crear tabla (similar a la idea de crear un scope al entrar en función):
+    public void crearTabla(String type, String funcName, int line, int col) {
+        // Emulamos lo que hacíamos antes, pero usando pushScope
+        System.out.println("Se crea nuevo scope para función: " + funcName);
+        pushScope(funcName);
+
+        // Si quisiéramos guardar metadata de la función como símbolo, lo hacemos:
+        SymbolData funcData = new SymbolData(funcName, "funcType:" + type, line, col, currentScope, null);
+        tablaSimbolos.get(currentScope).add(funcData);
+    }
+
+    // Agregar símbolo a la tabla
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
-            tablaSimbolos.put(scope, new ArrayList<String>());
+            tablaSimbolos.put(scope, new ArrayList<SymbolData>());
         }
-        String info = "line:" + line
-                    + " col:" + col
-                    + " lex:" + lexeme
-                    + " scope:" + scope
-                    + " type:" + type;
-        tablaSimbolos.get(scope).add(info);
-        System.out.println("Se agregó símbolo -> " + info);
+        SymbolData data = new SymbolData(lexeme, type, line, col, scope, null);
+        tablaSimbolos.get(scope).add(data);
+        System.out.println("Símbolo agregado -> "
+                           + "lex:'" + lexeme + "', tipo:'" + type
+                           + "', scope:'" + scope + "', línea:" + line + ", col:" + col);
     }
 
+    // Para cuando terminamos un bloque, si quisiéramos:
+    private void closeCurrentScope() {
+        popScope();
+    }
+
+    // Método para impresión final al concluir el parseo (similar a printSummary):
     public void imprimirTablaSimbolos() {
-        System.out.println("\n--- Tablas de Símbolos ---");
+        System.out.println("\n--- 1) TABLAS DE SÍMBOLOS ---");
+        System.out.println("Lexema\tTipo\tLínea\tCol\tScope\tValor");
+        System.out.println("---------------------------------------------");
         for (String scopeKey : tablaSimbolos.keySet()) {
-            System.out.println("Scope: " + scopeKey);
-            for (String symInfo : tablaSimbolos.get(scopeKey)) {
-                System.out.println("  " + symInfo);
+            for (SymbolData sd : tablaSimbolos.get(scopeKey)) {
+                System.out.printf("%s\t%s\t%d\t%d\t%s\t%s\n",
+                                  sd.lexeme,
+                                  sd.type,
+                                  sd.line,
+                                  sd.column,
+                                  sd.scope,
+                                  (sd.value != null ? sd.value.toString() : "null"));
             }
         }
+
+        System.out.println("\n--- 2) ERRORES SINTÁCTICOS ---");
+        if (errores.isEmpty()) {
+            System.out.println("No se encontraron errores sintácticos.");
+        } else {
+            for (String err : errores) {
+                System.out.println("* " + err);
+            }
+        }
+
+        // Si quisiéramos mostrar estructuras de control, similar al "parser de copia":
+        if (!estructurasControl.isEmpty()) {
+            System.out.println("\n--- 3) ESTRUCTURAS DE CONTROL DETECTADAS ---");
+            for (String info : estructurasControl) {
+                System.out.println("- " + info);
+            }
+        } else {
+            System.out.println("\n--- 3) ESTRUCTURAS DE CONTROL DETECTADAS ---");
+            System.out.println("No se detectaron estructuras de control.");
+        }
+
+        System.out.println("\n--- 4) RESUMEN GENERAL ---");
+        if (errores.isEmpty()) {
+            System.out.println("Estado del archivo: VÁLIDO");
+            System.out.println("Errores encontrados: 0");
+        } else {
+            System.out.println("Estado del archivo: INVÁLIDO");
+            System.out.println("Errores encontrados: " + errores.size());
+        }
+
+        System.out.println("\nFin del reporte.\n");
     }
+
+    // Por si deseamos rastrear alguna estructura de control (while, for, if, etc.)
+    public void addControlStructure(String info) {
+        estructurasControl.add(info);
+    }
+
 :}
 
 /* ----------------------------------------------------------------------
@@ -142,12 +237,6 @@ terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
 terminal PRINT, READ, MAIN;
 terminal ABRECUENTO, CIERRACUENTO, ABREREGALO, CIERRAREGALO, ABREEMPAQUE, CIERRAEMPAQUE;
 terminal PUNTO_Y_COMA, COMA;
-
-/*
-   Para la sugerencia de CUP:
-   stmt ::= expr SEMI | ... | customError SEMI ;
-   customError ::= customError error | error ;
-*/
 
 /* ----------------------------------------------------------------------
    4) Declaración de NO TERMINALES
@@ -185,24 +274,27 @@ start with programa;
 
 /* A) Estructura General del Programa */
 programa ::=
-
     declaracionesGlobales maindeclaracion bloque
        {:
          System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
+         // Al finalizar el parseo, imprimimos el reporte:
+         parser.imprimirTablaSimbolos();
        :}
   | maindeclaracion bloque
        {:
          System.out.println("Regla 'programa' con sólo MAIN");
+         // Al finalizar el parseo, imprimimos el reporte:
+         parser.imprimirTablaSimbolos();
        :}
   ;
-
 
 /* Main funciones */
 maindeclaracion ::=
 MAIN
  | MAIN ABREREGALO CIERRAREGALO
  | tipo_dato MAIN
- |  tipo_dato MAIN ABREREGALO CIERRAREGALO;
+ |  tipo_dato MAIN ABREREGALO CIERRAREGALO
+ ;
 
 /* declaracionesGlobales -> (globalDeclaracion)+ */
 declaracionesGlobales ::=
@@ -216,9 +308,7 @@ globalDeclaracion ::=
   |  funcion
   ;
 
-/* B) Bloque
-   Se elimina "bloque ::= error CIERRACUENTO" para evitar shift/reduce
-*/
+/* B) Bloque */
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
       {:
@@ -241,7 +331,6 @@ lista_sentencias ::=
 
 /* ----------------------------------------------------------------------
    C) Sentencia
-   Inyectamos la producción con customError para absorber 'error'
 ---------------------------------------------------------------------- */
 sentencia ::=
     declaracion
@@ -261,14 +350,14 @@ sentencia ::=
       :}
   | BREAK PUNTO_Y_COMA
 
-  /* Manejo de error con la idea CUP: customError SEMI */
+  /* Manejo de error */
   | customError PUNTO_Y_COMA
       {:
          System.err.println("Recuperado un error en sentencia con customError;");
          RESULT = "errStmt";
       :}
 
-  /* Producción para token desconocido, si el lexer retorna UNKNOWN_TOKEN */
+  /* Producción para token desconocido */
   | UNKNOWN_TOKEN:unk
       {:
          parser.report_error("Sentencia desconocida, token ignorado", parser.scan());
@@ -281,7 +370,6 @@ customError ::=
     customError error
       {:
         System.err.println("Absorbiendo otro token 'error' en customError");
-        // CUP internamente seguirá intentando re-sincronizar.
       :}
   | error
       {:
@@ -407,7 +495,7 @@ asignacion ::=
 funcion ::=
     tipo_dato:td IDENTIFICADOR:funId
     {:
-        // Convertimos a string
+        // Al reconocer la función, creamos un nuevo scope
         String t = (String) td;
         int line = funIdleft + 1;
         int col  = funIdright + 1;
@@ -425,8 +513,9 @@ funcion ::=
                           + ", con params: " + pStr
                           + " y un bloque.");
 
-       // Al terminar, regresamos el scope al global.
+       // Al terminar la función, regresamos scope al global (o popScope):
        parser.currentScope = "global";
+       parser.popScope();
 
        RESULT = "func["+t+" "+funId+"("+pStr+")]";
     :}
@@ -487,14 +576,16 @@ if_estructura ::=
     IF ABREREGALO expresion:cond CIERRAREGALO bloque:b
       {:
         RESULT = "if("+cond+")"+b;
+        parser.addControlStructure("Se detectó un 'if' con condición: " + cond);
       :}
   | IF ABREREGALO expresion:cond CIERRAREGALO bloque:b1 ELSE bloque:b2
       {:
         RESULT = "if("+cond+")"+b1+" else "+b2;
+        parser.addControlStructure("Se detectó un 'if-else' con condición: " + cond);
       :}
   | IF ABREREGALO error CIERRAREGALO bloque:bl
       {:
-        parser.report_error("Error in 'if' condition. Recovered until ')'", parser.scan());
+        parser.report_error("Error en condición de 'if'", parser.scan());
         RESULT = "ifError"+bl;
       :}
   ;
@@ -504,10 +595,11 @@ while_estructura ::=
     WHILE ABREREGALO expresion:cond CIERRAREGALO bloque:bl
       {:
         RESULT = "while("+cond+")"+bl;
+        parser.addControlStructure("Se detectó un 'while' con condición: " + cond);
       :}
   | WHILE ABREREGALO error CIERRAREGALO bloque:bl
       {:
-        parser.report_error("Error in 'while' condition. Recovered until ')'", parser.scan());
+        parser.report_error("Error en condición de 'while'", parser.scan());
         RESULT = "whileError"+bl;
       :}
   ;
@@ -517,10 +609,13 @@ for_estructura ::=
     FOR ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
       {:
         RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
+        parser.addControlStructure("Se detectó un 'for' con inicialización: " + ini
+                                   + ", condición: " + cond
+                                   + ", step: " + step);
       :}
   | FOR ABREREGALO error CIERRAREGALO bloque:bl
       {:
-        parser.report_error("Error in 'for' structure. Recovered until ')'", parser.scan());
+        parser.report_error("Error en 'for'", parser.scan());
         RESULT = "forError"+bl;
       :}
   ;
@@ -530,10 +625,11 @@ switch_estructura ::=
     SWITCH ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
       {:
         RESULT = "switch("+sw+") { "+cs+" }";
+        parser.addControlStructure("Se detectó un 'switch' con expresión: " + sw);
       :}
   | SWITCH ABREREGALO error CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
       {:
-        parser.report_error("Error in 'switch' structure. Recovered until ')'", parser.scan());
+        parser.report_error("Error en 'switch'", parser.scan());
         RESULT = "switchError{ "+cs+" }";
       :}
   ;
@@ -574,7 +670,6 @@ default_block ::=
 
 /* ----------------------------------------------------------------------
    H) Expresión con precedencia
-   error => re-sincronizar con ')'
 ---------------------------------------------------------------------- */
 expresion ::=
     expresion:e1 DISYUNCION expresion:e2
@@ -701,31 +796,31 @@ expresion ::=
       :}
   | error CIERRAREGALO
       {:
-        parser.report_error("Error in expression. Recovered until ')'", parser.scan());
+        parser.report_error("Error en expresión. Recuperado hasta ')'", parser.scan());
         RESULT = "errorExpr";
       :}
   ;
 
-  argumentos ::=
-      /* epsilon: llamada sin argumentos */
-        {:
-          RESULT = "";
-        :}
-    | lista_argumentos:la
-        {:
-          RESULT = la;
-        :}
-    ;
+argumentos ::=
+    /* epsilon: llamada sin argumentos */
+      {:
+        RESULT = "";
+      :}
+  | lista_argumentos:la
+      {:
+        RESULT = la;
+      :}
+  ;
 
-  lista_argumentos ::=
-      expresion:exp
-        {:
-          RESULT = exp;
-        :}
-    | lista_argumentos:la COMA expresion:exp
-        {:
-          RESULT = (String)la + ", " + exp;
-        :}
-    ;
+lista_argumentos ::=
+    expresion:exp
+      {:
+        RESULT = exp;
+      :}
+  | lista_argumentos:la COMA expresion:exp
+      {:
+        RESULT = (String)la + ", " + exp;
+      :}
+  ;
 
 /* Fin del parser.cup */
