@@ -1,7 +1,6 @@
 /* ============================================================================
    parser.cup - Xmas-Compiler
-   - Manejo robusto de errores (modo pánico) + Tablas de Símbolos por scope.
-   - Corrige problemas con $id y conversión a String.
+   corrige problemas con $id y conversión a String.
 ============================================================================ */
 
 package ParserLexer;
@@ -17,7 +16,7 @@ import java.util.List;
 parser code {:
     private Lexer s;
 
-    // Lista de errores sintácticos.
+    // errores sintácticos.
     private List<String> errores = new ArrayList<>();
 
     // Tabla de símbolos: scope -> lista de descripciones de símbolos.
@@ -30,7 +29,7 @@ parser code {:
         this.s = s;
     }
 
-    // Reporta error y lo agrega a la lista.
+    // error y lo agrega a la lista.
     public void report_error(String message, Symbol sym) {
         if (sym != null) {
             String errorMsg = String.format(
@@ -46,7 +45,7 @@ parser code {:
         }
     }
 
-    // Sobrescribimos syntax_error para usar report_error.
+    // syntax_error para usar report_error.
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Unexpected token", sym);
@@ -56,7 +55,6 @@ parser code {:
         return errores;
     }
 
-    // --- Métodos para manejar tablas de símbolos --- //
 
     // Crea un scope nuevo para la función (o main).
     // type, nombre, línea y columna.
@@ -72,7 +70,6 @@ parser code {:
         tablaSimbolos.put(currentScope, nuevaLista);
     }
 
-    // Agrega un símbolo de variable a la tabla (scope actual).
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
         if (!tablaSimbolos.containsKey(scope)) {
             tablaSimbolos.put(scope, new ArrayList<String>());
@@ -85,7 +82,7 @@ parser code {:
         System.out.println("Se agregó símbolo -> " + info);
     }
 
-    // Imprimir todas las tablas.
+    // todas las tablas.
     public void imprimirTablaSimbolos() {
         System.out.println("\n--- Tablas de Símbolos ---");
         for (String scopeKey : tablaSimbolos.keySet()) {
@@ -635,5 +632,3 @@ expresion ::=
         RESULT = "errorExpr";
       :}
   ;
-
-/* Fin del parser.cup */

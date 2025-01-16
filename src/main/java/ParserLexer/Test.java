@@ -47,7 +47,7 @@ public class Test {
             System.out.println("\nIniciando el análisis...");
             parser.parse();
             //parser.debug_parse();
-            System.out.println("Análisis completado exitosamente.");
+            System.out.println("Análisis completado.");
 
         } catch (Exception e) {
             System.err.println("Error durante el análisis:");

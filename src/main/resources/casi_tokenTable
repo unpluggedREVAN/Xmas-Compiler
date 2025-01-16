@@ -1,6 +1,5 @@
 /* ============================================================================
-   parser.cup - Xmas-Compiler con modo pánico mínimo, RESULT en expresiones,
-   y tokens INCREMENTO, DECREMENTO, UNKNOWN_TOKEN reintroducidos y usados.
+   parser.cup - Xmas-Compiler
 ============================================================================ */
 package ParserLexer;
 import java_cup.runtime.*;
@@ -183,7 +182,6 @@ lista_sentencias ::=
 
 /* ----------------------------------------------------------------------
    B) Sentencia
-   Agregamos una rama para UNKNOWN_TOKEN: con alias (unknown)
 ---------------------------------------------------------------------- */
 sentencia ::=
     declaracion
@@ -273,11 +271,6 @@ asignacion ::=
 
 /* ----------------------------------------------------------------------
    E) Declaración de Funciones
-      - Devuelven entero, flotante, char o bool (string si deseas),
-     con parámetros y un bloque.
-   - El enunciado dice "p. Debe permitir la creación y uso de funciones ...
-     separador de parámetros=coma".
-   - Propuesta en la tabla de simbolos, nose se si vaya a funcionar
 ---------------------------------------------------------------------- */
 ---------------------------------------------------------------------- */
 funcion ::=
@@ -530,7 +523,3 @@ expresion ::=
         RESULT = null;
       :}
   ;
-
-/*
-// no se define 'literal' pues no se usa
-*/
