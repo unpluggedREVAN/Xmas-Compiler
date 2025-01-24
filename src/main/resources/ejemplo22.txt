@@ -1,0 +1,47 @@
+  bromista  _mi_  abreregalo  rodolfo  _dif_ ,  cupido  _otra_ cierraregalo abrecuento  #sintactico  cierraregalo
+	 rodolfo  _otra_ finregalo 
+	 cometa  _str_ entrega "Hola $ magos &/#$& cierraregalo  mundo" finregalo 
+	 duende   abreregalo _i_ entrega 2 finregalo , _i_ evergreen 10 , _i_ quien  cierraregalo # puede dar sintactico
+	 abrecuento 
+		 envuelve  abreregalo _var2_ minstix 12.2  melchor  12 minstix  abreregalo 34 navidad 35 cierraregalo  cierraregalo  #semantico
+		 abrecuento 
+			_var_  entrega  _var_ intercambio 1 finregalo  #semantico
+		 cierracuento
+
+		 elfo   abreregalo _var_ mary 0 cierraregalo 
+		 abrecuento 
+			 narra  abreregalo "entra al  elfo " cierraregalo  finregalo 
+		 cierracuento 
+		 elfo  abreregalo true cierraregalo 
+		 abrecuento 
+			 narra  abreregalo _var_ cierraregalo  finregalo 
+		 cierracuento 
+		 hada 
+		 abrecuento
+			 varios  abreregalo _otra2_ cierraregalo  #semantico
+			 abrecuento 
+				 historia  10 sigue
+				 abrecuento
+					 narra  abreregalo "un  historia " cierraregalo  finregalo
+					 cierracuento
+			 cierracuento 
+		 cierracuento 
+	 cierracuento 
+	 envia 1 finregalo  #semantico
+  cierracuento 
+
+  trueno  _miOtraFun_  abreregalo  cierraregalo   abrecuento 
+	 envia 5.6 finregalo  #semantico
+  cierracuento
+
+  rodolfo  _verano_  abreregalo  cierraregalo   abrecuento
+      _arr_ abreempaque 67 navidad _i_ cierraempaque entrega 0.01 finregalo # semantico
+  	 trueno  _b1_ finregalo
+  	 cometa  _s1_ finregalo
+  	 escucha  abreregalo _s1_ cierraregalo  finregalo  #semantico
+  	 narra  abreregalo _b1_ cierraregalo  finregalo  #semantico
+  	 narra  abreregalo true cierraregalo  finregalo  #semantico
+  	 narra  abreregalo 6.7 cierraregalo  finregalo
+  	 #envia finregalo
+  	 envia 1 navidad _f_ abreregalo  cierraregalo  finregalo
+     cierracuento

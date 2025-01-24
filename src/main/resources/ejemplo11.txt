@@ -1,0 +1,53 @@
+
+ bromista  _func1_  abreregalo  cupido  _x22_ ,   cupido  _x22_ cierraregalo   abrecuento  #semantico borrar parametro
+
+	 bromista _h_ entrega 0.01 finregalo  #error sintactico
+	 cupido  _x22_ entrega 'a' finregalo  \_semantico x22_/
+	 cupido  _miChar_ entrega '!' finregalo #error sintactico
+	 cupido  _miChar2_ entrega '!' finregalo  #sintactico-semantico
+	 rodolfo  _x30_ entrega 1 finregalo
+	 trueno  _x40_ entrega false finregalo 
+	 cupido  _x50_ abreempaque 1000 cierraempaque  finregalo 
+	 cometa  _x50_ entrega "Hola a todos los que est abreempaque a cierraempaque  haciendo un compilador nuevo\n" finregalo 
+	 elfo  abreregalo _x22_ evergreen 45 melchor _var_ minstix 5.6 cierraregalo  abrecuento  #semantico x22 ,  var
+		 rodolfo  _y_ finregalo 
+		_x22_ entrega 10 finregalo 
+		 cupido  _ch33_ entrega 'a' finregalo 
+	 cierracuento   hada   abrecuento 
+		 rodolfo  _y_ finregalo #no error o no???
+		 cometa  _str2_ entrega "sdff" finregalo 
+	 cierracuento 
+	 duende   abreregalo _i_ entrega 0 finregalo , _i_ snowball 4 navidad _j_ , _i_ quien  cierraregalo  abrecuento  narra  abreregalo _i_ cierraregalo  finregalo  cierracuento  #semantico i y j
+	 narra  abreregalo "Hola mundo" cierraregalo  finregalo 
+	 escucha  abreregalo _x22_ cierraregalo  finregalo 
+	 envia 5.6 finregalo #cambio en retorno genera semantico
+ cierracuento 
+
+  trueno  _func2_  abreregalo  trueno  _b1_ ,   rodolfo  _i1_ cierraregalo   abrecuento 
+	 rodolfo _h_ finregalo  #sintactico
+	 envia 1 navidad 1 finregalo  #generar error con 5.6 y con i1
+  cierracuento  
+
+ cometa  _func3_  abreregalo  cierraregalo   abrecuento  #semantico  cometa 
+	 cometa  _b1_ finregalo 
+	 envia _b1_ finregalo  
+  cierracuento 
+
+  rodolfo  _verano_ abreregalo  cierraregalo   abrecuento  #sintactico
+\_
+Comentario 1
+_/
+	 bromista  _fl1_ finregalo 
+	 bromista  _fl1_ entrega 56.6 finregalo  #semantico fl1
+	 rodolfo  _in1_ entrega _fl1_ grinch intercambio 14 reyes _in1_ quien  navidad 7 intercambio 15 finregalo  #semantico fl1 ,  in1
+	 bromista  _fl2_ entrega 3.7 adviento _fl1_ navidad  abreregalo 45.6 magos 76 cierraregalo  finregalo  #semantico literal 76
+	
+#comentario 2
+	_arr_  entrega  10 intercambio _arr_ abreempaque 67 navidad _i_ cierraempaque  nochebuena _func1_  abreregalo _hola_ ,  true ,  "hola mundo" ,  4.5 ,  'a' cierraregalo  finregalo  #semantico func1 ,  retorno func1
+	_fl1_  entrega  4.5 magos _miChar_ adviento 0.005 finregalo  #semantico miChar
+	#_miFunc_ abreregalo _miFunc_ abreregalo  cierraregalo  , 'a' cierraregalo  finregalo  #semantico miFunc ,  hola
+	 trueno  _bl0_  entrega  6.7  openslae  8.9 finregalo  #ok
+	 trueno  _bl1_  entrega  _in1_  upatree  _fl1_  gaspar  false  melchor   baltazar  abreregalo _func2_ abreregalo 3 , _in1_ cierraregalo   minstix  56 cierraregalo  finregalo  #semantico in1  upatree  fl1 ,  func2
+	 envia   _bl1_ finregalo  #semantico
+  cierracuento 
+
