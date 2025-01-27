@@ -26,7 +26,6 @@ public class Test {
                 java_cup.runtime.Symbol token = lexer.next_token();
                 if (token.sym == sym.EOF) break;
 
-                // los va convirtiendo en cadenas
                 String lexema = (token.value != null) ? token.value.toString() : lexer.yytext();
                 String tipoToken = sym.terminalNames[token.sym];
                 String posicion = token.left + ":" + token.right; // Línea:Columna
@@ -34,7 +33,7 @@ public class Test {
                 System.out.println("Tipo: " + tipoToken + ", Lexema: " + lexema + ", Posición: " + posicion);
             }
 
-            // aquí escribe la tabla de tokens en el archivo de salida
+            // aquí escribe la tabla de tokens en un archivo de salida
             escribirTokensEnArchivo(lexer.tokenTable, archivoSalida);
             System.out.println("\nOutput del scanner guardado en: " + archivoSalida);
 
@@ -44,10 +43,27 @@ public class Test {
             Parser parser = new Parser(lexer);
 
             // Ejecutar el análisis sintáctico
-            System.out.println("\nIniciando el análisis...");
+            System.out.println("\nIniciando el análisis (parser)...");
             parser.parse();
-            //parser.debug_parse();
-            System.out.println("Análisis completado.");
+            System.out.println("Análisis sintáctico completado.");
+
+            // ============== FASE DE ANÁLISIS SEMÁNTICO ==============
+            System.out.println("Iniciando análisis semántico...");
+            SemanticAnalyzer semAnalyzer = new SemanticAnalyzer(
+                    parser.getSymbolTableManager(),
+                    parser.getAsignaciones() // la lista de asignaciones
+            );
+            semAnalyzer.runSemanticChecks();  // Realiza validaciones
+
+            // ============== FASE DE GENERACIÓN DE CÓDIGO ==============
+            System.out.println("Iniciando generación de código MIPS...");
+            MIPSGenerator mipsGen = new MIPSGenerator(
+                    parser.getSymbolTableManager(),
+                    parser.getAsignaciones()
+            );
+            String codigoMIPSsalida = directorioSalida + "/output.asm";
+            mipsGen.generateCode(codigoMIPSsalida);
+            System.out.println("Generación de código finalizada en " + codigoMIPSsalida);
 
         } catch (Exception e) {
             System.err.println("Error durante el análisis:");
@@ -55,16 +71,13 @@ public class Test {
         }
     }
 
-    // método para escribir la tabla de tokens en un archivo
     private void escribirTokensEnArchivo(List<String[]> tokenTable, String archivoSalida) {
         try (PrintWriter writer = new PrintWriter(archivoSalida)) {
-            // Encabezado de la tabla
             writer.printf("%-15s %-20s %-10s%n", "Lexema", "Tipo de Token", "Posición");
             writer.println("-------------------------------------------------------------");
 
-            // cada fila de la tabla
             for (String[] fila : tokenTable) {
-                writer.printf("%-15s %-20s %-10s%n", fila[0], fila[1], fila[2]); // se distancia
+                writer.printf("%-15s %-20s %-10s%n", fila[0], fila[1], fila[2]);
             }
         } catch (Exception e) {
             System.err.println("Error al escribir en el archivo de salida:");
@@ -72,7 +85,7 @@ public class Test {
         }
     }
 
-    // este main recibe como parámetro la ruta
+    // main
     public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("Error: Debe proporcionar la ruta del archivo .txt como parámetro.");
@@ -80,9 +93,7 @@ public class Test {
             return;
         }
 
-        // ruta del archivo
         String archivoEntrada = args[0];
-
         Test analizador = new Test();
         analizador.ejecutarAnalisis(archivoEntrada);
     }

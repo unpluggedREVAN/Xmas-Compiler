@@ -6,6 +6,8 @@
 package ParserLexer;
 
 import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.List;
 import java_cup.runtime.XMLElement;
 
 /** CUP v0.11b 20160615 (GIT 4ac7450) generated parser.
@@ -607,31 +609,30 @@ public class Parser extends java_cup.runtime.lr_parser {
     }
 
 
-    // Eliminamos toda la lógica de tabla de símbolos, scopes, etc.
+    // Lista de errores sintácticos
+    private List<String> errores = new ArrayList<>();
 
-    // Mantenemos la lista de errores sintácticos si deseas llevar el control aquí
-    private java.util.List<String> errores = new java.util.ArrayList<>();
-
-    // Objeto para manejar la tabla de símbolos y (futuros) análisis semánticos:
-    private SymbolTableManager manager;  // <-- Nueva referencia
-
+    // Objeto para manejar tabla de símbolos y análisis semántico:
+    private SymbolTableManager manager;
     private Lexer s;
 
-    // Constructor
+    // NUEVO: Para guardar asignaciones simples (p.e. "assign(x=expr)").
+    private List<String> asignacionesRealizadas = new ArrayList<>();
+
     public Parser(Lexer s) {
         this.s = s;
-        // Creamos el manager:
-        this.manager = new SymbolTableManager();  // <-- Se instancia aquí
+        this.manager = new SymbolTableManager();
     }
 
-    // Para acceso si se requiere
     public SymbolTableManager getSymbolTableManager() {
         return this.manager;
     }
 
-    /* ----------------------------------------------------------------------
-       Sobrescritura de métodos de error-recovery y reporte
-    ---------------------------------------------------------------------- */
+    // Método para que Test.java recoja las asignaciones y las pase al SemanticAnalyzer
+    public List<String> getAsignaciones() {
+        return this.asignacionesRealizadas;
+    }
+
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Token inesperado", sym);
@@ -643,7 +644,7 @@ public class Parser extends java_cup.runtime.lr_parser {
                     + (cur_token != null ? cur_token.value : "null")
                     + " (línea " + (cur_token != null ? (cur_token.left + 1) : -1)
                     + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
-        // No lanzamos excepción, para que el programa no termine abruptamente
+        // No lanzamos excepción, para que el programa no termine abruptamente.
     }
 
     @Override
@@ -667,9 +668,8 @@ public class Parser extends java_cup.runtime.lr_parser {
         }
     }
 
-    // Método que imprime un reporte final
+    // Método que imprime un reporte final (sintáctico + tabla de símbolos).
     private void imprimirReporteFinal() {
-        // 1) Errores sintácticos
         System.out.println("\n--- ERRORES SINTÁCTICOS ENCONTRADOS ---");
         if (errores.isEmpty()) {
             System.out.println("No se encontraron errores sintácticos.");
@@ -679,8 +679,7 @@ public class Parser extends java_cup.runtime.lr_parser {
             }
         }
 
-        // 2) Invocamos el reporte de la tabla de símbolos y estructuras
-        manager.imprimirReporte();  // <-- la parte que se movió a SymbolTableManager
+        manager.imprimirReporte();  // Parte final (tabla de símbolos, etc.)
     }
 
 
@@ -730,8 +729,7 @@ class CUP$Parser$actions {
 		
          manager.addDerivation("programa -> declaracionesGlobales maindeclaracion bloque");
          System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
-         // Al terminar, imprimimos el reporte
-         imprimirReporteFinal();  // <-- el método privado que llama manager.imprimirReporte()
+         imprimirReporteFinal();
        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("programa",0, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -867,7 +865,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("lista_sentencias -> lista_sentencias sentencia");
-        System.out.println("Regla 'lista_sentencias' procesando lista.");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_sentencias",5, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -879,7 +876,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("lista_sentencias -> sentencia");
-        System.out.println("Regla 'lista_sentencias' procesando sentencia.");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("lista_sentencias",5, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -942,7 +938,7 @@ class CUP$Parser$actions {
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
          manager.addDerivation("sentencia -> READ ( IDENTIFICADOR ) ;");
-         System.out.println("Leyendo a variable: " + id);
+         System.out.println("Leyendo variable: " + id);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -983,7 +979,6 @@ class CUP$Parser$actions {
 		
          manager.addDerivation("sentencia -> customError ;");
          System.err.println("Recuperado un error en sentencia con customError;");
-         RESULT = "errStmt";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -999,7 +994,6 @@ class CUP$Parser$actions {
 		
          manager.addDerivation("sentencia -> UNKNOWN_TOKEN");
          report_error("Sentencia desconocida, token ignorado", unk);
-         System.err.println("Sentencia desconocida: " + unk);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1011,7 +1005,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("customError -> customError error");
-        System.err.println("Absorbiendo otro token 'error' en customError");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("customError",27, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1023,8 +1016,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("customError -> error");
-        System.err.println("Detectado token 'error' en customError");
-        RESULT = "customErrBase";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("customError",27, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1047,17 +1038,12 @@ class CUP$Parser$actions {
       manager.addDerivation("declaracion -> tipo_dato IDENTIFICADOR declaracion_aux");
 
       String t = (String) td;
-      System.out.println("Declaración detectada:");
-      System.out.println("- Tipo de dato: " + t);
-      System.out.println("- Variable: " + myid);
-      System.out.println("- Inicialización: " + (aux != null ? aux : "Ninguna"));
+      System.out.println("Declaración detectada: (tipo=" + t + ", var=" + myid + ")");
 
-      // Agregar el símbolo a la tabla
+      // Agregar el símbolo a la tabla.
       int line = myidleft + 1;
       int col  = myidright + 1;
       manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
-
-      RESULT = null;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion",7, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1069,7 +1055,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("declaracion_aux -> ;");
-        RESULT = null;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1084,7 +1069,6 @@ class CUP$Parser$actions {
 		Object ex = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
         manager.addDerivation("declaracion_aux -> = expresion ;");
-        RESULT = " = " + ex;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1099,7 +1083,6 @@ class CUP$Parser$actions {
 		Object idx = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
         manager.addDerivation("declaracion_aux -> [ expresion ] ;");
-        RESULT = "[ " + idx + " ]";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1117,7 +1100,6 @@ class CUP$Parser$actions {
 		Object ai = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
         manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
-        RESULT = "[ " + idx + " ] = " + ai;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-5)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1334,10 +1316,13 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
         System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
-        RESULT = "assign(" + idVar + "=" + ex + ")";
 
-        // Aquí podríamos añadir chequeo semántico:
-        // manager.checkAssignmentType(idVar, ex);
+        // Creamos un string representando esta asignación, para la fase semántica.
+        String asigStr = "assign(" + idVar + "=" + ex + ")";
+        RESULT = asigStr;
+
+        // Guardamos la asignación para el SemanticAnalyzer.
+        asignacionesRealizadas.add(asigStr);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1359,9 +1344,10 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
         System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
-        RESULT = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
 
-        // Chequeos semánticos si se desea
+        String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
+        RESULT = asigStr;
+        // Igualmente podrías almacenar en asignacionesRealizadas si deseas.
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1379,11 +1365,11 @@ class CUP$Parser$actions {
 		String funId = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 
         manager.addDerivation("funcion -> tipo_dato IDENTIFICADOR ...");
-        // Al reconocer la función, creamos un nuevo scope con la clase manager
+        // Al reconocer la función, creamos un nuevo scope con la clase manager.
         String t = (String) td;
         int line = funIdleft + 1;
         int col  = funIdright + 1;
-        manager.crearScopeFuncion(t, funId, line, col);  // <-- Llamada
+        manager.crearScopeFuncion(t, funId, line, col);
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$0",30, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1413,14 +1399,9 @@ class CUP$Parser$actions {
        if (pStr.isEmpty()) pStr = "0 params";
 
        String t = (String) td;
-       System.out.println("Función declarada: " + funId
-                          + " de tipo " + t
-                          + ", con params: " + pStr
-                          + " y un bloque.");
+       System.out.println("Función declarada: " + funId + ", tipo " + t + ", params: " + pStr);
 
-       // Al terminar la función, regresar al scope anterior (global)
        manager.popScope();
-       RESULT = "func["+t+" "+funId+"("+pStr+")]";
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("funcion",19, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1569,7 +1550,7 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("if_estructura -> IF ( expresion ) bloque");
         RESULT = "if("+cond+")"+b;
-        manager.addControlStructure("Se detectó un 'if' con condición: " + cond);
+        manager.addControlStructure("Se detectó un 'if' con cond: " + cond);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1591,7 +1572,7 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("if_estructura -> IF ( expresion ) bloque ELSE bloque");
         RESULT = "if("+cond+")"+b1+" else "+b2;
-        manager.addControlStructure("Se detectó un 'if-else' con condición: " + cond);
+        manager.addControlStructure("Se detectó un 'if-else' con cond: " + cond);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1626,7 +1607,7 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("while_estructura -> WHILE ( expresion ) bloque");
         RESULT = "while("+cond+")"+bl;
-        manager.addControlStructure("Se detectó un 'while' con condición: " + cond);
+        manager.addControlStructure("Se detectó un 'while' con cond: " + cond);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("while_estructura",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1667,11 +1648,7 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
         RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
-        manager.addControlStructure(
-          "Se detectó un 'for' con inicialización: " + ini
-          + ", condición: " + cond
-          + ", step: " + step
-        );
+        manager.addControlStructure("Se detectó un 'for' con init=" + ini + ", cond=" + cond + ", step=" + step);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("for_estructura",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-8)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1706,7 +1683,7 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
         RESULT = "switch("+sw+") { "+cs+" }";
-        manager.addControlStructure("Se detectó un 'switch' con expresión: " + sw);
+        manager.addControlStructure("Se detectó un 'switch' con expr: " + sw);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("switch_estructura",15, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2119,7 +2096,6 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("expresion -> ++ IDENTIFICADOR");
         RESULT = "++"+id;
-        System.out.println("Expresión: ++" + id);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",23, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2135,7 +2111,6 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("expresion -> -- IDENTIFICADOR");
         RESULT = "--"+id;
-        System.out.println("Expresión: --" + id);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",23, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2151,7 +2126,6 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("expresion -> IDENTIFICADOR ++");
         RESULT = id+"++";
-        System.out.println("Expresión: " + id + "++");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",23, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2167,7 +2141,6 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("expresion -> IDENTIFICADOR --");
         RESULT = id+"--";
-        System.out.println("Expresión: " + id + "--");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",23, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2186,7 +2159,6 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
         RESULT = id + "(" + args + ")";
-        System.out.println("Llamada a función: " + id + " con argumentos: " + args);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",23, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
