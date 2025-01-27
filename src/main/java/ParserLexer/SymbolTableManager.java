@@ -3,17 +3,24 @@ package ParserLexer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 public class SymbolTableManager {
 
     public static class SymbolData {
         public String lexeme;
-        public String type;
+        public String type;  // "int", "float", "bool", etc. o "funcType:..."
         public int line;
         public int column;
         public String scope;
         public Object value;
+
+        // Novedades
+        public boolean isArray;
+        public int arraySize;
+        public boolean isFunction;
+        public List<String> paramTypes;  // p.e. ["int", "float"]
 
         public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
             this.lexeme = lexeme;
@@ -22,22 +29,21 @@ public class SymbolTableManager {
             this.column = column;
             this.scope = scope;
             this.value = value;
+
+            this.isArray = false;
+            this.arraySize = -1;
+            this.isFunction = false;
+            this.paramTypes = new ArrayList<>();
         }
     }
 
-    // Tabla de símbolos principal: scope -> lista de símbolos
     private HashMap<String, ArrayList<SymbolData>> tablaSimbolos;
-
-    // Manejo de scopes (ámbitos) usando una pila
     private Stack<String> scopeStack;
-
-    // Scope actual
     private String currentScope;
 
-    // Listas para almacenar errores e info adicional
     private List<String> erroresSemanticos;
     private List<String> estructurasControl;
-    private List<String> derivaciones;  // Producciones reconocidas
+    private List<String> derivaciones;
 
     public SymbolTableManager() {
         this.tablaSimbolos = new HashMap<>();
@@ -46,20 +52,16 @@ public class SymbolTableManager {
         this.estructurasControl = new ArrayList<>();
         this.derivaciones = new ArrayList<>();
 
-        // Iniciar el scope global
+        // scope inicial
         this.scopeStack.push("global");
         this.currentScope = "global";
         this.tablaSimbolos.put("global", new ArrayList<SymbolData>());
     }
 
-    // Getter para la tabla de símbolos
     public HashMap<String, ArrayList<SymbolData>> getTablaSimbolos() {
         return this.tablaSimbolos;
     }
 
-    /* ------------------------------------------------------------------
-       Métodos de manejo de scopes
-    ------------------------------------------------------------------ */
     public void pushScope(String newScope) {
         scopeStack.push(newScope);
         currentScope = newScope;
@@ -79,69 +81,91 @@ public class SymbolTableManager {
         return currentScope;
     }
 
-    /* ------------------------------------------------------------------
-       Métodos para manejar símbolos
-    ------------------------------------------------------------------ */
-    public void crearScopeFuncion(String type, String funcName, int line, int col) {
+    public void crearScopeFuncion(String returnType, String funcName, int line, int col) {
+        // Verificar duplicados
+        if (findSymbolInScope(funcName, currentScope) != null) {
+            addSemanticError("Función '" + funcName + "' redeclarada en scope '" + currentScope + "'");
+            return;
+        }
+        SymbolData funcData = new SymbolData(funcName, "funcType:" + returnType, line, col, currentScope, null);
+        funcData.isFunction = true;
+        tablaSimbolos.get(currentScope).add(funcData);
+
         System.out.println("Se crea nuevo scope para función: " + funcName);
         pushScope(funcName);
-
-        SymbolData funcData = new SymbolData(
-                funcName, "funcType:" + type,
-                line, col, currentScope, null
-        );
-        tablaSimbolos.get(currentScope).add(funcData);
     }
 
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
-        if (!tablaSimbolos.containsKey(scope)) {
-            tablaSimbolos.put(scope, new ArrayList<SymbolData>());
+        // Checar duplicado
+        if (findSymbolInScope(lexeme, scope) != null) {
+            addSemanticError("Variable '" + lexeme + "' redeclarada en scope '" + scope + "'");
+            return;
         }
         SymbolData data = new SymbolData(lexeme, type, line, col, scope, null);
         tablaSimbolos.get(scope).add(data);
-        System.out.println("Símbolo agregado -> "
-                + "lex:'" + lexeme + "', tipo:'" + type
+
+        System.out.println("Símbolo agregado -> lex:'" + lexeme + "', tipo:'" + type
                 + "', scope:'" + scope + "', línea:" + line + ", col:" + col);
     }
 
-    // Búsqueda de símbolos dentro de un scope específico
+    public void markAsArray(String scope, String lexeme, int size) {
+        SymbolData sd = findSymbolInScope(lexeme, scope);
+        if (sd == null) {
+            addSemanticError("Simbolo '" + lexeme + "' no encontrado para marcar como array");
+            return;
+        }
+        sd.isArray = true;
+        sd.arraySize = size;
+    }
+
+    public void addParamToCurrentFunction(String paramName, String paramType) {
+        String funcScope = getCurrentScope();
+        SymbolData funcSym = findSymbolInScope(funcScope, funcScope);
+        if (funcSym != null && funcSym.isFunction) {
+            // Checar si hay duplicado en parámetros
+            if (funcSym.paramTypes.contains(paramType + ":" + paramName)) {
+                addSemanticError("Parámetro repetido '" + paramName
+                        + "' en la función '" + funcScope + "'");
+                return;
+            }
+            funcSym.paramTypes.add(paramType + ":" + paramName);
+        } else {
+            addSemanticError("No se encontró la definición de la función '" + funcScope
+                    + "' para añadir el parámetro '" + paramName + "'");
+        }
+    }
+
     public SymbolData findSymbolInScope(String lexeme, String scope) {
         if (!tablaSimbolos.containsKey(scope)) return null;
         for (SymbolData sd : tablaSimbolos.get(scope)) {
-            if (sd.lexeme.equals(lexeme)) {
-                return sd;
-            }
+            if (sd.lexeme.equals(lexeme)) return sd;
         }
         return null;
     }
 
-    // Búsqueda de símbolo en el scope actual y ascendiendo la pila
     public SymbolData findSymbolRecursive(String lexeme) {
-        Stack<String> tempStack = new Stack<>();
-        tempStack.addAll(scopeStack);
+        Stack<String> temp = new Stack<>();
+        temp.addAll(scopeStack);
 
-        while (!tempStack.isEmpty()) {
-            String sc = tempStack.peek();
+        while (!temp.isEmpty()) {
+            String sc = temp.peek();
             SymbolData sym = findSymbolInScope(lexeme, sc);
-            if (sym != null) {
-                return sym;
-            }
-            tempStack.pop();
+            if (sym != null) return sym;
+            temp.pop();
         }
-        // Si no se encontró
         return null;
     }
 
-    // Reporte final
     public void imprimirReporte() {
-        System.out.println("\n--- 1) TABLAS DE SÍMBOLOS ---");
-        System.out.println("Lexema\tTipo\tLínea\tCol\tScope\tValor");
-        System.out.println("---------------------------------------------");
-        for (String scopeKey : tablaSimbolos.keySet()) {
-            for (SymbolData sd : tablaSimbolos.get(scopeKey)) {
-                System.out.printf("%s\t%s\t%d\t%d\t%s\t%s\n",
-                        sd.lexeme, sd.type, sd.line, sd.column, sd.scope,
-                        (sd.value != null ? sd.value.toString() : "null"));
+        System.out.println("\n--- 1) TABLAS DE SÍMBOLOS EXTENDIDA ---");
+        System.out.println("Lexema\tTipo\tLine\tCol\tScope\tisArr\tsize\tisFunc\tParams\tValue");
+        for (Map.Entry<String, ArrayList<SymbolData>> e : tablaSimbolos.entrySet()) {
+            for (SymbolData sd : e.getValue()) {
+                System.out.println(sd.lexeme + "\t" + sd.type
+                        + "\t" + sd.line + "\t" + sd.column + "\t" + sd.scope
+                        + "\t" + sd.isArray + "\t" + sd.arraySize
+                        + "\t" + sd.isFunction + "\t" + sd.paramTypes
+                        + "\t" + (sd.value!=null ? sd.value : "null"));
             }
         }
 
@@ -167,15 +191,13 @@ public class SymbolTableManager {
         if (derivaciones.isEmpty()) {
             System.out.println("No se registraron derivaciones.");
         } else {
-            for (String deriv : derivaciones) {
-                System.out.println(deriv);
+            for (String d : derivaciones) {
+                System.out.println(d);
             }
         }
-
         System.out.println("\nFin del reporte.\n");
     }
 
-    // Otros métodos auxiliares
     public void addControlStructure(String info) {
         estructurasControl.add(info);
     }
