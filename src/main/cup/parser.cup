@@ -1,79 +1,36 @@
 /* ============================================================================
-   parser.cup - Xmas-Compiler
-   * NOTA: Fuentes utilizadas para realizar este proyecto:
-   - https://andreil26.github.io/me/uniprojects/2019/06/21/lexer_parser.html
-   - https://www2.cs.tum.edu/projects/cup/docs.php#errors
-   - https://www2.cs.tum.edu/projects/cup/docs.php#parser
-   - https://stackoverflow.com/questions/78071695/cup-error-couldnt-repair-and-continue-parse
-   - https://stackoverflow.com/questions/50297794/debugging-a-cup-grammar
+   parser.cup - Xmas-Compiler (versión limpia)
 ============================================================================ */
-
 package ParserLexer;
 
 import java_cup.runtime.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Stack;
 
-/* ----------------------------------------------------------------------
-   1) código del parser
----------------------------------------------------------------------- */
 parser code {:
-    /*
-     * manejar la información de cada símbolo en la tabla.
-     */
-    public static class SymbolData {
-        String lexeme;
-        String type;
-        int line;
-        int column;
-        String scope;
-        Object value;
+    // Eliminamos toda la lógica de tabla de símbolos, scopes, etc.
 
-        public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
-            this.lexeme = lexeme;
-            this.type = type;
-            this.line = line;
-            this.column = column;
-            this.scope = scope;
-            this.value = value;
-        }
-    }
+    // Mantenemos la lista de errores sintácticos si deseas llevar el control aquí
+    private java.util.List<String> errores = new java.util.ArrayList<>();
 
-    private List<String> errores = new ArrayList<>();
-
-    private HashMap<String, ArrayList<SymbolData>> tablaSimbolos = new HashMap<>();
-
-    // Pila de scopes para manejar ámbitos anidados
-    private Stack<String> scopeStack = new Stack<>();
-
-    // Scope actual (por defecto "global").
-    public String currentScope = "global";
-
-    // estructuras de control detectadas
-    private List<String> estructurasControl = new ArrayList<>();
-
-    private int blockCounter = 0;
+    // Objeto para manejar la tabla de símbolos y (futuros) análisis semánticos:
+    private SymbolTableManager manager;  // <-- Nueva referencia
 
     private Lexer s;
 
-    // para almacenar las derivaciones
-    private List<String> derivations = new ArrayList<>();
-
-    /* ----------------------------------------------------------------------
-       constructor
-    ---------------------------------------------------------------------- */
+    // Constructor
     public Parser(Lexer s) {
         this.s = s;
-        scopeStack.push("global");
+        // Creamos el manager:
+        this.manager = new SymbolTableManager();  // <-- Se instancia aquí
     }
 
-    /*
-     ----------------------------------------------------------------------
+    // Para acceso si se requiere
+    public SymbolTableManager getSymbolTableManager() {
+        return this.manager;
+    }
+
+    /* ----------------------------------------------------------------------
        Sobrescritura de métodos de error-recovery y reporte
-    ----------------------------------------------------------------------
-    */
+    ---------------------------------------------------------------------- */
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Token inesperado", sym);
@@ -85,7 +42,7 @@ parser code {:
                     + (cur_token != null ? cur_token.value : "null")
                     + " (línea " + (cur_token != null ? (cur_token.left + 1) : -1)
                     + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
-        // aquí quitamos la excepción para que el programa no termine
+        // No lanzamos excepción, para que el programa no termine abruptamente
     }
 
     @Override
@@ -109,61 +66,10 @@ parser code {:
         }
     }
 
-    /* ----------------------------------------------------------------------
-       tabla de símbolos y scopes
-    ---------------------------------------------------------------------- */
-    private void pushScope(String newScope) {
-        scopeStack.push(newScope);
-        currentScope = newScope;
-        if (!tablaSimbolos.containsKey(currentScope)) {
-            tablaSimbolos.put(currentScope, new ArrayList<SymbolData>());
-        }
-    }
-
-    private void popScope() {
-        if (!scopeStack.isEmpty()) {
-            scopeStack.pop();
-            currentScope = scopeStack.isEmpty() ? "global" : scopeStack.peek();
-        }
-    }
-
-    public void crearTabla(String type, String funcName, int line, int col) {
-        System.out.println("Se crea nuevo scope para función: " + funcName);
-        pushScope(funcName);
-
-        SymbolData funcData = new SymbolData(funcName, "funcType:" + type, line, col, currentScope, null);
-        tablaSimbolos.get(currentScope).add(funcData);
-    }
-
-    public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
-        if (!tablaSimbolos.containsKey(scope)) {
-            tablaSimbolos.put(scope, new ArrayList<SymbolData>());
-        }
-        SymbolData data = new SymbolData(lexeme, type, line, col, scope, null);
-        tablaSimbolos.get(scope).add(data);
-        System.out.println("Símbolo agregado -> "
-                           + "lex:'" + lexeme + "', tipo:'" + type
-                           + "', scope:'" + scope + "', línea:" + line + ", col:" + col);
-    }
-
-    // cambiar ahí el número de línea y columna pls
-    public void imprimirTablaSimbolos() {
-        System.out.println("\n--- 1) TABLAS DE SÍMBOLOS ---");
-        System.out.println("Lexema\tTipo\tLínea\tCol\tScope\tValor");
-        System.out.println("---------------------------------------------");
-        for (String scopeKey : tablaSimbolos.keySet()) {
-            for (SymbolData sd : tablaSimbolos.get(scopeKey)) {
-                System.out.printf("%s\t%s\t%d\t%d\t%s\t%s\n",
-                                  sd.lexeme,
-                                  sd.type,
-                                  sd.line,
-                                  sd.column,
-                                  sd.scope,
-                                  (sd.value != null ? sd.value.toString() : "null"));
-            }
-        }
-
-        System.out.println("\n--- 2) ERRORES SINTÁCTICOS ---");
+    // Método que imprime un reporte final
+    private void imprimirReporteFinal() {
+        // 1) Errores sintácticos
+        System.out.println("\n--- ERRORES SINTÁCTICOS ENCONTRADOS ---");
         if (errores.isEmpty()) {
             System.out.println("No se encontraron errores sintácticos.");
         } else {
@@ -172,44 +78,8 @@ parser code {:
             }
         }
 
-        System.out.println("\n--- 3) ESTRUCTURAS DE CONTROL DETECTADAS ---");
-        if (estructurasControl.isEmpty()) {
-            System.out.println("No se detectaron estructuras de control.");
-        } else {
-            for (String info : estructurasControl) {
-                System.out.println("- " + info);
-            }
-        }
-
-        System.out.println("\n--- 4) RESUMEN GENERAL ---");
-        if (errores.isEmpty()) {
-            System.out.println("Estado del archivo: VÁLIDO");
-            System.out.println("Errores encontrados: 0");
-        } else {
-            System.out.println("Estado del archivo: INVÁLIDO");
-            System.out.println("Errores encontrados: " + errores.size());
-        }
-
-        System.out.println("\n--- 5) DERIVACIONES ---");
-        if (derivations.isEmpty()) {
-            System.out.println("No se registraron derivaciones.");
-        } else {
-            for (String deriv : derivations) {
-                System.out.println(deriv);
-            }
-        }
-
-        System.out.println("\nFin del reporte.\n");
-    }
-
-    // añadir información de estructuras de control al reporte
-    public void addControlStructure(String info) {
-        estructurasControl.add(info);
-    }
-
-    // registrar derivación (para imprimir al final)
-    public void addDerivation(String production) {
-        derivations.add(production);
+        // 2) Invocamos el reporte de la tabla de símbolos y estructuras
+        manager.imprimirReporte();  // <-- la parte que se movió a SymbolTableManager
     }
 
 :}
@@ -224,7 +94,6 @@ scan with {:
 /* ----------------------------------------------------------------------
    3) Declaración de TERMINALES
 ---------------------------------------------------------------------- */
-// Nota: se elimina FINREGALO porque no se usa
 terminal String IDENTIFICADOR;
 terminal INTEGER, FLOAT, BOOL, STRING, CHAR;
 terminal L_INTEGER, FLOAT_LITERAL, BOOL_LITERAL, CHAR_LITERAL, STRING_LITERAL;
@@ -276,59 +145,59 @@ start with programa;
 programa ::=
     declaracionesGlobales maindeclaracion bloque
        {:
-         parser.addDerivation("programa -> declaracionesGlobales maindeclaracion bloque");
+         manager.addDerivation("programa -> declaracionesGlobales maindeclaracion bloque");
          System.out.println("Regla 'programa' con declaracionesGlobales + MAIN");
-         // imprime al terminar
-         parser.imprimirTablaSimbolos();
+         // Al terminar, imprimimos el reporte
+         imprimirReporteFinal();  // <-- el método privado que llama manager.imprimirReporte()
        :}
   | maindeclaracion bloque
        {:
-         parser.addDerivation("programa -> maindeclaracion bloque");
+         manager.addDerivation("programa -> maindeclaracion bloque");
          System.out.println("Regla 'programa' con sólo MAIN");
-         parser.imprimirTablaSimbolos();
+         imprimirReporteFinal();
        :}
   ;
 
-/* Main funciones */
+/* Main */
 maindeclaracion ::=
-MAIN
-    {:
-      parser.addDerivation("maindeclaracion -> MAIN");
-    :}
+    MAIN
+      {:
+        manager.addDerivation("maindeclaracion -> MAIN");
+      :}
   | MAIN ABREREGALO CIERRAREGALO
-    {:
-      parser.addDerivation("maindeclaracion -> MAIN ( )");
-    :}
+      {:
+        manager.addDerivation("maindeclaracion -> MAIN ( )");
+      :}
   | tipo_dato MAIN
-    {:
-      parser.addDerivation("maindeclaracion -> tipo_dato MAIN");
-    :}
+      {:
+        manager.addDerivation("maindeclaracion -> tipo_dato MAIN");
+      :}
   | tipo_dato MAIN ABREREGALO CIERRAREGALO
-    {:
-      parser.addDerivation("maindeclaracion -> tipo_dato MAIN ( )");
-    :}
+      {:
+        manager.addDerivation("maindeclaracion -> tipo_dato MAIN ( )");
+      :}
   ;
 
 /* declaracionesGlobales -> (globalDeclaracion)+ */
 declaracionesGlobales ::=
     declaracionesGlobales globalDeclaracion
       {:
-        parser.addDerivation("declaracionesGlobales -> declaracionesGlobales globalDeclaracion");
+        manager.addDerivation("declaracionesGlobales -> declaracionesGlobales globalDeclaracion");
       :}
   | globalDeclaracion
       {:
-        parser.addDerivation("declaracionesGlobales -> globalDeclaracion");
+        manager.addDerivation("declaracionesGlobales -> globalDeclaracion");
       :}
   ;
 
 globalDeclaracion ::=
     declaracion
       {:
-        parser.addDerivation("globalDeclaracion -> declaracion");
+        manager.addDerivation("globalDeclaracion -> declaracion");
       :}
   | funcion
       {:
-        parser.addDerivation("globalDeclaracion -> funcion");
+        manager.addDerivation("globalDeclaracion -> funcion");
       :}
   ;
 
@@ -336,25 +205,25 @@ globalDeclaracion ::=
 bloque ::=
     ABRECUENTO lista_sentencias CIERRACUENTO
       {:
-        parser.addDerivation("bloque -> { lista_sentencias }");
+        manager.addDerivation("bloque -> { lista_sentencias }");
         System.out.println("Regla 'bloque' ejecutada.");
       :}
   | /* epsilon */
       {:
-        parser.addDerivation("bloque -> /* epsilon */");
+        manager.addDerivation("bloque -> /* epsilon */");
       :}
   ;
 
-/* una o más sentencias */
+/* lista_sentencias */
 lista_sentencias ::=
     lista_sentencias sentencia
       {:
-        parser.addDerivation("lista_sentencias -> lista_sentencias sentencia");
+        manager.addDerivation("lista_sentencias -> lista_sentencias sentencia");
         System.out.println("Regla 'lista_sentencias' procesando lista.");
       :}
   | sentencia
       {:
-        parser.addDerivation("lista_sentencias -> sentencia");
+        manager.addDerivation("lista_sentencias -> sentencia");
         System.out.println("Regla 'lista_sentencias' procesando sentencia.");
       :}
   ;
@@ -365,50 +234,47 @@ lista_sentencias ::=
 sentencia ::=
     declaracion
       {:
-        parser.addDerivation("sentencia -> declaracion");
+        manager.addDerivation("sentencia -> declaracion");
       :}
   | asignacion
       {:
-        parser.addDerivation("sentencia -> asignacion");
+        manager.addDerivation("sentencia -> asignacion");
       :}
   | control_estructuras
       {:
-        parser.addDerivation("sentencia -> control_estructuras");
+        manager.addDerivation("sentencia -> control_estructuras");
       :}
   | PRINT ABREREGALO expresion:e CIERRAREGALO PUNTO_Y_COMA
       {:
-         parser.addDerivation("sentencia -> PRINT ( expresion ) ;");
+         manager.addDerivation("sentencia -> PRINT ( expresion ) ;");
          System.out.println("Imprimiendo la expresión: " + e);
       :}
   | READ ABREREGALO IDENTIFICADOR:id CIERRAREGALO PUNTO_Y_COMA
       {:
-         parser.addDerivation("sentencia -> READ ( IDENTIFICADOR ) ;");
+         manager.addDerivation("sentencia -> READ ( IDENTIFICADOR ) ;");
          System.out.println("Leyendo a variable: " + id);
       :}
   | RETURN expresion:ret PUNTO_Y_COMA
       {:
-         parser.addDerivation("sentencia -> RETURN expresion ;");
+         manager.addDerivation("sentencia -> RETURN expresion ;");
          System.out.println("Return con expr: " + ret);
       :}
   | BREAK PUNTO_Y_COMA
       {:
-         parser.addDerivation("sentencia -> BREAK ;");
+         manager.addDerivation("sentencia -> BREAK ;");
          System.out.println("Break detectado.");
-         // Lo agregamos como parte de estructuras de control si así lo deseamos
-         parser.addControlStructure("Se detectó un 'break'.");
+         manager.addControlStructure("Se detectó un 'break'.");
       :}
-  /* Manejo de error con la idea CUP: customError SEMI */
   | customError PUNTO_Y_COMA
       {:
-         parser.addDerivation("sentencia -> customError ;");
+         manager.addDerivation("sentencia -> customError ;");
          System.err.println("Recuperado un error en sentencia con customError;");
          RESULT = "errStmt";
       :}
-  /* para token desconocido */
   | UNKNOWN_TOKEN:unk
       {:
-         parser.addDerivation("sentencia -> UNKNOWN_TOKEN");
-         parser.report_error("Sentencia desconocida, token ignorado", parser.scan());
+         manager.addDerivation("sentencia -> UNKNOWN_TOKEN");
+         report_error("Sentencia desconocida, token ignorado", unk);
          System.err.println("Sentencia desconocida: " + unk);
       :}
   ;
@@ -416,12 +282,12 @@ sentencia ::=
 customError ::=
     customError error
       {:
-        parser.addDerivation("customError -> customError error");
+        manager.addDerivation("customError -> customError error");
         System.err.println("Absorbiendo otro token 'error' en customError");
       :}
   | error
       {:
-        parser.addDerivation("customError -> error");
+        manager.addDerivation("customError -> error");
         System.err.println("Detectado token 'error' en customError");
         RESULT = "customErrBase";
       :}
@@ -433,18 +299,18 @@ customError ::=
 declaracion ::=
     tipo_dato:td IDENTIFICADOR:myid declaracion_aux:aux
     {:
-      parser.addDerivation("declaracion -> tipo_dato IDENTIFICADOR declaracion_aux");
+      manager.addDerivation("declaracion -> tipo_dato IDENTIFICADOR declaracion_aux");
 
       String t = (String) td;
-
       System.out.println("Declaración detectada:");
       System.out.println("- Tipo de dato: " + t);
       System.out.println("- Variable: " + myid);
       System.out.println("- Inicialización: " + (aux != null ? aux : "Ninguna"));
 
+      // Agregar el símbolo a la tabla
       int line = myidleft + 1;
       int col  = myidright + 1;
-      parser.addSimbolo(parser.currentScope, myid, line, col, t);
+      manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
 
       RESULT = null;
     :}
@@ -453,22 +319,22 @@ declaracion ::=
 declaracion_aux ::=
     PUNTO_Y_COMA
       {:
-        parser.addDerivation("declaracion_aux -> ;");
+        manager.addDerivation("declaracion_aux -> ;");
         RESULT = null;
       :}
   | ASIGNA expresion:ex PUNTO_Y_COMA
       {:
-        parser.addDerivation("declaracion_aux -> ASIGNA expresion ;");
+        manager.addDerivation("declaracion_aux -> = expresion ;");
         RESULT = " = " + ex;
       :}
   | ABREEMPAQUE expresion:idx CIERRAEMPAQUE PUNTO_Y_COMA
       {:
-        parser.addDerivation("declaracion_aux -> [ expresion ] ;");
+        manager.addDerivation("declaracion_aux -> [ expresion ] ;");
         RESULT = "[ " + idx + " ]";
       :}
   | ABREEMPAQUE expresion:idx CIERRAEMPAQUE ASIGNA array_init:ai PUNTO_Y_COMA
       {:
-        parser.addDerivation("declaracion_aux -> [ expresion ] ASIGNA array_init ;");
+        manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
         RESULT = "[ " + idx + " ] = " + ai;
       :}
   ;
@@ -477,7 +343,7 @@ declaracion_aux ::=
 array_init ::=
     ABRECUENTO array_item_list:ail CIERRACUENTO
       {:
-        parser.addDerivation("array_init -> { array_item_list }");
+        manager.addDerivation("array_init -> { array_item_list }");
         RESULT = "{ " + ail + " }";
       :}
   ;
@@ -485,12 +351,12 @@ array_init ::=
 array_item_list ::=
     array_item:ai
       {:
-        parser.addDerivation("array_item_list -> array_item");
+        manager.addDerivation("array_item_list -> array_item");
         RESULT = ai;
       :}
   | array_item_list:ail COMA array_item:ai
       {:
-        parser.addDerivation("array_item_list -> array_item_list , array_item");
+        manager.addDerivation("array_item_list -> array_item_list , array_item");
         RESULT = (String)ail + ", " + (String)ai;
       :}
   ;
@@ -498,32 +364,32 @@ array_item_list ::=
 array_item ::=
     CHAR_LITERAL:ch
       {:
-        parser.addDerivation("array_item -> CHAR_LITERAL");
+        manager.addDerivation("array_item -> CHAR_LITERAL");
         RESULT = "'"+ch+"'";
       :}
   | L_INTEGER:li
       {:
-        parser.addDerivation("array_item -> L_INTEGER");
+        manager.addDerivation("array_item -> L_INTEGER");
         RESULT = li.toString();
       :}
   | FLOAT_LITERAL:fl
       {:
-        parser.addDerivation("array_item -> FLOAT_LITERAL");
+        manager.addDerivation("array_item -> FLOAT_LITERAL");
         RESULT = fl.toString();
       :}
   | IDENTIFICADOR:id
       {:
-        parser.addDerivation("array_item -> IDENTIFICADOR");
+        manager.addDerivation("array_item -> IDENTIFICADOR");
         RESULT = id;
       :}
   | STRING_LITERAL:st
       {:
-        parser.addDerivation("array_item -> STRING_LITERAL");
+        manager.addDerivation("array_item -> STRING_LITERAL");
         RESULT = "\""+st+"\"";
       :}
   | BOOL_LITERAL:boo
       {:
-        parser.addDerivation("array_item -> BOOL_LITERAL");
+        manager.addDerivation("array_item -> BOOL_LITERAL");
         RESULT = boo.toString();
       :}
   ;
@@ -532,27 +398,27 @@ array_item ::=
 tipo_dato ::=
     INTEGER
       {:
-        parser.addDerivation("tipo_dato -> INTEGER");
+        manager.addDerivation("tipo_dato -> INTEGER");
         RESULT = "int";
       :}
   | FLOAT
       {:
-        parser.addDerivation("tipo_dato -> FLOAT");
+        manager.addDerivation("tipo_dato -> FLOAT");
         RESULT = "float";
       :}
   | BOOL
       {:
-        parser.addDerivation("tipo_dato -> BOOL");
+        manager.addDerivation("tipo_dato -> BOOL");
         RESULT = "bool";
       :}
   | CHAR
       {:
-        parser.addDerivation("tipo_dato -> CHAR");
+        manager.addDerivation("tipo_dato -> CHAR");
         RESULT = "char";
       :}
   | STRING
       {:
-        parser.addDerivation("tipo_dato -> STRING");
+        manager.addDerivation("tipo_dato -> STRING");
         RESULT = "string";
       :}
   ;
@@ -563,15 +429,20 @@ tipo_dato ::=
 asignacion ::=
     IDENTIFICADOR:idVar ASIGNA expresion:ex PUNTO_Y_COMA
       {:
-        parser.addDerivation("asignacion -> IDENTIFICADOR ASIGNA expresion ;");
+        manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
         System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
         RESULT = "assign(" + idVar + "=" + ex + ")";
+
+        // Aquí podríamos añadir chequeo semántico:
+        // manager.checkAssignmentType(idVar, ex);
       :}
   | IDENTIFICADOR:idVar ABREEMPAQUE expresion:pos CIERRAEMPAQUE ASIGNA expresion:rhs PUNTO_Y_COMA
       {:
-        parser.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] ASIGNA expresion ;");
+        manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
         System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
         RESULT = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
+
+        // Chequeos semánticos si se desea
       :}
   ;
 
@@ -581,30 +452,27 @@ asignacion ::=
 funcion ::=
     tipo_dato:td IDENTIFICADOR:funId
     {:
-        parser.addDerivation("funcion -> tipo_dato IDENTIFICADOR ...");
-        // Al reconocer la función, creamos un nuevo scope
+        manager.addDerivation("funcion -> tipo_dato IDENTIFICADOR ...");
+        // Al reconocer la función, creamos un nuevo scope con la clase manager
         String t = (String) td;
         int line = funIdleft + 1;
         int col  = funIdright + 1;
-        parser.crearTabla(t, funId, line, col);
+        manager.crearScopeFuncion(t, funId, line, col);  // <-- Llamada
     :}
     ABREREGALO parametros:p CIERRAREGALO bloque:b
     {:
-       parser.addDerivation("funcion -> ... ( parametros ) bloque");
+       manager.addDerivation("funcion -> ... ( parametros ) bloque");
        String pStr = (String) p;
        if (pStr.isEmpty()) pStr = "0 params";
 
        String t = (String) td;
-
        System.out.println("Función declarada: " + funId
                           + " de tipo " + t
                           + ", con params: " + pStr
                           + " y un bloque.");
 
-       // Al terminar la función, regresamos scope al global
-       parser.currentScope = "global";
-       parser.popScope();
-
+       // Al terminar la función, regresar al scope anterior (global)
+       manager.popScope();
        RESULT = "func["+t+" "+funId+"("+pStr+")]";
     :}
   ;
@@ -613,12 +481,12 @@ funcion ::=
 parametros ::=
     /* epsilon */
       {:
-        parser.addDerivation("parametros -> /* epsilon */");
+        manager.addDerivation("parametros -> /* epsilon */");
         RESULT = "";
       :}
   | lista_parametros:pp
       {:
-        parser.addDerivation("parametros -> lista_parametros");
+        manager.addDerivation("parametros -> lista_parametros");
         RESULT = pp;
       :}
   ;
@@ -627,12 +495,12 @@ parametros ::=
 lista_parametros ::=
     param_dec:pd
       {:
-        parser.addDerivation("lista_parametros -> param_dec");
+        manager.addDerivation("lista_parametros -> param_dec");
         RESULT = pd;
       :}
   | lista_parametros:lp COMA param_dec:pd
       {:
-        parser.addDerivation("lista_parametros -> lista_parametros , param_dec");
+        manager.addDerivation("lista_parametros -> lista_parametros , param_dec");
         RESULT = (String)lp + ", " + (String)pd;
       :}
   ;
@@ -641,14 +509,14 @@ lista_parametros ::=
 param_dec ::=
     tipo_dato:td IDENTIFICADOR:pid
       {:
-        parser.addDerivation("param_dec -> tipo_dato IDENTIFICADOR");
+        manager.addDerivation("param_dec -> tipo_dato IDENTIFICADOR");
         String t = (String) td;
         String paramStr = t + " " + pid;
         System.out.println("Parametro: " + paramStr);
 
         int line = pidleft + 1;
         int col  = pidright + 1;
-        parser.addSimbolo(parser.currentScope, pid, line, col, t);
+        manager.addSimbolo(manager.getCurrentScope(), pid, line, col, t);
 
         RESULT = paramStr;
       :}
@@ -660,39 +528,39 @@ param_dec ::=
 control_estructuras ::=
     if_estructura
       {:
-        parser.addDerivation("control_estructuras -> if_estructura");
+        manager.addDerivation("control_estructuras -> if_estructura");
       :}
   | while_estructura
       {:
-        parser.addDerivation("control_estructuras -> while_estructura");
+        manager.addDerivation("control_estructuras -> while_estructura");
       :}
   | for_estructura
       {:
-        parser.addDerivation("control_estructuras -> for_estructura");
+        manager.addDerivation("control_estructuras -> for_estructura");
       :}
   | switch_estructura
       {:
-        parser.addDerivation("control_estructuras -> switch_estructura");
+        manager.addDerivation("control_estructuras -> switch_estructura");
       :}
   ;
 
 if_estructura ::=
     IF ABREREGALO expresion:cond CIERRAREGALO bloque:b
       {:
-        parser.addDerivation("if_estructura -> IF ( expresion ) bloque");
+        manager.addDerivation("if_estructura -> IF ( expresion ) bloque");
         RESULT = "if("+cond+")"+b;
-        parser.addControlStructure("Se detectó un 'if' con condición: " + cond);
+        manager.addControlStructure("Se detectó un 'if' con condición: " + cond);
       :}
   | IF ABREREGALO expresion:cond CIERRAREGALO bloque:b1 ELSE bloque:b2
       {:
-        parser.addDerivation("if_estructura -> IF ( expresion ) bloque ELSE bloque");
+        manager.addDerivation("if_estructura -> IF ( expresion ) bloque ELSE bloque");
         RESULT = "if("+cond+")"+b1+" else "+b2;
-        parser.addControlStructure("Se detectó un 'if-else' con condición: " + cond);
+        manager.addControlStructure("Se detectó un 'if-else' con condición: " + cond);
       :}
   | IF ABREREGALO error CIERRAREGALO bloque:bl
       {:
-        parser.addDerivation("if_estructura -> IF ( error ) bloque");
-        parser.report_error("Error en condición de 'if'", parser.scan());
+        manager.addDerivation("if_estructura -> IF ( error ) bloque");
+        report_error("Error en condición de 'if'", "IF");
         RESULT = "ifError"+bl;
       :}
   ;
@@ -700,14 +568,14 @@ if_estructura ::=
 while_estructura ::=
     WHILE ABREREGALO expresion:cond CIERRAREGALO bloque:bl
       {:
-        parser.addDerivation("while_estructura -> WHILE ( expresion ) bloque");
+        manager.addDerivation("while_estructura -> WHILE ( expresion ) bloque");
         RESULT = "while("+cond+")"+bl;
-        parser.addControlStructure("Se detectó un 'while' con condición: " + cond);
+        manager.addControlStructure("Se detectó un 'while' con condición: " + cond);
       :}
   | WHILE ABREREGALO error CIERRAREGALO bloque:bl
       {:
-        parser.addDerivation("while_estructura -> WHILE ( error ) bloque");
-        parser.report_error("Error en condición de 'while'", parser.scan());
+        manager.addDerivation("while_estructura -> WHILE ( error ) bloque");
+        report_error("Error en condición de 'while'", "WHILE");
         RESULT = "whileError"+bl;
       :}
   ;
@@ -715,9 +583,9 @@ while_estructura ::=
 for_estructura ::=
     FOR ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
       {:
-        parser.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
+        manager.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
         RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
-        parser.addControlStructure(
+        manager.addControlStructure(
           "Se detectó un 'for' con inicialización: " + ini
           + ", condición: " + cond
           + ", step: " + step
@@ -725,8 +593,8 @@ for_estructura ::=
       :}
   | FOR ABREREGALO error CIERRAREGALO bloque:bl
       {:
-        parser.addDerivation("for_estructura -> FOR ( error ) bloque");
-        parser.report_error("Error en 'for'", parser.scan());
+        manager.addDerivation("for_estructura -> FOR ( error ) bloque");
+        report_error("Error en 'for'", "FOR");
         RESULT = "forError"+bl;
       :}
   ;
@@ -734,14 +602,14 @@ for_estructura ::=
 switch_estructura ::=
     SWITCH ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
       {:
-        parser.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
+        manager.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
         RESULT = "switch("+sw+") { "+cs+" }";
-        parser.addControlStructure("Se detectó un 'switch' con expresión: " + sw);
+        manager.addControlStructure("Se detectó un 'switch' con expresión: " + sw);
       :}
   | SWITCH ABREREGALO error CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
       {:
-        parser.addDerivation("switch_estructura -> SWITCH ( error ) { case_blocks }");
-        parser.report_error("Error en 'switch'", parser.scan());
+        manager.addDerivation("switch_estructura -> SWITCH ( error ) { case_blocks }");
+        report_error("Error en 'switch'", "SWITCH");
         RESULT = "switchError{ "+cs+" }";
       :}
   ;
@@ -749,17 +617,17 @@ switch_estructura ::=
 case_blocks ::=
     case_blocks:prev case_block:cb
       {:
-        parser.addDerivation("case_blocks -> case_blocks case_block");
+        manager.addDerivation("case_blocks -> case_blocks case_block");
         RESULT = prev + " " + cb;
       :}
   | case_block:cb
       {:
-        parser.addDerivation("case_blocks -> case_block");
+        manager.addDerivation("case_blocks -> case_block");
         RESULT = cb;
       :}
   | default_block:db
       {:
-        parser.addDerivation("case_blocks -> default_block");
+        manager.addDerivation("case_blocks -> default_block");
         RESULT = db;
       :}
   ;
@@ -767,12 +635,12 @@ case_blocks ::=
 case_block ::=
     CASE L_INTEGER:li DOS_PUNTOS bloque:bl
       {:
-        parser.addDerivation("case_block -> CASE L_INTEGER : bloque");
+        manager.addDerivation("case_block -> CASE L_INTEGER : bloque");
         RESULT = "case "+li+": "+bl;
       :}
   | CASE CHAR_LITERAL:ch DOS_PUNTOS bloque:bl
       {:
-        parser.addDerivation("case_block -> CASE CHAR_LITERAL : bloque");
+        manager.addDerivation("case_block -> CASE CHAR_LITERAL : bloque");
         RESULT = "case '"+ch+"': "+bl;
       :}
   ;
@@ -780,7 +648,7 @@ case_block ::=
 default_block ::=
     DEFAULT DOS_PUNTOS bloque:bl
       {:
-        parser.addDerivation("default_block -> DEFAULT : bloque");
+        manager.addDerivation("default_block -> DEFAULT : bloque");
         RESULT = "default: "+bl;
       :}
   ;
@@ -791,159 +659,158 @@ default_block ::=
 expresion ::=
     expresion:e1 DISYUNCION expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion || expresion");
+        manager.addDerivation("expresion -> expresion || expresion");
         RESULT = "("+e1+" || "+e2+")";
       :}
   | expresion:e1 CONJUNCION expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion && expresion");
+        manager.addDerivation("expresion -> expresion && expresion");
         RESULT = "("+e1+" && "+e2+")";
       :}
   | expresion:e1 IGUALDAD expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion == expresion");
+        manager.addDerivation("expresion -> expresion == expresion");
         RESULT = "("+e1+" == "+e2+")";
       :}
   | expresion:e1 DIFERENTE expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion != expresion");
+        manager.addDerivation("expresion -> expresion != expresion");
         RESULT = "("+e1+" != "+e2+")";
       :}
   | expresion:e1 MENOR expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion < expresion");
+        manager.addDerivation("expresion -> expresion < expresion");
         RESULT = "("+e1+" < "+e2+")";
       :}
   | expresion:e1 MENOROIGUAL expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion <= expresion");
+        manager.addDerivation("expresion -> expresion <= expresion");
         RESULT = "("+e1+" <= "+e2+")";
       :}
   | expresion:e1 MAYOR expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion > expresion");
+        manager.addDerivation("expresion -> expresion > expresion");
         RESULT = "("+e1+" > "+e2+")";
       :}
   | expresion:e1 MAYOROIGUAL expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion >= expresion");
+        manager.addDerivation("expresion -> expresion >= expresion");
         RESULT = "("+e1+" >= "+e2+")";
       :}
   | expresion:e1 SUMA expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion + expresion");
+        manager.addDerivation("expresion -> expresion + expresion");
         RESULT = "("+e1+" + "+e2+")";
       :}
   | expresion:e1 RESTA expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion - expresion");
+        manager.addDerivation("expresion -> expresion - expresion");
         RESULT = "("+e1+" - "+e2+")";
       :}
   | expresion:e1 MULTIPLICACION expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion * expresion");
+        manager.addDerivation("expresion -> expresion * expresion");
         RESULT = "("+e1+" * "+e2+")";
       :}
   | expresion:e1 DIVISION expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion / expresion");
+        manager.addDerivation("expresion -> expresion / expresion");
         RESULT = "("+e1+" / "+e2+")";
       :}
   | expresion:e1 MODULE expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion % expresion");
+        manager.addDerivation("expresion -> expresion % expresion");
         RESULT = "("+e1+" % "+e2+")";
       :}
   | expresion:e1 POTENCIA expresion:e2
       {:
-        parser.addDerivation("expresion -> expresion ^ expresion");
+        manager.addDerivation("expresion -> expresion ^ expresion");
         RESULT = "("+e1+" ^ "+e2+")";
       :}
   | NEGACION expresion:e
       {:
-        parser.addDerivation("expresion -> ! expresion");
+        manager.addDerivation("expresion -> ! expresion");
         RESULT = "!"+e;
       :}
   | RESTA expresion:e
       {:
-        parser.addDerivation("expresion -> - expresion");
+        manager.addDerivation("expresion -> - expresion");
         RESULT = "-"+e;
       :}
   | INCREMENTO IDENTIFICADOR:id
       {:
-        parser.addDerivation("expresion -> ++ IDENTIFICADOR");
+        manager.addDerivation("expresion -> ++ IDENTIFICADOR");
         RESULT = "++"+id;
         System.out.println("Expresión: ++" + id);
       :}
   | DECREMENTO IDENTIFICADOR:id
       {:
-        parser.addDerivation("expresion -> -- IDENTIFICADOR");
+        manager.addDerivation("expresion -> -- IDENTIFICADOR");
         RESULT = "--"+id;
         System.out.println("Expresión: --" + id);
       :}
   | IDENTIFICADOR:id INCREMENTO
       {:
-        parser.addDerivation("expresion -> IDENTIFICADOR ++");
+        manager.addDerivation("expresion -> IDENTIFICADOR ++");
         RESULT = id+"++";
         System.out.println("Expresión: " + id + "++");
       :}
   | IDENTIFICADOR:id DECREMENTO
       {:
-        parser.addDerivation("expresion -> IDENTIFICADOR --");
+        manager.addDerivation("expresion -> IDENTIFICADOR --");
         RESULT = id+"--";
         System.out.println("Expresión: " + id + "--");
       :}
   | IDENTIFICADOR:id ABREREGALO argumentos:args CIERRAREGALO
       {:
-        parser.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
+        manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
         RESULT = id + "(" + args + ")";
         System.out.println("Llamada a función: " + id + " con argumentos: " + args);
       :}
-  /* primarios */
   | IDENTIFICADOR:id
       {:
-        parser.addDerivation("expresion -> IDENTIFICADOR");
+        manager.addDerivation("expresion -> IDENTIFICADOR");
         RESULT = id;
       :}
   | L_INTEGER:lint
       {:
-        parser.addDerivation("expresion -> L_INTEGER");
+        manager.addDerivation("expresion -> L_INTEGER");
         RESULT = lint.toString();
       :}
   | FLOAT_LITERAL:flit
       {:
-        parser.addDerivation("expresion -> FLOAT_LITERAL");
+        manager.addDerivation("expresion -> FLOAT_LITERAL");
         RESULT = flit.toString();
       :}
   | CHAR_LITERAL:chl
       {:
-        parser.addDerivation("expresion -> CHAR_LITERAL");
+        manager.addDerivation("expresion -> CHAR_LITERAL");
         RESULT = "'"+chl+"'";
       :}
   | STRING_LITERAL:str
       {:
-        parser.addDerivation("expresion -> STRING_LITERAL");
+        manager.addDerivation("expresion -> STRING_LITERAL");
         RESULT = "\""+str+"\"";
       :}
   | BOOL_LITERAL:boo
       {:
-        parser.addDerivation("expresion -> BOOL_LITERAL");
+        manager.addDerivation("expresion -> BOOL_LITERAL");
         RESULT = boo.toString();
       :}
   | IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
       {:
-        parser.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
+        manager.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
         RESULT = arr + "["+ex+"]";
       :}
   | ABREREGALO expresion:ex CIERRAREGALO
       {:
-        parser.addDerivation("expresion -> ( expresion )");
+        manager.addDerivation("expresion -> ( expresion )");
         RESULT = "("+ex+")";
       :}
   | error CIERRAREGALO
       {:
-        parser.addDerivation("expresion -> error )");
-        parser.report_error("Error en expresión. Recuperado hasta ')'", parser.scan());
+        manager.addDerivation("expresion -> error )");
+        report_error("Error en expresión. Recuperado hasta ')'", "EXP");
         RESULT = "errorExpr";
       :}
   ;
@@ -952,12 +819,12 @@ expresion ::=
 argumentos ::=
     /* epsilon: llamada sin argumentos */
       {:
-        parser.addDerivation("argumentos -> /* epsilon */");
+        manager.addDerivation("argumentos -> /* epsilon */");
         RESULT = "";
       :}
   | lista_argumentos:la
       {:
-        parser.addDerivation("argumentos -> lista_argumentos");
+        manager.addDerivation("argumentos -> lista_argumentos");
         RESULT = la;
       :}
   ;
@@ -965,12 +832,12 @@ argumentos ::=
 lista_argumentos ::=
     expresion:exp
       {:
-        parser.addDerivation("lista_argumentos -> expresion");
+        manager.addDerivation("lista_argumentos -> expresion");
         RESULT = exp;
       :}
   | lista_argumentos:la COMA expresion:exp
       {:
-        parser.addDerivation("lista_argumentos -> lista_argumentos , expresion");
+        manager.addDerivation("lista_argumentos -> lista_argumentos , expresion");
         RESULT = (String)la + ", " + exp;
       :}
   ;
