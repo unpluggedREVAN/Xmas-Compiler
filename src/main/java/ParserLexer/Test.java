@@ -51,7 +51,7 @@ public class Test {
             System.out.println("Iniciando análisis semántico...");
             SemanticAnalyzer semAnalyzer = new SemanticAnalyzer(
                     parser.getSymbolTableManager(),
-                    parser.getAsignaciones() // la lista de asignaciones
+                    parser.getAsignaciones() // se pasan 2 argumentos al constructor
             );
             semAnalyzer.runSemanticChecks();  // Realiza validaciones
 

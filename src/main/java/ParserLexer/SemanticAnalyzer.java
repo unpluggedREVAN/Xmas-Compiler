@@ -2,55 +2,84 @@ package ParserLexer;
 
 import java.util.List;
 
-/**
- * Realiza el análisis semántico usando la tabla de símbolos
- * proporcionada por el parser.
- */
 public class SemanticAnalyzer {
 
     private SymbolTableManager symbolTable;
+    private List<String> asignacionesSimples;  // Única lista que recibimos
 
-    // Aquí podrías almacenar estructuras intermediarias (por ejemplo, lista de asignaciones o un AST).
-    private List<String> asignacionesSimples;
-    // Imagina que el parser llena esta lista con entradas tipo: "assign(var=expr)"
-
-    public SemanticAnalyzer(SymbolTableManager stm, List<String> asignacionesSimples) {
+    // Constructor con dos parámetros
+    public SemanticAnalyzer(SymbolTableManager stm, List<String> assigns) {
         this.symbolTable = stm;
-        this.asignacionesSimples = asignacionesSimples;
+        this.asignacionesSimples = assigns;
     }
 
     public void runSemanticChecks() {
         System.out.println("\n[SEMANTIC] Iniciando chequeos semánticos...");
 
-        checkAsignaciones();
+        // Ejemplo de dos chequeos sencillos:
+        checkDeclaracionesYTipos();
+        checkTiposExpresiones();
 
+        // Podrías expandir con más validaciones si lo deseas
         System.out.println("[SEMANTIC] Análisis semántico terminado.\n");
     }
 
     /**
-     * Ejemplo: Para cada asignación "assign(x=algo)", verificamos si x
-     * está declarado en la tabla de símbolos.
+     * 1) Verificación de uso de variables (deben estar declaradas).
      */
-    private void checkAsignaciones() {
+    private void checkDeclaracionesYTipos() {
         for (String asig : asignacionesSimples) {
-            // asig = "assign(var=expr)" -> parsearlo groseramente
-            // Esto es solo un ejemplo muy simplificado.
-            if (asig.startsWith("assign(") && asig.endsWith(")")) {
-                String contenido = asig.substring("assign(".length(), asig.length()-1);
-                // contenido = var=expr
-                int eqIndex = contenido.indexOf('=');
-                if (eqIndex > 0) {
-                    String varName = contenido.substring(0, eqIndex);
-                    varName = varName.trim();
-                    // Revisar si está declarado
-                    SymbolTableManager.SymbolData sd = symbolTable.findSymbolRecursive(varName);
-                    if (sd == null) {
-                        symbolTable.addSemanticError(
-                                "Variable '" + varName + "' usada en asignación pero no declarada."
-                        );
-                    }
-                }
+            // asig: "assign(x= expr)"
+            String varName = parseVarFromAssign(asig);
+            // Ver si está declarado
+            SymbolTableManager.SymbolData sd = symbolTable.findSymbolRecursive(varName);
+            if (sd == null) {
+                symbolTable.addSemanticError("Variable '" + varName
+                        + "' usada sin declarar. En: " + asig);
             }
         }
+    }
+
+    /**
+     * 2) Validación de tipos de expresiones (simplificado).
+     *    Por ejemplo, si la variable es int y detectamos un decimal, error.
+     */
+    private void checkTiposExpresiones() {
+        for (String asig : asignacionesSimples) {
+            String var = parseVarFromAssign(asig);
+            String expr = parseExprFromAssign(asig);
+
+            SymbolTableManager.SymbolData sd = symbolTable.findSymbolRecursive(var);
+            if (sd == null) continue; // Ya se reportó el error
+
+            // Si es int y la expresión contiene '.', lo consideramos float
+            if (sd.type.equals("int") && expr.contains(".")) {
+                symbolTable.addSemanticError("Asignando float a variable int ("
+                        + var + ") en " + asig);
+            }
+            // Podrías detectar "expr.contains(\"/0\")" => división por cero, etc.
+        }
+    }
+
+    /**
+     * Extrae el nombre de variable de un string tipo "assign(x= expr)".
+     */
+    private String parseVarFromAssign(String asigStr) {
+        // Ejemplo rápido:
+        // "assign(x= y+2 )"
+        int openPar = asigStr.indexOf("(");
+        int eq = asigStr.indexOf("=");
+        if (openPar < 0 || eq < openPar) return "???";
+        return asigStr.substring(openPar + 1, eq).trim();
+    }
+
+    /**
+     * Extrae la parte de la expresión a la derecha del '=' en "assign(x= expr)".
+     */
+    private String parseExprFromAssign(String asigStr) {
+        int eq = asigStr.indexOf("=") + 1;
+        int closePar = asigStr.lastIndexOf(")");
+        if (eq < 1 || closePar < eq) return "";
+        return asigStr.substring(eq, closePar).trim();
     }
 }
