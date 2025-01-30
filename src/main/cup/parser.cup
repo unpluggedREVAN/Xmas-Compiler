@@ -428,7 +428,7 @@ asignacion ::=
 
         String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
         RESULT = asigStr;
-        // Igualmente podrías almacenar en asignacionesRealizadas si deseas.
+        // Si quisieras, podrías almacenar en asignacionesRealizadas si deseas.
       :}
   ;
 
@@ -498,6 +498,7 @@ param_dec ::=
         int line = pidleft + 1;
         int col  = pidright + 1;
         manager.addSimbolo(manager.getCurrentScope(), pid, line, col, t);
+        // O si quisieras, manager.addParamToCurrentFunction(pid, t);
 
         RESULT = paramStr;
       :}

@@ -1347,7 +1347,7 @@ class CUP$Parser$actions {
 
         String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
         RESULT = asigStr;
-        // Igualmente podrías almacenar en asignacionesRealizadas si deseas.
+        // Si quisieras, podrías almacenar en asignacionesRealizadas si deseas.
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1486,6 +1486,7 @@ class CUP$Parser$actions {
         int line = pidleft + 1;
         int col  = pidright + 1;
         manager.addSimbolo(manager.getCurrentScope(), pid, line, col, t);
+        // O si quisieras, manager.addParamToCurrentFunction(pid, t);
 
         RESULT = paramStr;
       
