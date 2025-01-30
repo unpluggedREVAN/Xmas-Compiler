@@ -51,6 +51,7 @@ public class SymbolTableManager {
     private Stack<String> scopeStack;                             // pila para scopes anidados
     private String currentScope;
     private String lastDeclaredIdentifier;
+    private String lastDeclaredVar;
 
     // Manejo de reportes
     private List<String> erroresSemanticos;   // si detectas problemas semánticos
@@ -286,5 +287,13 @@ public class SymbolTableManager {
 
     public String getLastDeclaredIdentifier() {
         return this.lastDeclaredIdentifier;
+    }
+
+    public void setVarName(String varName) {
+        this.lastDeclaredVar = varName;
+    }
+
+    public String getVarName() {
+        return this.lastDeclaredVar;
     }
 }

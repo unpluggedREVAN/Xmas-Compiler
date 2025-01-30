@@ -288,62 +288,77 @@ customError ::=
 /* ----------------------------------------------------------------------
    D) Declaraciones
 ---------------------------------------------------------------------- */
-declaracion ::= tipo_dato:td IDENTIFICADOR:myid declaracion_aux
+declaracion ::= tipo_dato:td IDENTIFICADOR:myid
     {:
-      manager.addDerivation("declaracion -> tipo_dato IDENTIFICADOR declaracion_aux");
+        // Mid-rule action: Establecer lastDeclaredIdentifier y añadir símbolo aquí
+        manager.setLastDeclaredIdentifier(myid);
 
-      String t = (String) td;
-      System.out.println("Declaración detectada: (tipo=" + t + ", var=" + myid + ")");
+        String t = (String) td;
+        System.out.println("Declaración detectada: (tipo=" + t + ", var=" + myid + ")");
 
-      // Guardar el identificador en la tabla de símbolos
-      int line = myidleft + 1;
-      int col  = myidright + 1;
-      manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
-
-      // Guardar `myid` para uso en `declaracion_aux`
-      manager.setLastDeclaredIdentifier(myid);
+        // Guardar la variable con valor inicial null
+        int line = myidleft + 1;
+        int col  = myidright + 1;
+        manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
+    :}
+    declaracion_aux
+    {:
+        // Código posterior si es necesario
     :}
   ;
 
 declaracion_aux ::=
     PUNTO_Y_COMA
-      {:
+    {:
         manager.addDerivation("declaracion_aux -> ;");
-      :}
+        // No hay asignación, la variable ya existe con valor `null` desde la declaración.
+    :}
   | ASIGNA expresion:ex PUNTO_Y_COMA
-        {:
-          manager.addDerivation("declaracion_aux -> = expresion ;");
+    {:
+        manager.addDerivation("declaracion_aux -> = expresion ;");
 
-          // Obtener la última variable declarada
-          String lastId = manager.getLastDeclaredIdentifier();
-          SymbolData var = manager.findSymbolRecursive(lastId);
+        // Recuperamos correctamente la última variable declarada
+        String lastId = manager.getLastDeclaredIdentifier();
+        SymbolData var = manager.findSymbolRecursive(lastId);
 
-          if (var != null) {
-              var.value = ex;  // Guardar valor en la tabla de símbolos
-              System.out.println("Valor asignado: " + lastId + " = " + ex);
-          } else {
-              manager.addSemanticError("Error: Variable '" + lastId + "' no declarada antes de asignación.");
-          }
-        :}
+        if (var != null) {
+            var.value = ex;  // Ahora la asignación se hace correctamente
+            System.out.println("✔ Valor asignado correctamente: " + lastId + " = " + ex);
+        } else {
+            manager.addSemanticError("Error: Variable '" + lastId + "' no declarada antes de asignación.");
+        }
+    :}
   | ABREEMPAQUE expresion:idx CIERRAEMPAQUE PUNTO_Y_COMA
-        {:
-          manager.addDerivation("declaracion_aux -> [ expresion ] ;");
+    {:
+        manager.addDerivation("declaracion_aux -> [ expresion ] ;");
 
-          // Marcar la variable como array
-          String lastId = manager.getLastDeclaredIdentifier();
-          SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+        // Recuperamos correctamente la última variable declarada
+        String lastId = manager.getLastDeclaredIdentifier();
+        SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-          if (var != null) {
-              manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
-              System.out.println("Array detectado: " + lastId + " con tamaño " + idx);
-          } else {
-              manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
-          }
-        :}
+        if (var != null) {
+            manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
+            System.out.println("✔ Array detectado: " + lastId + " con tamaño " + idx);
+        } else {
+            manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
+        }
+    :}
   | ABREEMPAQUE expresion:idx CIERRAEMPAQUE ASIGNA array_init:ai PUNTO_Y_COMA
-      {:
+    {:
         manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
-      :}
+
+        // Recuperamos correctamente la última variable declarada
+        String lastId = manager.getLastDeclaredIdentifier();
+        SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+
+        if (var != null) {
+            manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
+            var.value = ai;  // Guardamos la inicialización del array
+            System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
+        } else {
+            manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
+        }
+    :}
   ;
 
 /* array_init ::= { array_item_list } */
