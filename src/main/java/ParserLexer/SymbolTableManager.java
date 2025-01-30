@@ -50,6 +50,7 @@ public class SymbolTableManager {
     private HashMap<String, ArrayList<SymbolData>> tablaSimbolos; // scope -> lista de SymbolData
     private Stack<String> scopeStack;                             // pila para scopes anidados
     private String currentScope;
+    private String lastDeclaredIdentifier;
 
     // Manejo de reportes
     private List<String> erroresSemanticos;   // si detectas problemas semánticos
@@ -277,5 +278,13 @@ public class SymbolTableManager {
 
     public void addSemanticError(String mensaje) {
         erroresSemanticos.add(mensaje);
+    }
+
+    public void setLastDeclaredIdentifier(String id) {
+        this.lastDeclaredIdentifier = id;
+    }
+
+    public String getLastDeclaredIdentifier() {
+        return this.lastDeclaredIdentifier;
     }
 }

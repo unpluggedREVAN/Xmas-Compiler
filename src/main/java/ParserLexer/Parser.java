@@ -8,6 +8,7 @@ package ParserLexer;
 import java_cup.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
+import ParserLexer.SymbolTableManager.SymbolData;
 import java_cup.runtime.XMLElement;
 
 /** CUP v0.11b 20160615 (GIT 4ac7450) generated parser.
@@ -1031,19 +1032,19 @@ class CUP$Parser$actions {
 		int myidleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).left;
 		int myidright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		String myid = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
-		int auxleft = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).left;
-		int auxright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
-		Object aux = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
       manager.addDerivation("declaracion -> tipo_dato IDENTIFICADOR declaracion_aux");
 
       String t = (String) td;
       System.out.println("Declaración detectada: (tipo=" + t + ", var=" + myid + ")");
 
-      // Agregar el símbolo a la tabla.
+      // Guardar el identificador en la tabla de símbolos
       int line = myidleft + 1;
       int col  = myidright + 1;
       manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
+
+      // Guardar `myid` para uso en `declaracion_aux`
+      manager.setLastDeclaredIdentifier(myid);
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion",7, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1068,8 +1069,19 @@ class CUP$Parser$actions {
 		int exright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		Object ex = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-        manager.addDerivation("declaracion_aux -> = expresion ;");
-      
+          manager.addDerivation("declaracion_aux -> = expresion ;");
+
+          // Obtener la última variable declarada
+          String lastId = manager.getLastDeclaredIdentifier();
+          SymbolData var = manager.findSymbolRecursive(lastId);
+
+          if (var != null) {
+              var.value = ex;  // Guardar valor en la tabla de símbolos
+              System.out.println("Valor asignado: " + lastId + " = " + ex);
+          } else {
+              manager.addSemanticError("Error: Variable '" + lastId + "' no declarada antes de asignación.");
+          }
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1082,8 +1094,19 @@ class CUP$Parser$actions {
 		int idxright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
 		Object idx = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
-        manager.addDerivation("declaracion_aux -> [ expresion ] ;");
-      
+          manager.addDerivation("declaracion_aux -> [ expresion ] ;");
+
+          // Marcar la variable como array
+          String lastId = manager.getLastDeclaredIdentifier();
+          SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+
+          if (var != null) {
+              manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
+              System.out.println("Array detectado: " + lastId + " con tamaño " + idx);
+          } else {
+              manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
+          }
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1317,12 +1340,19 @@ class CUP$Parser$actions {
         manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
         System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
 
-        // Creamos un string representando esta asignación, para la fase semántica.
-        String asigStr = "assign(" + idVar + "=" + ex + ")";
-        RESULT = asigStr;
+        // Buscar la variable en la tabla de símbolos
+        SymbolData var = manager.findSymbolRecursive(idVar);
+        if (var != null) {
+            var.value = ex;  // Guardar el valor en la tabla de símbolos
+            System.out.println("Valor actualizado en tabla de símbolos: " + idVar + " = " + ex);
+        } else {
+            manager.addSemanticError("Error: Asignación a variable no declarada '" + idVar + "'");
+        }
 
         // Guardamos la asignación para el SemanticAnalyzer.
+        String asigStr = "assign(" + idVar + "=" + ex + ")";
         asignacionesRealizadas.add(asigStr);
+        RESULT = asigStr;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1489,6 +1519,8 @@ class CUP$Parser$actions {
         // O si quisieras, manager.addParamToCurrentFunction(pid, t);
 
         RESULT = paramStr;
+        // Guardar el parámetro en la función actual
+        manager.addParamToCurrentFunction(pid, t);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("param_dec",22, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
