@@ -1,13 +1,18 @@
 package ParserLexer;
 
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
+/**
+ * Analizador semántico ampliado para cubrir los puntos clave
+ * de la Fase 3.
+ */
 public class SemanticAnalyzer {
 
     private SymbolTableManager symbolTable;
-    private List<String> asignacionesSimples;  // Única lista que recibimos
+    private List<String> asignacionesSimples;  // Lista de "assign(x=expr)" recolectadas
 
-    // Constructor con dos parámetros
     public SemanticAnalyzer(SymbolTableManager stm, List<String> assigns) {
         this.symbolTable = stm;
         this.asignacionesSimples = assigns;
@@ -16,22 +21,26 @@ public class SemanticAnalyzer {
     public void runSemanticChecks() {
         System.out.println("\n[SEMANTIC] Iniciando chequeos semánticos...");
 
-        // Ejemplo de dos chequeos sencillos:
+        // Chequeos que ya existían
         checkDeclaracionesYTipos();
         checkTiposExpresiones();
 
-        // Podrías expandir con más validaciones si lo deseas
+        // Chequeos nuevos o ampliados
+        checkUniqueMain();
+        checkArrayDimensions();
+        checkFunctionParams();
+        // Podrías añadir más si lo deseas (control de break/continue, etc.)
+
         System.out.println("[SEMANTIC] Análisis semántico terminado.\n");
     }
 
     /**
-     * 1) Verificación de uso de variables (deben estar declaradas).
+     * 1) Verificación de uso de variables (deben estar declaradas antes de usarse).
+     *    Este método ya existía de forma similar.
      */
     private void checkDeclaracionesYTipos() {
         for (String asig : asignacionesSimples) {
-            // asig: "assign(x= expr)"
             String varName = parseVarFromAssign(asig);
-            // Ver si está declarado
             SymbolTableManager.SymbolData sd = symbolTable.findSymbolRecursive(varName);
             if (sd == null) {
                 symbolTable.addSemanticError("Variable '" + varName
@@ -41,8 +50,8 @@ public class SemanticAnalyzer {
     }
 
     /**
-     * 2) Validación de tipos de expresiones (simplificado).
-     *    Por ejemplo, si la variable es int y detectamos un decimal, error.
+     * 2) Chequeo de tipos de expresiones (simplificado).
+     *    Ejemplo: si la variable es int y la expresión contiene '.', asumimos float.
      */
     private void checkTiposExpresiones() {
         for (String asig : asignacionesSimples) {
@@ -50,32 +59,98 @@ public class SemanticAnalyzer {
             String expr = parseExprFromAssign(asig);
 
             SymbolTableManager.SymbolData sd = symbolTable.findSymbolRecursive(var);
-            if (sd == null) continue; // Ya se reportó el error
+            if (sd == null) continue; // Ya se reportó
 
-            // Si es int y la expresión contiene '.', lo consideramos float
+            // Chequeo muy básico de "float" vs "int"
             if (sd.type.equals("int") && expr.contains(".")) {
-                symbolTable.addSemanticError("Asignando float a variable int ("
-                        + var + ") en " + asig);
+                symbolTable.addSemanticError("Asignando float a variable int ("+ var + ") en " + asig);
             }
-            // Podrías detectar "expr.contains(\"/0\")" => división por cero, etc.
+
+            // Detectar división por cero sencilla: "/0"
+            if (expr.contains("/0")) {
+                symbolTable.addSemanticError("División por cero en la expresión: " + expr);
+            }
         }
     }
 
     /**
-     * Extrae el nombre de variable de un string tipo "assign(x= expr)".
+     * 3) Verificar que exista exactamente 1 main.
      */
+    private void checkUniqueMain() {
+        int foundMains = 0;
+        // Recorremos toda la tabla
+        for (var entry : symbolTable.getTablaSimbolos().entrySet()) {
+            for (var sd : entry.getValue()) {
+                if (sd.isFunction && sd.lexeme.equals("main")) {
+                    foundMains++;
+                }
+            }
+        }
+        if (foundMains == 0) {
+            symbolTable.addSemanticError("No se declaró la función 'main'. Debe existir exactamente una.");
+        } else if (foundMains > 1) {
+            symbolTable.addSemanticError("Existen múltiples funciones 'main' ("+foundMains+"). Debe haber solo una.");
+        }
+    }
+
+    /**
+     * 4) Revisión de que los arreglos tengan dimensiones válidas.
+     */
+    private void checkArrayDimensions() {
+        for (var entry : symbolTable.getTablaSimbolos().entrySet()) {
+            for (var sd : entry.getValue()) {
+                if (sd.isArray && sd.arraySize < 1) {
+                    symbolTable.addSemanticError("Array '"+sd.lexeme+"' con dimensión inválida: "+sd.arraySize);
+                }
+            }
+        }
+    }
+
+    /**
+     * 5) Verificar que los parámetros de cada función no se repitan
+     *    y que sus tipos sean válidos.
+     */
+    private void checkFunctionParams() {
+        for (var entry : symbolTable.getTablaSimbolos().entrySet()) {
+            for (var sd : entry.getValue()) {
+                if (sd.isFunction) {
+                    // Revisamos sd.paramTypes, que lucen como "tipo:paramName"
+                    Set<String> seenParamNames = new HashSet<>();
+                    for (String paramDesc : sd.paramTypes) {
+                        String[] parts = paramDesc.split(":");
+                        if (parts.length == 2) {
+                            String pType = parts[0];
+                            String pName = parts[1];
+                            // Comprobar duplicados de nombre
+                            if (seenParamNames.contains(pName)) {
+                                symbolTable.addSemanticError("Parámetro repetido '" + pName
+                                        + "' en la función '" + sd.lexeme + "'");
+                            } else {
+                                seenParamNames.add(pName);
+                            }
+                            // Comprobar tipo válido
+                            if (!symbolTable.isValidType(pType)) {
+                                symbolTable.addSemanticError("Tipo de parámetro inválido '"
+                                        + pType + "' en la función '" + sd.lexeme + "'");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------
+    // Métodos auxiliares para parsear la asignación simple
+    // --------------------------------------------------
     private String parseVarFromAssign(String asigStr) {
-        // Ejemplo rápido:
-        // "assign(x= y+2 )"
+        // "assign(x= expr)"
         int openPar = asigStr.indexOf("(");
         int eq = asigStr.indexOf("=");
         if (openPar < 0 || eq < openPar) return "???";
         return asigStr.substring(openPar + 1, eq).trim();
     }
 
-    /**
-     * Extrae la parte de la expresión a la derecha del '=' en "assign(x= expr)".
-     */
     private String parseExprFromAssign(String asigStr) {
         int eq = asigStr.indexOf("=") + 1;
         int closePar = asigStr.lastIndexOf(")");

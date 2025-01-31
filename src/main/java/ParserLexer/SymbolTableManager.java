@@ -25,9 +25,9 @@ public class SymbolTableManager {
 
         // Indicadores extra:
         public boolean isArray;
-        public int arraySize;      // tamaño 1D (puedes extender para multidimensional)
+        public int arraySize;      // tamaño 1D (puedes extender a multi-dim)
         public boolean isFunction;
-        public List<String> paramTypes;  // p.e. ["int", "float"]
+        public List<String> paramTypes;  // p.e. ["int:param1", "float:param2"]
 
         public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
             this.lexeme = lexeme;
@@ -47,16 +47,16 @@ public class SymbolTableManager {
     // ----------------------------------------------------------------
     // Estructuras principales
     // ----------------------------------------------------------------
-    private HashMap<String, ArrayList<SymbolData>> tablaSimbolos; // scope -> lista de SymbolData
-    private Stack<String> scopeStack;                             // pila para scopes anidados
+    private HashMap<String, ArrayList<SymbolData>> tablaSimbolos;
+    private Stack<String> scopeStack;
     private String currentScope;
     private String lastDeclaredIdentifier;
     private String lastDeclaredVar;
 
     // Manejo de reportes
-    private List<String> erroresSemanticos;   // si detectas problemas semánticos
-    private List<String> estructurasControl;  // info sobre if, while, etc.
-    private List<String> derivaciones;         // producciones registradas
+    private List<String> erroresSemanticos;
+    private List<String> estructurasControl;
+    private List<String> derivaciones;
 
     // ----------------------------------------------------------------
     // Constructor
@@ -69,7 +69,7 @@ public class SymbolTableManager {
         this.estructurasControl = new ArrayList<>();
         this.derivaciones = new ArrayList<>();
 
-        // El scope inicial es "global"
+        // Scope inicial: "global"
         this.scopeStack.push("global");
         this.currentScope = "global";
         this.tablaSimbolos.put("global", new ArrayList<SymbolData>());
@@ -92,7 +92,6 @@ public class SymbolTableManager {
     public void pushScope(String newScope) {
         scopeStack.push(newScope);
         currentScope = newScope;
-        // Si no existe, crear la lista de símbolos para ese scope
         if (!tablaSimbolos.containsKey(currentScope)) {
             tablaSimbolos.put(currentScope, new ArrayList<SymbolData>());
         }
@@ -114,19 +113,17 @@ public class SymbolTableManager {
      * en la tabla de símbolos del scope actual).
      */
     public void crearScopeFuncion(String returnType, String funcName, int line, int col) {
-        // Verificar si ya hay un símbolo con ese nombre en el scope actual
+        // Verificar duplicado en el mismo scope
         if (findSymbolInScope(funcName, currentScope) != null) {
             addSemanticError("Función '" + funcName + "' redeclarada en scope '" + currentScope + "'");
             return;
         }
 
-        // Crear su SymbolData, marcar isFunction
         SymbolData funcData = new SymbolData(funcName, "funcType:" + returnType, line, col, currentScope, null);
         funcData.isFunction = true;
         tablaSimbolos.get(currentScope).add(funcData);
 
         System.out.println("Se crea nuevo scope para la función: " + funcName);
-        // Cambiar el scope -> nombre de la función
         pushScope(funcName);
     }
 
@@ -134,7 +131,7 @@ public class SymbolTableManager {
      * Agrega un símbolo (variable) al scope indicado.
      */
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
-        // Verificar duplicado en el mismo scope
+        // Verificar duplicado
         if (findSymbolInScope(lexeme, scope) != null) {
             addSemanticError("Variable '" + lexeme + "' redeclarada en scope '" + scope + "'");
             return;
@@ -164,16 +161,16 @@ public class SymbolTableManager {
      */
     public void addParamToCurrentFunction(String paramName, String paramType) {
         String funcScope = getCurrentScope();
-        // Buscar la symbolData con lexeme == funcScope en ese scope
         SymbolData funcSym = findSymbolInScope(funcScope, funcScope);
         if (funcSym != null && funcSym.isFunction) {
-            // Repetido?
-            if (funcSym.paramTypes.contains(paramType + ":" + paramName)) {
+            // Solo añadimos si no está repetido
+            String joined = paramType + ":" + paramName;
+            if (funcSym.paramTypes.contains(joined)) {
                 addSemanticError("Parámetro repetido '" + paramName
                         + "' en la función '" + funcScope + "'");
                 return;
             }
-            funcSym.paramTypes.add(paramType + ":" + paramName);
+            funcSym.paramTypes.add(joined);
         } else {
             addSemanticError("No se encontró la función '" + funcScope
                     + "' para añadir el parámetro '" + paramName + "'");
@@ -183,9 +180,6 @@ public class SymbolTableManager {
     // ----------------------------------------------------------------
     // Búsquedas de símbolos
     // ----------------------------------------------------------------
-    /**
-     * Busca un símbolo (por lexeme) en el scope dado.
-     */
     public SymbolData findSymbolInScope(String lexeme, String scope) {
         if (!tablaSimbolos.containsKey(scope)) return null;
         for (SymbolData sd : tablaSimbolos.get(scope)) {
@@ -196,10 +190,6 @@ public class SymbolTableManager {
         return null;
     }
 
-    /**
-     * Busca un símbolo recursivamente en la pila de scopes:
-     * scope actual, luego el anterior, etc.
-     */
     public SymbolData findSymbolRecursive(String lexeme) {
         Stack<String> tempStack = new Stack<>();
         tempStack.addAll(scopeStack);
@@ -295,5 +285,15 @@ public class SymbolTableManager {
 
     public String getVarName() {
         return this.lastDeclaredVar;
+    }
+
+    /**
+     * Verifica si un string corresponde a un tipo básico válido
+     */
+    public boolean isValidType(String t) {
+        // Ajustar según los tipos que manejas
+        return t.equals("int") || t.equals("float")
+                || t.equals("bool") || t.equals("char")
+                || t.equals("string");
     }
 }

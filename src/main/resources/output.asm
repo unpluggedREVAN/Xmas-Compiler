@@ -1,6 +1,7 @@
 .data
-_x_: .word 0
-_y_: .word 0
+_edad_: .word 0
+_contador_: .word 0
+_valores_: .word 0
 
 .text
 .globl main
