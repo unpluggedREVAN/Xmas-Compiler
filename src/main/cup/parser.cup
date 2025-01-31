@@ -1,5 +1,5 @@
 /* ============================================================================
-   parser.cup - Xmas-Compiler (versión limpia + recolección de asignaciones)
+   parser.cup - Xmas-Compiler (versión final con modificaciones semánticas)
 ============================================================================ */
 package ParserLexer;
 
@@ -11,6 +11,9 @@ import java.io.PrintWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 
+/* ----------------------------------------------------------------------
+   1) Sección de código del parser
+---------------------------------------------------------------------- */
 parser code {:
     // Lista de errores sintácticos
     private List<String> errores = new ArrayList<>();
@@ -36,10 +39,9 @@ parser code {:
             this.text = tx;
         }
 
-        // MÉTODO QUE SOLUCIONA EL PROBLEMA
         @Override
         public String toString() {
-            return text; // Así imprimirá el valor en lugar del objeto en memoria
+            return text; // Imprime el valor textual en lugar de la referencia
         }
     }
 
@@ -106,38 +108,35 @@ parser code {:
         manager.imprimirReporte();  // Parte final (tabla de símbolos, etc.)
     }
 
-  /*Parte de las generación de código destino en MIPS*/
+    /*Parte de la generación de código destino en MIPS*/
+    private List<String> codigoMIPS = new ArrayList<>();
 
-  /*Lista para guardar las instrucciones MIPS que se van creando*/
-  private List<String> codigoMIPS = new ArrayList<>();
-
-  //Método para añadir instrucción
-  public void addInstructionMIPS(String instruction) {
-    codigoMIPS.add(instruction);
-  }
-
-  public void generarArchivoMIPS() {
-    try(PrintWriter writer = new PrintWriter(new FileWriter("codigoMIPS.asm"))) {
-      // Seccion de los datos del archivo MIPS
-      writer.println(".data");
-      /*En esta parte se van a tomar la tabla de símbolos para definir los datos*/
-
-      writer.println("\n.text");
-      writer.println(".globl main");
-      writer.println("main:");
-
-      //Sección de las instrucciones generadas
-      for (String instr: codigoMIPS){
-        writer.println(instr);
-      }
-
-      //Sección de salida del programa
-      writer.println("li $v0, 10");
-      writer.println("syscall");
-    } catch (IOException e) {
-      System.err.println("Error al generar el archivo: " + e.getMessage());
+    public void addInstructionMIPS(String instruction) {
+      codigoMIPS.add(instruction);
     }
-  }
+
+    public void generarArchivoMIPS() {
+      try(PrintWriter writer = new PrintWriter(new FileWriter("codigoMIPS.asm"))) {
+        // Sección de datos del archivo MIPS
+        writer.println(".data");
+        /*Aquí se pueden definir datos basándose en la tabla de símbolos*/
+
+        writer.println("\n.text");
+        writer.println(".globl main");
+        writer.println("main:");
+
+        //Sección de instrucciones generadas
+        for (String instr: codigoMIPS){
+          writer.println(instr);
+        }
+
+        //Sección de salida del programa
+        writer.println("li $v0, 10");
+        writer.println("syscall");
+      } catch (IOException e) {
+        System.err.println("Error al generar el archivo: " + e.getMessage());
+      }
+    }
 :}
 
 /* ----------------------------------------------------------------------
@@ -174,7 +173,17 @@ non terminal case_blocks, case_block, default_block;
 non terminal funcion, parametros, lista_parametros, param_dec;
 non terminal array_init, array_item, array_item_list;
 non terminal customError;
-non terminal argumentos, lista_argumentos;
+non terminal while_token, for_token, switch_token;
+
+/*
+  Para manejar argumentos con tipado estricto,
+  usamos List<ExprInfo> como atributo de argumentos y lista_argumentos.
+*/
+non terminal java.util.List<ExprInfo> argumentos, lista_argumentos;
+
+/*
+  expr -> ExprInfo. Esto ya estaba:
+*/
 non terminal ExprInfo expresion;
 
 /* ----------------------------------------------------------------------
@@ -313,12 +322,32 @@ sentencia ::=
       {:
          manager.addDerivation("sentencia -> RETURN expresion ;");
          System.out.println("Return con expr: " + ret);
+
+         // Verificar si estamos dentro de una función
+         if (!manager.isInsideFunction()) {
+           manager.addSemanticError("Uso de 'return' fuera de una función.");
+         } else {
+           // Chequear si coincide con el tipo de la función
+           String expected = manager.getCurrentFunctionReturnType();
+           if (expected != null && !expected.equals("void")) {
+               // Si tu lenguaje maneja "void", aquí habría que verificar
+               if (!ret.type.equals(expected) && !ret.type.equals("error")) {
+                   manager.addSemanticError("Return type mismatch: se esperaba '"
+                       + expected + "', se encontró '" + ret.type + "'");
+               }
+           }
+         }
       :}
   | BREAK PUNTO_Y_COMA
       {:
          manager.addDerivation("sentencia -> BREAK ;");
          System.out.println("Break detectado.");
          manager.addControlStructure("Se detectó un 'break'.");
+
+         // Verificar si es válido
+         if (!manager.canBreakHere()) {
+           manager.addSemanticError("Uso de 'break' fuera de while/for/switch");
+         }
       :}
   | customError PUNTO_Y_COMA
       {:
@@ -348,7 +377,6 @@ customError ::=
 ---------------------------------------------------------------------- */
 declaracion ::= tipo_dato:td IDENTIFICADOR:myid
     {:
-        // Mid-rule action: Establecer lastDeclaredIdentifier y añadir símbolo aquí
         manager.setLastDeclaredIdentifier(myid);
 
         String t = (String) td;
@@ -375,12 +403,12 @@ declaracion_aux ::=
     {:
         manager.addDerivation("declaracion_aux -> = expresion ;");
 
-        // Recuperamos correctamente la última variable declarada
         String lastId = manager.getLastDeclaredIdentifier();
         SymbolData var = manager.findSymbolRecursive(lastId);
 
         if (var != null) {
-            var.value = ex;  // Ahora la asignación se hace correctamente
+            var.value = ex;
+            // Si manejas isInitialized, podrías hacer: var.isInitialized = true;
             System.out.println("✔ Valor asignado correctamente: " + lastId + " = " + ex);
         } else {
             manager.addSemanticError("Error: Variable '" + lastId + "' no declarada antes de asignación.");
@@ -390,7 +418,6 @@ declaracion_aux ::=
     {:
         manager.addDerivation("declaracion_aux -> [ expresion ] ;");
 
-        // Recuperamos correctamente la última variable declarada
         String lastId = manager.getLastDeclaredIdentifier();
         SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
@@ -405,13 +432,12 @@ declaracion_aux ::=
     {:
         manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
 
-        // Recuperamos correctamente la última variable declarada
         String lastId = manager.getLastDeclaredIdentifier();
         SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
         if (var != null) {
             manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
-            var.value = ai;  // Guardamos la inicialización del array
+            var.value = ai;
             System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
         } else {
             manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
@@ -464,7 +490,7 @@ array_item ::=
       :}
   | STRING_LITERAL:st
       {:
-        manager.addDerivation("array_item -> STRING_LITERAL");
+        manager.addDerivation("array_item ->  STRING_LITERAL");
         RESULT = "\""+st+"\"";
       :}
   | BOOL_LITERAL:boo
@@ -512,10 +538,10 @@ asignacion ::=
         manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
         System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
 
-        // Buscar la variable en la tabla de símbolos
         SymbolData var = manager.findSymbolRecursive(idVar);
         if (var != null) {
-            var.value = ex;  // Guardar el valor en la tabla de símbolos
+            var.value = ex;
+            // var.isInitialized = true; (si manejas inicialización)
             System.out.println("Valor actualizado en tabla de símbolos: " + idVar + " = " + ex);
         } else {
             manager.addSemanticError("Error: Asignación a variable no declarada '" + idVar + "'");
@@ -526,14 +552,13 @@ asignacion ::=
         asignacionesRealizadas.add(asigStr);
         RESULT = asigStr;
       :}
-  | IDENTIFICADOR:idVar ABREEMPAQUE expresion:pos CIERRAEMPAQUE ASIGNA expresion:rhs PUNTO_Y_COMA
+  | IDENTIFICADOR:idVar ABREEMPAQUE expresion:pos CIERRAREGALO ASIGNA expresion:rhs PUNTO_Y_COMA
       {:
         manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
         System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
 
         String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
         RESULT = asigStr;
-        // Si quisieras, podrías almacenar en asignacionesRealizadas si deseas.
       :}
   ;
 
@@ -543,23 +568,29 @@ asignacion ::=
 funcion ::=
     tipo_dato:td IDENTIFICADOR:funId
     {:
-        manager.addDerivation("funcion -> tipo_dato IDENTIFICADOR ...");
-        // Al reconocer la función, creamos un nuevo scope con la clase manager.
-        String t = (String) td;
-        int line = funIdleft + 1;
-        int col  = funIdright + 1;
-        manager.crearScopeFuncion(t, funId, line, col);
+       manager.addDerivation("funcion -> tipo_dato IDENTIFICADOR ...");
+
+       String t = (String) td;
+       int line = funIdleft + 1;
+       int col  = funIdright + 1;
+       manager.crearScopeFuncion(t, funId, line, col);
+
+       // Pila de tipo de retorno
+       manager.pushFunctionReturnType(t);
     :}
     ABREREGALO parametros:p CIERRAREGALO bloque:b
     {:
        manager.addDerivation("funcion -> ... ( parametros ) bloque");
+
        String pStr = (String) p;
        if (pStr.isEmpty()) pStr = "0 params";
 
        String t = (String) td;
        System.out.println("Función declarada: " + funId + ", tipo " + t + ", params: " + pStr);
 
+       // Al salir de la función:
        manager.popScope();
+       manager.popFunctionReturnType();
     :}
   ;
 
@@ -603,17 +634,36 @@ param_dec ::=
         int line = pidleft + 1;
         int col  = pidright + 1;
         manager.addSimbolo(manager.getCurrentScope(), pid, line, col, t);
-        // O si quisieras, manager.addParamToCurrentFunction(pid, t);
+        manager.addParamToCurrentFunction(pid, t);
 
         RESULT = paramStr;
-        // Guardar el parámetro en la función actual
-        manager.addParamToCurrentFunction(pid, t);
       :}
   ;
 
 /* ----------------------------------------------------------------------
    G) Estructuras de Control
 ---------------------------------------------------------------------- */
+while_token ::=
+  WHILE
+  {:
+    manager.pushControlStructure("while");
+  :}
+;
+
+for_token ::=
+  FOR
+  {:
+    manager.pushControlStructure("for");
+  :}
+;
+
+switch_token ::=
+  SWITCH
+  {:
+    manager.pushControlStructure("switch");
+  :}
+;
+
 control_estructuras ::=
     if_estructura
       {:
@@ -633,18 +683,28 @@ control_estructuras ::=
       :}
   ;
 
+/* IF */
 if_estructura ::=
     IF ABREREGALO expresion:cond CIERRAREGALO bloque:b
       {:
         manager.addDerivation("if_estructura -> IF ( expresion ) bloque");
         RESULT = "if("+cond+")"+b;
         manager.addControlStructure("Se detectó un 'if' con cond: " + cond);
+
+        // CHEQUEO: debe ser bool
+        if (!cond.type.equals("bool")) {
+          manager.addSemanticError("La condición del if debe ser de tipo bool, encontrado: " + cond.type);
+        }
       :}
   | IF ABREREGALO expresion:cond CIERRAREGALO bloque:b1 ELSE bloque:b2
       {:
         manager.addDerivation("if_estructura -> IF ( expresion ) bloque ELSE bloque");
         RESULT = "if("+cond+")"+b1+" else "+b2;
         manager.addControlStructure("Se detectó un 'if-else' con cond: " + cond);
+
+        if (!cond.type.equals("bool")) {
+          manager.addSemanticError("La condición del if debe ser de tipo bool, encontrado: " + cond.type);
+        }
       :}
   | IF ABREREGALO error CIERRAREGALO bloque:bl
       {:
@@ -654,51 +714,78 @@ if_estructura ::=
       :}
   ;
 
+/* WHILE */
 while_estructura ::=
-    WHILE ABREREGALO expresion:cond CIERRAREGALO bloque:bl
-      {:
-        manager.addDerivation("while_estructura -> WHILE ( expresion ) bloque");
-        RESULT = "while("+cond+")"+bl;
-        manager.addControlStructure("Se detectó un 'while' con cond: " + cond);
-      :}
-  | WHILE ABREREGALO error CIERRAREGALO bloque:bl
-      {:
-        manager.addDerivation("while_estructura -> WHILE ( error ) bloque");
-        report_error("Error en condición de 'while'", "WHILE");
-        RESULT = "whileError"+bl;
-      :}
+    while_token ABREREGALO expresion:cond CIERRAREGALO bloque:bl
+    {:
+      manager.addDerivation("while_estructura -> WHILE ( expresion ) bloque");
+      RESULT = "while("+cond+")"+bl;
+      manager.addControlStructure("Se detectó un 'while' con cond: " + cond);
+
+      // Checar cond sea bool
+      if (!cond.type.equals("bool")) {
+        manager.addSemanticError("La condición del while debe ser bool, encontrado: " + cond.type);
+      }
+
+      manager.popControlStructure(); // salimos del while
+    :}
+  | while_token ABREREGALO error CIERRAREGALO bloque:bl
+    {:
+      manager.addDerivation("while_estructura -> WHILE ( error ) bloque");
+      report_error("Error en condición de 'while'", "WHILE");
+      RESULT = "whileError"+bl;
+
+      manager.popControlStructure(); // salir del while
+    :}
   ;
 
+/* FOR */
 for_estructura ::=
-    FOR ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
-      {:
-        manager.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
-        RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
-        manager.addControlStructure("Se detectó un 'for' con init=" + ini + ", cond=" + cond + ", step=" + step);
-      :}
-  | FOR ABREREGALO error CIERRAREGALO bloque:bl
-      {:
-        manager.addDerivation("for_estructura -> FOR ( error ) bloque");
-        report_error("Error en 'for'", "FOR");
-        RESULT = "forError"+bl;
-      :}
+    for_token ABREREGALO asignacion:ini COMA expresion:cond COMA expresion:step CIERRAREGALO bloque:bl
+    {:
+      manager.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
+      RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
+      manager.addControlStructure("Se detectó un 'for' con init=" + ini + ", cond=" + cond + ", step=" + step);
+
+      // Checar cond sea bool
+      if (!((Parser.ExprInfo)cond).type.equals("bool")) {
+        manager.addSemanticError("La condición del for debe ser bool, encontrado: " + ((Parser.ExprInfo)cond).type);
+      }
+      manager.popControlStructure(); // salimos del for
+    :}
+  | for_token ABREREGALO error CIERRAREGALO bloque:bl
+    {:
+      manager.addDerivation("for_estructura -> FOR ( error ) bloque");
+      report_error("Error en 'for'", "FOR");
+      RESULT = "forError"+bl;
+
+      manager.popControlStructure(); // salimos del for
+    :}
   ;
 
+/* SWITCH */
 switch_estructura ::=
-    SWITCH ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
-      {:
-        manager.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
-        RESULT = "switch("+sw+") { "+cs+" }";
-        manager.addControlStructure("Se detectó un 'switch' con expr: " + sw);
-      :}
-  | SWITCH ABREREGALO error CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
-      {:
-        manager.addDerivation("switch_estructura -> SWITCH ( error ) { case_blocks }");
-        report_error("Error en 'switch'", "SWITCH");
-        RESULT = "switchError{ "+cs+" }";
-      :}
+    switch_token ABREREGALO expresion:sw CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
+    {:
+      manager.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
+      RESULT = "switch("+sw+") { "+cs+" }";
+      manager.addControlStructure("Se detectó un 'switch' con expr: " + sw);
+
+      // Aquí podrías guardar sw.type para validar cases
+
+      manager.popControlStructure(); // salimos del switch
+    :}
+  | switch_token ABREREGALO error CIERRAREGALO ABRECUENTO case_blocks:cs CIERRACUENTO
+    {:
+      manager.addDerivation("switch_estructura -> SWITCH ( error ) { case_blocks }");
+      report_error("Error en 'switch'", "SWITCH");
+      RESULT = "switchError{ "+cs+" }";
+
+      manager.popControlStructure(); // salimos del switch
+    :}
   ;
 
+/* case_blocks */
 case_blocks ::=
     case_blocks:prev case_block:cb
       {:
@@ -717,19 +804,23 @@ case_blocks ::=
       :}
   ;
 
+/* case_block */
 case_block ::=
     CASE L_INTEGER:li DOS_PUNTOS bloque:bl
       {:
         manager.addDerivation("case_block -> CASE L_INTEGER : bloque");
         RESULT = "case "+li+": "+bl;
+        // Podrías checar si el switch era int
       :}
   | CASE CHAR_LITERAL:ch DOS_PUNTOS bloque:bl
       {:
         manager.addDerivation("case_block -> CASE CHAR_LITERAL : bloque");
         RESULT = "case '"+ch+"': "+bl;
+        // Podrías checar si el switch era char
       :}
   ;
 
+/* default_block */
 default_block ::=
     DEFAULT DOS_PUNTOS bloque:bl
       {:
@@ -741,473 +832,485 @@ default_block ::=
 /* ----------------------------------------------------------------------
    H) Expresión con precedencia
 ---------------------------------------------------------------------- */
-expresion ::= expresion:e1 DISYUNCION expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion || expresion");
-        ExprInfo out = new ExprInfo();
+expresion ::=
+  expresion:e1 DISYUNCION expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion || expresion");
+      ExprInfo out = new ExprInfo();
 
-        // Chequeo de tipos: ambos deben ser bool
-        if (e1.type.equals("bool") && e2.type.equals("bool")) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("Operador '||' requiere ambos operandos de tipo bool");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " || " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 CONJUNCION expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion && expresion");
-        ExprInfo out = new ExprInfo();
-
-        if (e1.type.equals("bool") && e2.type.equals("bool")) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("Operador '&&' requiere ambos operandos de tipo bool");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " && " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 IGUALDAD expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion == expresion");
-        ExprInfo out = new ExprInfo();
-        // Simplificado: permitimos == entre mismos tipos (int==int, float==float, etc.)
-        if (e1.type.equals(e2.type) && !e1.type.equals("error")) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("Operador '==' con tipos incompatibles: " + e1.type + " y " + e2.type);
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " == " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 DIFERENTE expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion != expresion");
-        ExprInfo out = new ExprInfo();
-        if (e1.type.equals(e2.type) && !e1.type.equals("error")) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("Operador '!=' con tipos incompatibles: " + e1.type + " y " + e2.type);
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " != " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 MENOR expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion < expresion");
-        ExprInfo out = new ExprInfo();
-        // Para < se requiere (int,float) vs (int,float)
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))
-         && !e1.type.equals("error") && !e2.type.equals("error")) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("'<' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " < " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 MENOROIGUAL expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion <= expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("'<=' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " <= " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 MAYOR expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion > expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("'>' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " > " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 MAYOROIGUAL expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion >= expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("'>=' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " >= " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 SUMA expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion + expresion");
-        ExprInfo out = new ExprInfo();
-        // Reglas simplificadas: int+int -> int; float+X -> float
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-          else out.type = "int";
-        } else {
-          manager.addSemanticError("Operador '+' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " + " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 RESTA expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion - expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-          else out.type = "int";
-        } else {
-          manager.addSemanticError("Operador '-' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " - " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 MULTIPLICACION expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion * expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-          else out.type = "int";
-        } else {
-          manager.addSemanticError("Operador '*' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " * " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 DIVISION expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion / expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-          else out.type = "int";
-          // Chequeo adicional si e2 es literalmente '0'... (solo si e2.text == "0")
-          if (e2.text.equals("0") || e2.text.equals("0.0")) {
-             manager.addSemanticError("Posible división por cero detectada en tiempo de compilación");
-          }
-        } else {
-          manager.addSemanticError("Operador '/' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " / " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 MODULE expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion % expresion");
-        ExprInfo out = new ExprInfo();
-        // Mismo criterio que +, -, etc.
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          if (e1.type.equals("float") || e2.type.equals("float")) {
-            // Algunos lenguajes no soportan % con float,
-            // pero aquí lo dejamos con "float" como ejemplo
-            out.type = "float";
-          } else {
-            out.type = "int";
-          }
-        } else {
-          manager.addSemanticError("Operador '%' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " % " + e2.text + ")";
-        RESULT = out;
-      :}
-  | expresion:e1 POTENCIA expresion:e2
-      {:
-        manager.addDerivation("expresion -> expresion ^ expresion");
-        ExprInfo out = new ExprInfo();
-        if ((e1.type.equals("int") || e1.type.equals("float"))
-         && (e2.type.equals("int") || e2.type.equals("float"))) {
-          // si alguno es float => float
-          if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-          else out.type = "int";
-        } else {
-          manager.addSemanticError("Operador '^' requiere operandos numéricos");
-          out.type = "error";
-        }
-        out.text = "(" + e1.text + " ^ " + e2.text + ")";
-        RESULT = out;
-      :}
-  | NEGACION expresion:e
-      {:
-        manager.addDerivation("expresion -> ! expresion");
-        ExprInfo out = new ExprInfo();
-        if (e.type.equals("bool")) {
-          out.type = "bool";
-        } else {
-          manager.addSemanticError("Operador '!' solo aplica a bool");
-          out.type = "error";
-        }
-        out.text = "!(" + e.text + ")";
-        RESULT = out;
-      :}
-  | RESTA expresion:e
-      {:
-        manager.addDerivation("expresion -> - expresion");
-        ExprInfo out = new ExprInfo();
-        // Operador unario -
-        if (e.type.equals("int") || e.type.equals("float")) {
-          out.type = e.type; // se mantiene
-        } else {
-          manager.addSemanticError("Operador unario '-' solo aplica a int o float");
-          out.type = "error";
-        }
-        out.text = "-(" + e.text + ")";
-        RESULT = out;
-      :}
-  | INCREMENTO IDENTIFICADOR:id
-      {:
-        manager.addDerivation("expresion -> ++ IDENTIFICADOR");
-        ExprInfo out = new ExprInfo();
-        // Buscamos la variable
-        SymbolTableManager.SymbolData var = manager.findSymbolRecursive(id);
-        if (var == null) {
-          manager.addSemanticError("Variable '"+id+"' no declarada antes de ++");
-          out.type = "error";
-        } else {
-          // Verificamos tipo
-          if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-          else {
-            manager.addSemanticError("++ aplica solo a variables numéricas");
-            out.type = "error";
-          }
-        }
-        out.text = "++" + id;
-        RESULT = out;
-      :}
-  | DECREMENTO IDENTIFICADOR:id
-      {:
-        manager.addDerivation("expresion -> -- IDENTIFICADOR");
-        ExprInfo out = new ExprInfo();
-        SymbolTableManager.SymbolData var = manager.findSymbolRecursive(id);
-        if (var == null) {
-          manager.addSemanticError("Variable '"+id+"' no declarada antes de --");
-          out.type = "error";
-        } else {
-          if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-          else {
-            manager.addSemanticError("-- aplica solo a variables numéricas");
-            out.type = "error";
-          }
-        }
-        out.text = "--" + id;
-        RESULT = out;
-      :}
-  | IDENTIFICADOR:id INCREMENTO
-      {:
-        manager.addDerivation("expresion -> IDENTIFICADOR ++");
-        ExprInfo out = new ExprInfo();
-        SymbolTableManager.SymbolData var = manager.findSymbolRecursive(id);
-        if (var == null) {
-          manager.addSemanticError("Variable '"+id+"' no declarada antes de ++");
-          out.type = "error";
-        } else {
-          if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-          else {
-            manager.addSemanticError("++ aplica solo a variables numéricas");
-            out.type = "error";
-          }
-        }
-        out.text = id + "++";
-        RESULT = out;
-      :}
-  | IDENTIFICADOR:id DECREMENTO
-      {:
-        manager.addDerivation("expresion -> IDENTIFICADOR --");
-        ExprInfo out = new ExprInfo();
-        SymbolTableManager.SymbolData var = manager.findSymbolRecursive(id);
-        if (var == null) {
-          manager.addSemanticError("Variable '"+id+"' no declarada antes de --");
-          out.type = "error";
-        } else {
-          if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-          else {
-            manager.addSemanticError("-- aplica solo a variables numéricas");
-            out.type = "error";
-          }
-        }
-        out.text = id + "--";
-        RESULT = out;
-      :}
-  | IDENTIFICADOR:id ABREREGALO argumentos:args CIERRAREGALO
-      {:
-        manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
-        ExprInfo out = new ExprInfo();
-        // Llamada a función
-        SymbolTableManager.SymbolData funcSym = manager.findSymbolRecursive(id);
-        if (funcSym == null || !funcSym.isFunction) {
-          manager.addSemanticError("Llamada a función desconocida: '"+id+"'");
-          out.type = "error";
-        } else {
-          // Recuperar el tipo de retorno (funcType:XXX)
-          String funcTypePrefix = "funcType:";
-          if (funcSym.type.startsWith(funcTypePrefix)) {
-            out.type = funcSym.type.substring(funcTypePrefix.length());
-          } else {
-            out.type = "error";
-            manager.addSemanticError("Función '"+id+"' con tipo inválido: " + funcSym.type);
-          }
-          // (Se podría chequear la compatibilidad de 'args' con los paramTypes)
-        }
-        out.text = id + "(" + args + ")";
-        RESULT = out;
-      :}
-  | IDENTIFICADOR:id
-      {:
-        manager.addDerivation("expresion -> IDENTIFICADOR");
-        ExprInfo out = new ExprInfo();
-        // Ver si la variable existe
-        SymbolTableManager.SymbolData var = manager.findSymbolRecursive(id);
-        if (var == null) {
-          manager.addSemanticError("Variable o función '"+id+"' no declarada");
-          out.type = "error";
-        } else {
-          // Si es función, su tipo real es "funcType:..."
-          if (var.isFunction) {
-            String funcTypePrefix = "funcType:";
-            if (var.type.startsWith(funcTypePrefix)) {
-              out.type = var.type.substring(funcTypePrefix.length());
-            } else {
-              out.type = "error";
-            }
-          } else {
-            // Es variable normal
-            out.type = var.type;
-          }
-        }
-        out.text = id;
-        RESULT = out;
-      :}
-  | L_INTEGER:lint
-      {:
-        manager.addDerivation("expresion -> L_INTEGER");
-        ExprInfo out = new ExprInfo();
-        out.type = "int";
-        out.text = lint.toString(); // asumiendo lint es un Integer
-        RESULT = out;
-      :}
-  | FLOAT_LITERAL:flit
-      {:
-        manager.addDerivation("expresion -> FLOAT_LITERAL");
-        ExprInfo out = new ExprInfo();
-        out.type = "float";
-        out.text = flit.toString();
-        RESULT = out;
-      :}
-  | CHAR_LITERAL:chl
-      {:
-        manager.addDerivation("expresion -> CHAR_LITERAL");
-        ExprInfo out = new ExprInfo();
-        out.type = "char";
-        out.text = "'"+chl+"'";
-        RESULT = out;
-      :}
-  | STRING_LITERAL:str
-      {:
-        manager.addDerivation("expresion -> STRING_LITERAL");
-        ExprInfo out = new ExprInfo();
-        out.type = "string";
-        out.text = "\""+str+"\"";
-        RESULT = out;
-      :}
-  | BOOL_LITERAL:boo
-      {:
-        manager.addDerivation("expresion -> BOOL_LITERAL");
-        ExprInfo out = new ExprInfo();
+      if (e1.type.equals("bool") && e2.type.equals("bool")) {
         out.type = "bool";
-        out.text = boo.toString();
-        RESULT = out;
-      :}
-  | IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
-      {:
-        manager.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
-        ExprInfo out = new ExprInfo();
-        // Ver si arr es un array
-        SymbolTableManager.SymbolData var = manager.findSymbolRecursive(arr);
-        if (var == null) {
-          manager.addSemanticError("Acceso a arreglo no declarado: "+arr);
-          out.type = "error";
-        } else if (!var.isArray) {
-          manager.addSemanticError("El identificador '"+arr+"' no es un array");
-          out.type = "error";
+      } else {
+        manager.addSemanticError("Operador '||' requiere operandos de tipo bool");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " || " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 CONJUNCION expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion && expresion");
+      ExprInfo out = new ExprInfo();
+
+      if (e1.type.equals("bool") && e2.type.equals("bool")) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("Operador '&&' requiere operandos de tipo bool");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " && " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 IGUALDAD expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion == expresion");
+      ExprInfo out = new ExprInfo();
+      if (e1.type.equals(e2.type) && !e1.type.equals("error")) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("Operador '==' con tipos incompatibles: " + e1.type + " y " + e2.type);
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " == " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 DIFERENTE expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion != expresion");
+      ExprInfo out = new ExprInfo();
+      if (e1.type.equals(e2.type) && !e1.type.equals("error")) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("Operador '!=' con tipos incompatibles: " + e1.type + " y " + e2.type);
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " != " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 MENOR expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion < expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))
+       && !e1.type.equals("error") && !e2.type.equals("error")) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("'<' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " < " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 MENOROIGUAL expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion <= expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("'<=' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " <= " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 MAYOR expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion > expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("'>' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " > " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 MAYOROIGUAL expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion >= expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("'>=' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " >= " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 SUMA expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion + expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
+        else out.type = "int";
+      } else {
+        manager.addSemanticError("Operador '+' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " + " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 RESTA expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion - expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
+        else out.type = "int";
+      } else {
+        manager.addSemanticError("Operador '-' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " - " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 MULTIPLICACION expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion * expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
+        else out.type = "int";
+      } else {
+        manager.addSemanticError("Operador '*' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " * " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 DIVISION expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion / expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
+        else out.type = "int";
+        // Chequeo adicional si e2 es "0" / "0.0"
+        if (e2.text.equals("0") || e2.text.equals("0.0")) {
+           manager.addSemanticError("Posible división por cero detectada en tiempo de compilación");
+        }
+      } else {
+        manager.addSemanticError("Operador '/' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " / " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 MODULE expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion % expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        if (e1.type.equals("float") || e2.type.equals("float")) {
+          out.type = "float"; // Asumimos permitir % con float
         } else {
-          // Checar tipo de ex sea int
-          if (!ex.type.equals("int")) {
-            manager.addSemanticError("Índice de array debe ser int, se encontró: "+ex.type);
+          out.type = "int";
+        }
+      } else {
+        manager.addSemanticError("Operador '%' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " % " + e2.text + ")";
+      RESULT = out;
+    :}
+| expresion:e1 POTENCIA expresion:e2
+    {:
+      manager.addDerivation("expresion -> expresion ^ expresion");
+      ExprInfo out = new ExprInfo();
+      if ((e1.type.equals("int") || e1.type.equals("float"))
+       && (e2.type.equals("int") || e2.type.equals("float"))) {
+        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
+        else out.type = "int";
+      } else {
+        manager.addSemanticError("Operador '^' requiere operandos numéricos");
+        out.type = "error";
+      }
+      out.text = "(" + e1.text + " ^ " + e2.text + ")";
+      RESULT = out;
+    :}
+| NEGACION expresion:e
+    {:
+      manager.addDerivation("expresion -> ! expresion");
+      ExprInfo out = new ExprInfo();
+      if (e.type.equals("bool")) {
+        out.type = "bool";
+      } else {
+        manager.addSemanticError("Operador '!' solo aplica a bool");
+        out.type = "error";
+      }
+      out.text = "!(" + e.text + ")";
+      RESULT = out;
+    :}
+| RESTA expresion:e
+    {:
+      manager.addDerivation("expresion -> - expresion");
+      ExprInfo out = new ExprInfo();
+      // Operador unario -
+      if (e.type.equals("int") || e.type.equals("float")) {
+        out.type = e.type;
+      } else {
+        manager.addSemanticError("Operador unario '-' solo aplica a int o float");
+        out.type = "error";
+      }
+      out.text = "-(" + e.text + ")";
+      RESULT = out;
+    :}
+| INCREMENTO IDENTIFICADOR:id
+    {:
+      manager.addDerivation("expresion -> ++ IDENTIFICADOR");
+      ExprInfo out = new ExprInfo();
+      SymbolData var = manager.findSymbolRecursive(id);
+      if (var == null) {
+        manager.addSemanticError("Variable '"+id+"' no declarada antes de ++");
+        out.type = "error";
+      } else {
+        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
+        else {
+          manager.addSemanticError("++ aplica solo a variables numéricas");
+          out.type = "error";
+        }
+      }
+      out.text = "++" + id;
+      RESULT = out;
+    :}
+| DECREMENTO IDENTIFICADOR:id
+    {:
+      manager.addDerivation("expresion -> -- IDENTIFICADOR");
+      ExprInfo out = new ExprInfo();
+      SymbolData var = manager.findSymbolRecursive(id);
+      if (var == null) {
+        manager.addSemanticError("Variable '"+id+"' no declarada antes de --");
+        out.type = "error";
+      } else {
+        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
+        else {
+          manager.addSemanticError("-- aplica solo a variables numéricas");
+          out.type = "error";
+        }
+      }
+      out.text = "--" + id;
+      RESULT = out;
+    :}
+| IDENTIFICADOR:id INCREMENTO
+    {:
+      manager.addDerivation("expresion -> IDENTIFICADOR ++");
+      ExprInfo out = new ExprInfo();
+      SymbolData var = manager.findSymbolRecursive(id);
+      if (var == null) {
+        manager.addSemanticError("Variable '"+id+"' no declarada antes de ++");
+        out.type = "error";
+      } else {
+        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
+        else {
+          manager.addSemanticError("++ aplica solo a variables numéricas");
+          out.type = "error";
+        }
+      }
+      out.text = id + "++";
+      RESULT = out;
+    :}
+| IDENTIFICADOR:id DECREMENTO
+    {:
+      manager.addDerivation("expresion -> IDENTIFICADOR --");
+      ExprInfo out = new ExprInfo();
+      SymbolData var = manager.findSymbolRecursive(id);
+      if (var == null) {
+        manager.addSemanticError("Variable '"+id+"' no declarada antes de --");
+        out.type = "error";
+      } else {
+        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
+        else {
+          manager.addSemanticError("-- aplica solo a variables numéricas");
+          out.type = "error";
+        }
+      }
+      out.text = id + "--";
+      RESULT = out;
+    :}
+| IDENTIFICADOR:id ABREREGALO argumentos:argList CIERRAREGALO
+    {:
+      manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
+      ExprInfo out = new ExprInfo();
+      SymbolData funcSym = manager.findSymbolRecursive(id);
+      if (funcSym == null || !funcSym.isFunction) {
+        manager.addSemanticError("Llamada a función desconocida: '"+id+"'");
+        out.type = "error";
+      } else {
+        // Recuperar el tipo de retorno
+        String funcTypePrefix = "funcType:";
+        if (funcSym.type.startsWith(funcTypePrefix)) {
+          out.type = funcSym.type.substring(funcTypePrefix.length());
+        } else {
+          out.type = "error";
+          manager.addSemanticError("Función '"+id+"' con tipo inválido: " + funcSym.type);
+        }
+
+        // Verificar número y tipo de argumentos
+        List<String> paramDefs = funcSym.paramTypes;
+        // paramDefs ejemplo: ["int:param1", "bool:param2"]
+        if (paramDefs.size() != argList.size()) {
+          manager.addSemanticError("Llamada a '"+id+"' con # de argumentos distinto ("
+            + argList.size() + ") que la definición (" + paramDefs.size() + ")");
+        } else {
+          for (int i = 0; i < paramDefs.size(); i++) {
+            String def = paramDefs.get(i);
+            String[] parts = def.split(":"); // p.e. "int:paramName"
+            String paramType = parts[0];
+
+            ExprInfo actualArg = argList.get(i);
+            if (!actualArg.type.equals(paramType) && !actualArg.type.equals("error")) {
+              manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
+                + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
+            }
           }
-          // El tipo resultante es el del array
+        }
+      }
+      // Convertir la lista de ExprInfo a texto si se desea
+      out.text = id + "(...)";
+      RESULT = out;
+    :}
+| IDENTIFICADOR:id
+    {:
+      manager.addDerivation("expresion -> IDENTIFICADOR");
+      ExprInfo out = new ExprInfo();
+      SymbolData var = manager.findSymbolRecursive(id);
+      if (var == null) {
+        manager.addSemanticError("Variable o función '"+id+"' no declarada");
+        out.type = "error";
+      } else {
+        if (var.isFunction) {
+          String funcTypePrefix = "funcType:";
+          if (var.type.startsWith(funcTypePrefix)) {
+            out.type = var.type.substring(funcTypePrefix.length());
+          } else {
+            out.type = "error";
+          }
+        } else {
           out.type = var.type;
         }
-        out.text = arr + "[" + ex.text + "]";
-        RESULT = out;
-      :}
-  | ABREREGALO expresion:ex CIERRAREGALO
-      {:
-        manager.addDerivation("expresion -> ( expresion )");
-        ExprInfo out = new ExprInfo(ex.type, "(" + ex.text + ")");
-        RESULT = out;
-      :}
-  | error CIERRAREGALO
-      {:
-        manager.addDerivation("expresion -> error )");
-        manager.addSemanticError("Error en expresión. Recuperado hasta ')'");
-        ExprInfo out = new ExprInfo("error", "errorExpr");
-        RESULT = out;
-      :}
-  ;
+      }
+      out.text = id;
+      RESULT = out;
+    :}
+| L_INTEGER:lint
+    {:
+      manager.addDerivation("expresion -> L_INTEGER");
+      ExprInfo out = new ExprInfo();
+      out.type = "int";
+      out.text = lint.toString();
+      RESULT = out;
+    :}
+| FLOAT_LITERAL:flit
+    {:
+      manager.addDerivation("expresion -> FLOAT_LITERAL");
+      ExprInfo out = new ExprInfo();
+      out.type = "float";
+      out.text = flit.toString();
+      RESULT = out;
+    :}
+| CHAR_LITERAL:chl
+    {:
+      manager.addDerivation("expresion -> CHAR_LITERAL");
+      ExprInfo out = new ExprInfo();
+      out.type = "char";
+      out.text = "'"+chl+"'";
+      RESULT = out;
+    :}
+| STRING_LITERAL:str
+    {:
+      manager.addDerivation("expresion -> STRING_LITERAL");
+      ExprInfo out = new ExprInfo();
+      out.type = "string";
+      out.text = "\""+str+"\"";
+      RESULT = out;
+    :}
+| BOOL_LITERAL:boo
+    {:
+      manager.addDerivation("expresion -> BOOL_LITERAL");
+      ExprInfo out = new ExprInfo();
+      out.type = "bool";
+      out.text = boo.toString();
+      RESULT = out;
+    :}
+| IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
+    {:
+      manager.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
+      ExprInfo out = new ExprInfo();
+      SymbolData var = manager.findSymbolRecursive(arr);
+      if (var == null) {
+        manager.addSemanticError("Acceso a arreglo no declarado: "+arr);
+        out.type = "error";
+      } else if (!var.isArray) {
+        manager.addSemanticError("El identificador '"+arr+"' no es un array");
+        out.type = "error";
+      } else {
+        // Checar que ex sea int
+        if (!ex.type.equals("int")) {
+          manager.addSemanticError("Índice de array debe ser int, se encontró: "+ex.type);
+        }
+        out.type = var.type; // Tipo del array base
+      }
+      out.text = arr + "[" + ex.text + "]";
+      RESULT = out;
+    :}
+| ABREREGALO expresion:ex CIERRAREGALO
+    {:
+      manager.addDerivation("expresion -> ( expresion )");
+      ExprInfo out = new ExprInfo(ex.type, "(" + ex.text + ")");
+      RESULT = out;
+    :}
+| error CIERRAREGALO
+    {:
+      manager.addDerivation("expresion -> error )");
+      manager.addSemanticError("Error en expresión. Recuperado hasta ')'");
+      ExprInfo out = new ExprInfo("error", "errorExpr");
+      RESULT = out;
+    :}
+;
 
-/* lista de argumentos en llamada de función */
+/* ----------------------------------------------------------------------
+   I) Argumentos de función
+---------------------------------------------------------------------- */
 argumentos ::=
     /* epsilon: llamada sin argumentos */
-      {:
-        manager.addDerivation("argumentos -> /* epsilon */");
-        RESULT = "";
-      :}
+    {:
+      manager.addDerivation("argumentos -> /* epsilon */");
+      // Retornamos una lista vacía de ExprInfo
+      RESULT = new ArrayList<ExprInfo>();
+    :}
   | lista_argumentos:la
-      {:
-        manager.addDerivation("argumentos -> lista_argumentos");
-        RESULT = la;
-      :}
-  ;
+    {:
+      manager.addDerivation("argumentos -> lista_argumentos");
+      RESULT = la;
+    :}
+;
 
+/* lista_argumentos -> expresion | lista_argumentos , expresion */
 lista_argumentos ::=
     expresion:exp
       {:
         manager.addDerivation("lista_argumentos -> expresion");
-        RESULT = exp;
+        List<ExprInfo> tmp = new ArrayList<>();
+        tmp.add(exp);
+        RESULT = tmp;
       :}
   | lista_argumentos:la COMA expresion:exp
       {:
         manager.addDerivation("lista_argumentos -> lista_argumentos , expresion");
-        RESULT = (String)la + ", " + exp;
+        la.add(exp);
+        RESULT = la;
       :}
   ;

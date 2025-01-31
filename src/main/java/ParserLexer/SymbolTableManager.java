@@ -29,6 +29,9 @@ public class SymbolTableManager {
         public boolean isFunction;
         public List<String> paramTypes;  // p.e. ["int:param1", "float:param2"]
 
+        // NUEVO: para controlar uso de variables sin inicializar (opcional)
+        public boolean isInitialized;
+
         public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
             this.lexeme = lexeme;
             this.type = type;
@@ -41,6 +44,9 @@ public class SymbolTableManager {
             this.arraySize = -1;
             this.isFunction = false;
             this.paramTypes = new ArrayList<>();
+
+            // Por defecto, una variable no está inicializada hasta que se le asigne un valor
+            this.isInitialized = false;
         }
     }
 
@@ -59,6 +65,21 @@ public class SymbolTableManager {
     private List<String> derivaciones;
 
     // ----------------------------------------------------------------
+    // NUEVOS CAMPOS para manejo de tipo de retorno y estructuras de control
+    // ----------------------------------------------------------------
+    /**
+     * Pila para el tipo de retorno de la función actual.
+     * Cuando entramos en una función, hacemos push; al salir, pop.
+     */
+    private Stack<String> functionReturnTypeStack;
+
+    /**
+     * Pila para controlar estructuras de control anidadas
+     * (while, for, switch...) y validar 'break'/'continue'.
+     */
+    private Stack<String> controlStructureStack;
+
+    // ----------------------------------------------------------------
     // Constructor
     // ----------------------------------------------------------------
     public SymbolTableManager() {
@@ -73,6 +94,10 @@ public class SymbolTableManager {
         this.scopeStack.push("global");
         this.currentScope = "global";
         this.tablaSimbolos.put("global", new ArrayList<SymbolData>());
+
+        // Inicializamos las pilas nuevas
+        this.functionReturnTypeStack = new Stack<>();
+        this.controlStructureStack = new Stack<>();
     }
 
     // ----------------------------------------------------------------
@@ -191,6 +216,7 @@ public class SymbolTableManager {
     }
 
     public SymbolData findSymbolRecursive(String lexeme) {
+        // Copia de la pila actual
         Stack<String> tempStack = new Stack<>();
         tempStack.addAll(scopeStack);
 
@@ -291,9 +317,86 @@ public class SymbolTableManager {
      * Verifica si un string corresponde a un tipo básico válido
      */
     public boolean isValidType(String t) {
-        // Ajustar según los tipos que manejas
+        // Ajustar según los tipos que manejas (tipado explícito y fuerte)
         return t.equals("int") || t.equals("float")
                 || t.equals("bool") || t.equals("char")
                 || t.equals("string");
+    }
+
+    // ----------------------------------------------------------------
+    // NUEVOS MÉTODOS para la pila de retorno de funciones
+    // ----------------------------------------------------------------
+    /**
+     * Indica si estamos dentro de alguna función.
+     */
+    public boolean isInsideFunction() {
+        return !functionReturnTypeStack.isEmpty();
+    }
+
+    /**
+     * Devuelve el tipo de retorno de la función actual (en la cima de la pila),
+     * o null si no estamos en una función.
+     */
+    public String getCurrentFunctionReturnType() {
+        if (!functionReturnTypeStack.isEmpty()) {
+            return functionReturnTypeStack.peek();
+        }
+        return null;
+    }
+
+    /**
+     * Ingresa un tipo de retorno al comenzar una función.
+     */
+    public void pushFunctionReturnType(String returnType) {
+        functionReturnTypeStack.push(returnType);
+    }
+
+    /**
+     * Quita el tipo de retorno al terminar la función.
+     */
+    public void popFunctionReturnType() {
+        if (!functionReturnTypeStack.isEmpty()) {
+            functionReturnTypeStack.pop();
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // NUEVOS MÉTODOS para la pila de estructuras de control
+    // ----------------------------------------------------------------
+    /**
+     * Invocado cuando se entra a un while, for, o switch (u otras si aplican).
+     * Ej.: pushControlStructure("while"), pushControlStructure("for"), etc.
+     */
+    public void pushControlStructure(String structType) {
+        controlStructureStack.push(structType);
+    }
+
+    /**
+     * Invocado cuando se sale de la estructura de control.
+     */
+    public void popControlStructure() {
+        if (!controlStructureStack.isEmpty()) {
+            controlStructureStack.pop();
+        }
+    }
+
+    /**
+     * Verifica si en la cima de la pila de estructuras hay un while/for/switch
+     * que justifique un 'break'.
+     */
+    public boolean canBreakHere() {
+        if (controlStructureStack.isEmpty()) return false;
+        String top = controlStructureStack.peek();
+        return top.equals("while") || top.equals("for") || top.equals("switch");
+    }
+
+    /**
+     * Verifica si en la cima de la pila de estructuras hay un while/for
+     * que justifique un 'continue'.
+     */
+    public boolean canContinueHere() {
+        if (controlStructureStack.isEmpty()) return false;
+        String top = controlStructureStack.peek();
+        return top.equals("while") || top.equals("for");
     }
 }
