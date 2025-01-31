@@ -82,6 +82,38 @@ parser code {:
         manager.imprimirReporte();  // Parte final (tabla de símbolos, etc.)
     }
 
+  /*Parte de las generación de código destino en MIPS*/
+
+  /*Lista para guardar las instrucciones MIPS que se van creando*/
+  private List<String> codigoMIPS = new ArrayList<>();
+
+  //Método para añadir instrucción
+  public void addInstructionMIPS(String instruction) {
+    codigoMIPS.add(instruction);
+  }
+
+  public void generarArchivoMIPS() {
+    try(PrintWriter writer = new PrintWriter(new FileWriter("codigoMIPS.asm"))) {
+      // Seccion de los datos del archivo MIPS
+      writer.println(".data");
+      /*En esta parte se van a tomar la tabla de símbolos para definir los datos*/
+
+      writer.println("\n.text");
+      writer.println(".globl main");
+      writer.println("main:");
+
+      //Sección de las instrucciones generadas
+      for (String instr: codigoMIPS){
+        writer.println(instr;)
+      }
+
+      //Sección de salida del programa
+      writer.println("li $v0, 10");
+      writer.println("syscall");
+    } catch (IOException e) {
+      System.err.println("Error al generar el archivo: " + e.getMessage());
+    }
+  }
 :}
 
 /* ----------------------------------------------------------------------
@@ -153,7 +185,12 @@ programa ::=
        {:
          manager.addDerivation("programa -> maindeclaracion bloque");
          System.out.println("Regla 'programa' con sólo MAIN");
+<<<<<<< Updated upstream
          imprimirReporteFinal();
+=======
+         parser.imprimirTablaSimbolos();
+         parser.generarArchivoMIPS();
+>>>>>>> Stashed changes
        :}
   ;
 
