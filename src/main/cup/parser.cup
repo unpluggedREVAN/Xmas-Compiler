@@ -111,31 +111,37 @@ parser code {:
     /*Parte de la generación de código destino en MIPS*/
     private List<String> codigoMIPS = new ArrayList<>();
 
-    public void addInstructionMIPS(String instruction) {
-      codigoMIPS.add(instruction);
-    }
+  /*Lista para guardar las instrucciones MIPS que se van creando*/
+  private List<String> codigoMIPS = new ArrayList<>();
 
-    public void generarArchivoMIPS() {
-      try(PrintWriter writer = new PrintWriter(new FileWriter("codigoMIPS.asm"))) {
-        // Sección de datos del archivo MIPS
-        writer.println(".data");
-        /*Aquí se pueden definir datos basándose en la tabla de símbolos*/
+  /*Contador para generar etiquetas en MIPS unicas*/
+  private int labelCount = 0;
 
-        writer.println("\n.text");
-        writer.println(".globl main");
-        writer.println("main:");
+  //Método para añadir instrucción
+  public void addInstructionMIPS(String instruction) {
+    codigoMIPS.add(instruction);
+  }
 
-        //Sección de instrucciones generadas
-        for (String instr: codigoMIPS){
-          writer.println(instr);
-        }
+  public void generarArchivoMIPS() {
+    try(PrintWriter writer = new PrintWriter(new FileWriter("codigoMIPS.asm"))) {
+      // Seccion de los datos del archivo MIPS
+      writer.println(".data");
+      /*En esta parte se van a tomar la tabla de símbolos para definir los datos*/
 
-        //Sección de salida del programa
-        writer.println("li $v0, 10");
-        writer.println("syscall");
-      } catch (IOException e) {
-        System.err.println("Error al generar el archivo: " + e.getMessage());
+      writer.println("\n.text");
+      writer.println(".globl main");
+      writer.println("main:");
+
+      //Sección de las instrucciones generadas
+      for (String instr: codigoMIPS){
+        writer.println(instr;)
       }
+
+      //Sección de salida del programa
+      writer.println("li $v0, 10");
+      writer.println("syscall");
+    } catch (IOException e) {
+      System.err.println("Error al generar el archivo: " + e.getMessage());
     }
 :}
 
@@ -220,6 +226,7 @@ programa ::=
          manager.addDerivation("programa -> maindeclaracion bloque");
          System.out.println("Regla 'programa' con sólo MAIN");
          imprimirReporteFinal();
+         parser.imprimirTablaSimbolos();
          parser.generarArchivoMIPS();
        :}
   ;
@@ -888,10 +895,279 @@ default_block ::=
    H) Expresión con precedencia
 ---------------------------------------------------------------------- */
 expresion ::=
-  expresion:e1 DISYUNCION expresion:e2
-    {:
-      manager.addDerivation("expresion -> expresion || expresion");
-      ExprInfo out = new ExprInfo();
+    expresion:e1 DISYUNCION expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion || expresion");
+        RESULT = "("+e1+" || "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+        parser.addInstructionMIPS("or $t2, $t0, $t1");
+
+      :}
+  | expresion:e1 CONJUNCION expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion && expresion");
+        RESULT = "("+e1+" && "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+        parser.addInstructionMIPS("and $t2, $t0, $t1");
+      :}
+  | expresion:e1 IGUALDAD expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion == expresion");
+        RESULT = "("+e1+" == "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("seq $t2, $t0, $t1"); //Se guarda el resultado en $t2, 1 si es verdadera de igualdad y 0 en caso contrario
+      :}
+  | expresion:e1 DIFERENTE expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion != expresion");
+        RESULT = "("+e1+" != "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("sne $t2, $t0, $t1"); //Se guarda el resultado en $t2, 1 si es verdadera de diferente y 0 en caso contrario
+      :}
+  | expresion:e1 MENOR expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion < expresion");
+        RESULT = "("+e1+" < "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("slt $t2, $t0, $t1");
+      :}
+  | expresion:e1 MENOROIGUAL expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion <= expresion");
+        RESULT = "("+e1+" <= "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("sle $t2, $t0, $t1"); //Se guarda el resultado en $t2, 1 si es verdadera de igualdad y 0 en caso contrario
+      :}
+  | expresion:e1 MAYOR expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion > expresion");
+        RESULT = "("+e1+" > "+e2+")";
+
+        // Generacion de código MIPS
+        // Por el momento solo voy a hacer uso de los registros, no voy a generar variables temporales ni utilizar la pila
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+        parser.addInstructionMIPS("sgt $t2, $t0, $t1");
+      :}
+  | expresion:e1 MAYOROIGUAL expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion >= expresion");
+        RESULT = "("+e1+" >= "+e2+")";
+
+        //Generaracio de código MIPS
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("sge $t2, $t0, $t1");
+      :}
+  | expresion:e1 SUMA expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion + expresion");
+        RESULT = "("+e1+" + "+e2+")";
+
+        //Generacion de código MIPS
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("add $t2, $t0, $t1");
+      :}
+  | expresion:e1 RESTA expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion - expresion");
+        RESULT = "("+e1+" - "+e2+")";
+
+       //Generacion de código MIPS
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("sub $t2, $t0, $t1");
+      :}
+  | expresion:e1 MULTIPLICACION expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion * expresion");
+        RESULT = "("+e1+" * "+e2+")";
+
+       //Generacion de código MIPS
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("mul $t2, $t0, $t1");
+      :}
+  | expresion:e1 DIVISION expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion / expresion");
+        RESULT = "("+e1+" / "+e2+")";
+
+        //Generacion de código MIPS
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("div $t0, $t1");
+        parser.addInstructionMIPS("mflo $t2"); //Mueve el cociente de la division al registro $t2
+      :}
+  | expresion:e1 MODULE expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion % expresion");
+        RESULT = "("+e1+" % "+e2+")";
+
+        //Generacion de código MIPS
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        parser.addInstructionMIPS("div $t0, $t1");
+        parser.addInstructionMIPS("mfhi $t2"); //Mueve el cociente de la division al registro $t2
+      :}
+  | expresion:e1 POTENCIA expresion:e2
+      {:
+        manager.addDerivation("expresion -> expresion ^ expresion");
+        RESULT = "("+e1+" ^ "+e2+")";
+
+        //Generacion de código MIPS
+        //Cargar los valores
+        parser.addInstructionMIPS("lw $t0, " + e1);
+        parser.addInstructionMIPS("lw $t1, " + e2);
+
+        //Inicializar el valor del registro en 0
+        parser.addInstructionMIPS("li $t2, 1");
+
+        //Etiquetas para el inicio y fin del bucle
+        String beginLoopLabel = "pow_loop_" + parser.labelCount;
+        String exitLoopLabel = "pow_exit_" + parser.labelCount++;
+
+        parser.addInstructionMIPS(beginLoopLabel + :)
+        parser.addInstructionMIPS("beqz $t1, " + exitLoopLabel);
+        parser.addInstructionMIPS(mul $t2, $t2, $t0);
+        parser.addInstructionMIPS("sub $t1, $t1, 1");
+        parser.addInstructionMIPS("j " + exitLoopLabel);
+        parser.addInstructionMips(exitLoopLabel + ":");
+      :}
+  | NEGACION expresion:e
+      {:
+        manager.addDerivation("expresion -> ! expresion");
+        RESULT = "!"+e;
+
+        //Generacion de codigo
+        parser.addInstructionMIPS("lw $t0, " + e);
+
+        parser.addInstructionMIPS("seq $t1, $t0, $zero");
+      :}
+  | RESTA expresion:e
+      {:
+        manager.addDerivation("expresion -> - expresion");
+        RESULT = "-"+e;
+      :}
+  | INCREMENTO IDENTIFICADOR:id
+      {:
+        manager.addDerivation("expresion -> ++ IDENTIFICADOR");
+        RESULT = "++"+id;
+
+        //Generacion de codigo MIPS
+        parser.addInstructionMIPS("lw $t0, " + id);
+        parser.addInstructionMIPS("add $t0, $t0, 1");
+
+        parser.addInstructionMIPS("sw $t0, " + id);
+      :}
+  | DECREMENTO IDENTIFICADOR:id
+      {:
+        manager.addDerivation("expresion -> -- IDENTIFICADOR");
+        RESULT = "--"+id;
+
+        //Generacion de codigo MIPS
+        parser.addInstructionMIPS("lw $t0, " + id);
+        parser.addInstructionMIPS("sub $t0, $t0, 1");
+
+        parser.addInstructionMIPS("sw $t0, " + id);
+      :}
+  | IDENTIFICADOR:id INCREMENTO
+      {:
+        manager.addDerivation("expresion -> IDENTIFICADOR ++");
+        RESULT = id+"++";
+      :}
+  | IDENTIFICADOR:id DECREMENTO
+      {:
+        manager.addDerivation("expresion -> IDENTIFICADOR --");
+        RESULT = id+"--";
+      :}
+  | IDENTIFICADOR:id ABREREGALO argumentos:args CIERRAREGALO
+      {:
+        manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
+        RESULT = id + "(" + args + ")";
+      :}
+  | IDENTIFICADOR:id
+      {:
+        manager.addDerivation("expresion -> IDENTIFICADOR");
+        RESULT = id;
+      :}
+  | L_INTEGER:lint
+      {:
+        manager.addDerivation("expresion -> L_INTEGER");
+        RESULT = lint.toString();
+      :}
+  | FLOAT_LITERAL:flit
+      {:
+        manager.addDerivation("expresion -> FLOAT_LITERAL");
+        RESULT = flit.toString();
+      :}
+  | CHAR_LITERAL:chl
+      {:
+        manager.addDerivation("expresion -> CHAR_LITERAL");
+        RESULT = "'"+chl+"'";
+      :}
+  | STRING_LITERAL:str
+      {:
+        manager.addDerivation("expresion -> STRING_LITERAL");
+        RESULT = "\""+str+"\"";
+      :}
+  | BOOL_LITERAL:boo
+      {:
+        manager.addDerivation("expresion -> BOOL_LITERAL");
+        RESULT = boo.toString();
+      :}
+  | IDENTIFICADOR:arr ABREEMPAQUE expresion:ex CIERRAEMPAQUE
+      {:
+        manager.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
+        RESULT = arr + "["+ex+"]";
+      :}
+  | ABREREGALO expresion:ex CIERRAREGALO
+      {:
+        manager.addDerivation("expresion -> ( expresion )");
+        RESULT = "("+ex+")";
+      :}
+  | error CIERRAREGALO
+      {:
+        manager.addDerivation("expresion -> error )");
+        report_error("Error en expresión. Recuperado hasta ')'", "EXP");
+        RESULT = "errorExpr";
+      :}
+  ;
 
       if (e1.type.equals("bool") && e2.type.equals("bool")) {
         out.type = "bool";
