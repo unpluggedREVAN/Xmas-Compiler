@@ -1190,18 +1190,32 @@ class CUP$Parser$actions {
 		int idxright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
 		ExprInfo idx = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
-        manager.addDerivation("declaracion_aux -> [ expresion ] ;");
+          manager.addDerivation("declaracion_aux -> [ expresion ] ;");
 
-        String lastId = manager.getLastDeclaredIdentifier();
-        SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+          String lastId = manager.getLastDeclaredIdentifier();
+          SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-        if (var != null) {
-            manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
-            System.out.println("✔ Array detectado: " + lastId + " con tamaño " + idx);
-        } else {
-            manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
-        }
-    
+          // Verificar que la expresión que define la dimensión sea de tipo int
+          if (!idx.type.equals("int")) {
+              manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
+          } else {
+              try {
+                  int dimension = Integer.parseInt(idx.text);
+                  if (dimension < 1) {
+                      manager.addSemanticError("Error en la declaración de array: el tamaño debe ser al menos 1, se encontró: " + dimension);
+                  } else {
+                      if (var != null) {
+                          manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
+                          System.out.println("✔ Array detectado: " + lastId + " con tamaño " + dimension);
+                      } else {
+                          manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
+                      }
+                  }
+              } catch (NumberFormatException e) {
+                  manager.addSemanticError("Error en la declaración de array: el tamaño debe ser un literal entero, se encontró: " + idx.text);
+              }
+          }
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1217,19 +1231,33 @@ class CUP$Parser$actions {
 		int airight = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		Object ai = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-        manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
+          manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
 
-        String lastId = manager.getLastDeclaredIdentifier();
-        SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+          String lastId = manager.getLastDeclaredIdentifier();
+          SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-        if (var != null) {
-            manager.markAsArray(manager.getCurrentScope(), lastId, Integer.parseInt(idx.toString()));
-            var.value = ai;
-            System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
-        } else {
-            manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
-        }
-    
+          // Verificar que la expresión que define la dimensión sea de tipo int
+          if (!idx.type.equals("int")) {
+              manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
+          } else {
+              try {
+                  int dimension = Integer.parseInt(idx.text);
+                  if (dimension < 1) {
+                      manager.addSemanticError("Error en la declaración de array: el tamaño debe ser al menos 1, se encontró: " + dimension);
+                  } else {
+                      if (var != null) {
+                          manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
+                          var.value = ai;
+                          System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
+                      } else {
+                          manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
+                      }
+                  }
+              } catch (NumberFormatException e) {
+                  manager.addSemanticError("Error en la declaración de array: el tamaño debe ser un literal entero, se encontró: " + idx.text);
+              }
+          }
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-5)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1350,7 +1378,7 @@ class CUP$Parser$actions {
 		int stright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object st = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        manager.addDerivation("array_item -> STRING_LITERAL");
+        manager.addDerivation("array_item ->  STRING_LITERAL");
         RESULT = "\""+st+"\"";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("array_item",24, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1443,23 +1471,25 @@ class CUP$Parser$actions {
 		int exright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo ex = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-        manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
-        System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
+            manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
+            System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
 
-        SymbolData var = manager.findSymbolRecursive(idVar);
-        if (var != null) {
-            var.value = ex;
-            // var.isInitialized = true; (si manejas inicialización)
-            System.out.println("Valor actualizado en tabla de símbolos: " + idVar + " = " + ex);
-        } else {
-            manager.addSemanticError("Error: Asignación a variable no declarada '" + idVar + "'");
-        }
-
-        // Guardamos la asignación para el SemanticAnalyzer.
-        String asigStr = "assign(" + idVar + "=" + ex + ")";
-        asignacionesRealizadas.add(asigStr);
-        RESULT = asigStr;
-      
+            SymbolData var = manager.findSymbolRecursive(idVar);
+            if (var != null) {
+                if (!manager.esCompatible(var.type, ex.type)) {
+                    manager.addSemanticError("Error en asignación: la variable '" + idVar +
+                        "' es de tipo '" + var.type + "', pero la expresión es de tipo '" + ex.type + "'");
+                } else {
+                    var.value = ex;
+                    System.out.println("Valor actualizado en tabla de símbolos: " + idVar + " = " + ex);
+                }
+            } else {
+                manager.addSemanticError("Error: Asignación a variable no declarada '" + idVar + "'");
+            }
+            String asigStr = "assign(" + idVar + "=" + ex + ")";
+            asignacionesRealizadas.add(asigStr);
+            RESULT = asigStr;
+          
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1478,11 +1508,34 @@ class CUP$Parser$actions {
 		int rhsright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo rhs = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-        manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
-        System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
+          manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
+          System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
 
-        String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
-        RESULT = asigStr;
+          // Buscamos la variable
+          SymbolTableManager.SymbolData var = manager.findSymbolRecursive(idVar);
+          if (var == null) {
+              manager.addSemanticError("Error: Asignación a array: variable '" + idVar + "' no declarada.");
+          } else {
+              // Verificar que la variable es un array
+              if (!var.isArray) {
+                  manager.addSemanticError("Error: La variable '" + idVar + "' no es un array.");
+              }
+              // Verificar que el índice sea de tipo int
+              if (!pos.type.equals("int")) {
+                  manager.addSemanticError("Error: El índice del array debe ser de tipo int, se encontró: " + pos.type);
+              }
+              // Verificar compatibilidad del valor asignado con el tipo base del array.
+              // Suponiendo que el tipo base del array está en var.type (por ejemplo, "int" o "char")
+              if (!manager.esCompatible(var.type, rhs.type)) {
+                  manager.addSemanticError("Error en asignación al array: la variable '" + idVar +
+                      "' es de tipo array de '" + var.type + "', pero la expresión es de tipo '" + rhs.type + "'");
+              }
+          }
+
+          // Se guarda la asignación (por ejemplo, para el análisis semántico posterior)
+          String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
+          asignacionesRealizadas.add(asigStr);
+          RESULT = asigStr;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }

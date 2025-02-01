@@ -323,6 +323,27 @@ public class SymbolTableManager {
                 || t.equals("string");
     }
 
+    /**
+     * Verifica si el tipo declarado es compatible con el tipo de la expresión.
+     * Permite, por ejemplo, asignar un 'int' a una variable de tipo 'float'.
+     */
+    public boolean esCompatible(String tipoDeclarado, String tipoExpr) {
+        // Si alguno de los tipos es "error", se evita cascada de errores.
+        if (tipoDeclarado.equals("error") || tipoExpr.equals("error")) {
+            return true;
+        }
+        // Si los tipos son exactamente iguales, son compatibles.
+        if (tipoDeclarado.equals(tipoExpr)) {
+            return true;
+        }
+        // Permitir conversión implícita: asignar un int a una variable float.
+        if (tipoDeclarado.equals("float") && tipoExpr.equals("int")) {
+            return true;
+        }
+        // Se pueden añadir más reglas según las conversiones permitidas.
+        return false;
+    }
+
     // ----------------------------------------------------------------
     // NUEVOS MÉTODOS para la pila de retorno de funciones
     // ----------------------------------------------------------------
