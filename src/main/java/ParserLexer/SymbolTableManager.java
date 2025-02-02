@@ -12,6 +12,8 @@ import java.util.Stack;
  */
 public class SymbolTableManager {
 
+    private boolean returnFound;
+
     /**
      * Estructura que guarda la información de cada símbolo.
      */
@@ -379,6 +381,18 @@ public class SymbolTableManager {
         if (!functionReturnTypeStack.isEmpty()) {
             functionReturnTypeStack.pop();
         }
+    }
+
+    public void setReturnFound(boolean flag) {
+        this.returnFound = flag;
+    }
+
+    public boolean getReturnFound() {
+        return this.returnFound;
+    }
+
+    public void resetReturnFound() {
+        this.returnFound = false;
     }
 
     // ----------------------------------------------------------------

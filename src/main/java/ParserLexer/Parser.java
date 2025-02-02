@@ -1016,23 +1016,24 @@ class CUP$Parser$actions {
 		int retright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo ret = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-         manager.addDerivation("sentencia -> RETURN expresion ;");
-         System.out.println("Return con expr: " + ret);
+           manager.addDerivation("sentencia -> RETURN expresion ;");
+           System.out.println("Return con expr: " + ret);
 
-         // Verificar si estamos dentro de una función
-         if (!manager.isInsideFunction()) {
-           manager.addSemanticError("Uso de 'return' fuera de una función.");
-         } else {
-           // Chequear si coincide con el tipo de la función
-           String expected = manager.getCurrentFunctionReturnType();
-           if (expected != null && !expected.equals("void")) {
-               // Si tu lenguaje maneja "void", aquí habría que verificar
-               if (!ret.type.equals(expected) && !ret.type.equals("error")) {
-                   manager.addSemanticError("Return type mismatch: se esperaba '"
-                       + expected + "', se encontró '" + ret.type + "'");
-               }
+           // Verificar si estamos dentro de una función
+           if (!manager.isInsideFunction()) {
+             manager.addSemanticError("Uso de 'return' fuera de una función.");
+           } else {
+             // Chequear si coincide con el tipo de la función
+             String expected = manager.getCurrentFunctionReturnType();
+             if (expected != null && !expected.equals("void")) {
+                 if (!ret.type.equals(expected) && !ret.type.equals("error")) {
+                     manager.addSemanticError("Return type mismatch: se esperaba '"
+                         + expected + "', se encontró '" + ret.type + "'");
+                 }
+             }
            }
-         }
+           // Marcar que se encontró un return
+           manager.setReturnFound(true);
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1593,6 +1594,8 @@ class CUP$Parser$actions {
 
        // Pila de tipo de retorno
        manager.pushFunctionReturnType(t);
+       // Reiniciamos el flag de return para esta función
+       manager.resetReturnFound();
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$1",34, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1624,6 +1627,11 @@ class CUP$Parser$actions {
 
        String t = (String) td;
        System.out.println("Función declarada: " + funId + ", tipo " + t + ", params: " + pStr);
+
+       // Verificar que, si la función no es void, se haya encontrado al menos un return.
+       if (!t.equals("void") && !manager.getReturnFound()) {
+           manager.addSemanticError("La función '" + funId + "' de tipo '" + t + "' no retorna un valor en todas las rutas de ejecución.");
+       }
 
        // Al salir de la función:
        manager.popScope();
@@ -2410,18 +2418,32 @@ class CUP$Parser$actions {
 		
       manager.addDerivation("expresion -> expresion / expresion");
       ExprInfo out = new ExprInfo();
+
       if ((e1.type.equals("int") || e1.type.equals("float"))
        && (e2.type.equals("int") || e2.type.equals("float"))) {
-        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-        else out.type = "int";
-        // Chequeo adicional si e2 es "0" / "0.0"
-        if (e2.text.equals("0") || e2.text.equals("0.0")) {
-           manager.addSemanticError("Posible división por cero detectada en tiempo de compilación");
+
+        if (e1.type.equals("float") || e2.type.equals("float"))
+          out.type = "float";
+        else
+          out.type = "int";
+
+        // Intentar evaluar e2.text como número para detectar división por cero
+        try {
+          double denom = Double.parseDouble(e2.text);
+          if (denom == 0.0) {
+             manager.addSemanticError("Error semántico: División por cero detectada en la expresión ("
+                + e1.text + " / " + e2.text + ")");
+          }
+        } catch (NumberFormatException nfe) {
+          // Si no se puede evaluar, no se realiza la comprobación.
+          // Podrías agregar un warning si lo consideras necesario.
         }
+
       } else {
         manager.addSemanticError("Operador '/' requiere operandos numéricos");
         out.type = "error";
       }
+
       out.text = "(" + e1.text + " / " + e2.text + ")";
       RESULT = out;
     
@@ -2840,17 +2862,30 @@ class CUP$Parser$actions {
       ExprInfo out = new ExprInfo();
       SymbolData var = manager.findSymbolRecursive(arr);
       if (var == null) {
-        manager.addSemanticError("Acceso a arreglo no declarado: "+arr);
+        manager.addSemanticError("Acceso a arreglo no declarado: " + arr);
         out.type = "error";
       } else if (!var.isArray) {
-        manager.addSemanticError("El identificador '"+arr+"' no es un array");
+        manager.addSemanticError("El identificador '" + arr + "' no es un array");
         out.type = "error";
       } else {
         // Checar que ex sea int
         if (!ex.type.equals("int")) {
-          manager.addSemanticError("Índice de array debe ser int, se encontró: "+ex.type);
+          manager.addSemanticError("Índice de array debe ser int, se encontró: " + ex.type);
+        } else {
+          // Intentar evaluar el índice en tiempo de compilación
+          try {
+            int indexValue = Integer.parseInt(ex.text);
+            if (indexValue < 0 || indexValue >= var.arraySize) {
+              manager.addSemanticError("Error en acceso a array: el índice " + indexValue +
+                  " está fuera de los límites (0-" + (var.arraySize - 1) + ") en el arreglo " + arr);
+            }
+          } catch (NumberFormatException nfe) {
+            // Si no se puede evaluar a entero (por ejemplo, si es una variable o expresión compleja),
+            // se omite el chequeo estático.
+          }
         }
-        out.type = var.type; // Tipo del array base
+        // El tipo del acceso es el tipo base del array
+        out.type = var.type;
       }
       out.text = arr + "[" + ex.text + "]";
       RESULT = out;
