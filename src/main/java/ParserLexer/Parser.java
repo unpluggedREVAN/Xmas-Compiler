@@ -2373,17 +2373,21 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion || expresion");
-      ExprInfo out = new ExprInfo();
-
-      if (e1.type.equals("bool") && e2.type.equals("bool")) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("Operador '||' requiere operandos de tipo bool");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " || " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion || expresion");
+       ExprInfo out = new ExprInfo();
+       if(e1.type.equals("bool") && e2.type.equals("bool")){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '||' requiere operandos de tipo bool, se encontraron: " + e1.type + " y " + e2.type);
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " || " + e2.text + ")";
+       // Generar código MIPS para OR:
+       parser.addInstructionMIPS("# Evaluación de ||");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("or $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2400,17 +2404,21 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion && expresion");
-      ExprInfo out = new ExprInfo();
-
-      if (e1.type.equals("bool") && e2.type.equals("bool")) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("Operador '&&' requiere operandos de tipo bool");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " && " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion && expresion");
+       ExprInfo out = new ExprInfo();
+       if(e1.type.equals("bool") && e2.type.equals("bool")){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '&&' requiere operandos de tipo bool, se encontraron: " + e1.type + " y " + e2.type);
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " && " + e2.text + ")";
+       // Generar código MIPS para AND:
+       parser.addInstructionMIPS("# Evaluación de &&");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("and $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2427,16 +2435,21 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion == expresion");
-      ExprInfo out = new ExprInfo();
-      if (e1.type.equals(e2.type) && !e1.type.equals("error")) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("Operador '==' con tipos incompatibles: " + e1.type + " y " + e2.type);
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " == " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion == expresion");
+       ExprInfo out = new ExprInfo();
+       if(e1.type.equals(e2.type) && !e1.type.equals("error")){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '==' con tipos incompatibles: " + e1.type + " y " + e2.type);
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " == " + e2.text + ")";
+       // Generar código MIPS para comparación de igualdad:
+       parser.addInstructionMIPS("# Evaluación de ==");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("seq $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2453,16 +2466,21 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion != expresion");
-      ExprInfo out = new ExprInfo();
-      if (e1.type.equals(e2.type) && !e1.type.equals("error")) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("Operador '!=' con tipos incompatibles: " + e1.type + " y " + e2.type);
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " != " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion != expresion");
+       ExprInfo out = new ExprInfo();
+       if(e1.type.equals(e2.type) && !e1.type.equals("error")){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '!=' con tipos incompatibles: " + e1.type + " y " + e2.type);
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " != " + e2.text + ")";
+       // Código MIPS para desigualdad:
+       parser.addInstructionMIPS("# Evaluación de !=");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("sne $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2479,18 +2497,23 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion < expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))
-       && !e1.type.equals("error") && !e2.type.equals("error")) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("'<' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " < " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion < expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))
+          && !e1.type.equals("error") && !e2.type.equals("error")){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '<' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " < " + e2.text + ")";
+       // Código MIPS para comparación de menor:
+       parser.addInstructionMIPS("# Evaluación de <");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("slt $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2507,17 +2530,24 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion <= expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("'<=' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " <= " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion <= expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '<=' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " <= " + e2.text + ")";
+       // Código MIPS para <= (usando slt y complemento):
+       parser.addInstructionMIPS("# Evaluación de <=");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       // Usamos 'slt' y luego invertimos el resultado:
+       parser.addInstructionMIPS("slt $t3, $t0, $t1");
+       parser.addInstructionMIPS("xori $t2, $t3, 1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2534,17 +2564,22 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion > expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("'>' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " > " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion > expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '>' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " > " + e2.text + ")";
+       // Código MIPS para > (usando slt invertido):
+       parser.addInstructionMIPS("# Evaluación de >");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("slt $t2, $t1, $t0");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2561,17 +2596,23 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion >= expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("'>=' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " >= " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion >= expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '>=' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " >= " + e2.text + ")";
+       // Código MIPS para >= (usando slt y complemento):
+       parser.addInstructionMIPS("# Evaluación de >=");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("slt $t3, $t0, $t1");
+       parser.addInstructionMIPS("xori $t2, $t3, 1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2588,18 +2629,25 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion + expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-        else out.type = "int";
-      } else {
-        manager.addSemanticError("Operador '+' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " + " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion + expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           if(e1.type.equals("float") || e2.type.equals("float"))
+              out.type = "float";
+           else
+              out.type = "int";
+       } else {
+           manager.addSemanticError("Operador '+' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " + " + e2.text + ")";
+       // Código MIPS para suma:
+       parser.addInstructionMIPS("# Evaluación de +");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("add $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2616,18 +2664,25 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion - expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-        else out.type = "int";
-      } else {
-        manager.addSemanticError("Operador '-' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " - " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion - expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           if(e1.type.equals("float") || e2.type.equals("float"))
+              out.type = "float";
+           else
+              out.type = "int";
+       } else {
+           manager.addSemanticError("Operador '-' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " - " + e2.text + ")";
+       // Código MIPS para resta:
+       parser.addInstructionMIPS("# Evaluación de - (binario)");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("sub $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2644,18 +2699,25 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion * expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-        else out.type = "int";
-      } else {
-        manager.addSemanticError("Operador '*' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " * " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion * expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           if(e1.type.equals("float") || e2.type.equals("float"))
+              out.type = "float";
+           else
+              out.type = "int";
+       } else {
+           manager.addSemanticError("Operador '*' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " * " + e2.text + ")";
+       // Código MIPS para multiplicación:
+       parser.addInstructionMIPS("# Evaluación de *");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("mul $t2, $t0, $t1");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2672,36 +2734,35 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion / expresion");
-      ExprInfo out = new ExprInfo();
-
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-
-        if (e1.type.equals("float") || e2.type.equals("float"))
-          out.type = "float";
-        else
-          out.type = "int";
-
-        // Intentar evaluar e2.text como número para detectar división por cero
-        try {
-          double denom = Double.parseDouble(e2.text);
-          if (denom == 0.0) {
-             manager.addSemanticError("Error semántico: División por cero detectada en la expresión ("
-                + e1.text + " / " + e2.text + ")");
-          }
-        } catch (NumberFormatException nfe) {
-          // Si no se puede evaluar, no se realiza la comprobación.
-          // Podrías agregar un warning si lo consideras necesario.
-        }
-
-      } else {
-        manager.addSemanticError("Operador '/' requiere operandos numéricos");
-        out.type = "error";
-      }
-
-      out.text = "(" + e1.text + " / " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion / expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           if(e1.type.equals("float") || e2.type.equals("float"))
+              out.type = "float";
+           else
+              out.type = "int";
+           // Comprobar división por cero
+           try {
+             double denom = Double.parseDouble(e2.text);
+             if(denom == 0.0){
+                 manager.addSemanticError("Error semántico: División por cero en (" + e1.text + " / " + e2.text + ")");
+             }
+           } catch (NumberFormatException nfe) {
+             // No se puede evaluar en tiempo de compilación, omitir
+           }
+       } else {
+           manager.addSemanticError("Operador '/' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " / " + e2.text + ")";
+       // Código MIPS para división:
+       parser.addInstructionMIPS("# Evaluación de /");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("div $t0, $t1");
+       parser.addInstructionMIPS("mflo $t2");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2718,21 +2779,26 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion % expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        if (e1.type.equals("float") || e2.type.equals("float")) {
-          out.type = "float"; // Asumimos permitir % con float
-        } else {
-          out.type = "int";
-        }
-      } else {
-        manager.addSemanticError("Operador '%' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " % " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion % expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           if(e1.type.equals("float") || e2.type.equals("float"))
+              out.type = "float";  // Permitir % con float (según lenguaje)
+           else
+              out.type = "int";
+       } else {
+           manager.addSemanticError("Operador '%' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " % " + e2.text + ")";
+       // Código MIPS para módulo:
+       parser.addInstructionMIPS("# Evaluación de %");
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       parser.addInstructionMIPS("div $t0, $t1");
+       parser.addInstructionMIPS("mfhi $t2");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2749,18 +2815,39 @@ class CUP$Parser$actions {
 		int e2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e2 = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> expresion ^ expresion");
-      ExprInfo out = new ExprInfo();
-      if ((e1.type.equals("int") || e1.type.equals("float"))
-       && (e2.type.equals("int") || e2.type.equals("float"))) {
-        if (e1.type.equals("float") || e2.type.equals("float")) out.type = "float";
-        else out.type = "int";
-      } else {
-        manager.addSemanticError("Operador '^' requiere operandos numéricos");
-        out.type = "error";
-      }
-      out.text = "(" + e1.text + " ^ " + e2.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> expresion ^ expresion");
+       ExprInfo out = new ExprInfo();
+       if((e1.type.equals("int") || e1.type.equals("float"))
+          && (e2.type.equals("int") || e2.type.equals("float"))){
+           if(e1.type.equals("float") || e2.type.equals("float"))
+              out.type = "float";
+           else
+              out.type = "int";
+       } else {
+           manager.addSemanticError("Operador '^' requiere operandos numéricos");
+           out.type = "error";
+       }
+       out.text = "(" + e1.text + " ^ " + e2.text + ")";
+       // Código MIPS para potencia (bucle de multiplicación):
+       parser.addInstructionMIPS("# Evaluación de ^ (potencia)");
+       // Cargar operandos:
+       parser.addInstructionMIPS("lw $t0, " + e1.text);
+       parser.addInstructionMIPS("lw $t1, " + e2.text);
+       // Inicializar $t2 con 1 (resultado acumulado)
+       parser.addInstructionMIPS("li $t2, 1");
+       String powLoop = "pow_loop_" + parser.labelCount;
+       String powExit = "pow_exit_" + parser.labelCount++;
+       parser.addInstructionMIPS(powLoop + ":");
+       // Si $t1 (exponente) es 0, saltar a la salida
+       parser.addInstructionMIPS("beqz $t1, " + powExit);
+       // Multiplicar acumulado por la base
+       parser.addInstructionMIPS("mul $t2, $t2, $t0");
+       // Decrementar exponente
+       parser.addInstructionMIPS("addi $t1, $t1, -1");
+       // Saltar al inicio del bucle
+       parser.addInstructionMIPS("j " + powLoop);
+       parser.addInstructionMIPS(powExit + ":");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2774,16 +2861,20 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> ! expresion");
-      ExprInfo out = new ExprInfo();
-      if (e.type.equals("bool")) {
-        out.type = "bool";
-      } else {
-        manager.addSemanticError("Operador '!' solo aplica a bool");
-        out.type = "error";
-      }
-      out.text = "!(" + e.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> ! expresion");
+       ExprInfo out = new ExprInfo();
+       if(e.type.equals("bool")){
+           out.type = "bool";
+       } else {
+           manager.addSemanticError("Operador '!' solo aplica a bool, encontrado: " + e.type);
+           out.type = "error";
+       }
+       out.text = "!(" + e.text + ")";
+       // Código MIPS para NOT: se utiliza seqz (set equal to zero)
+       parser.addInstructionMIPS("# Evaluación de !");
+       parser.addInstructionMIPS("lw $t0, " + e.text);
+       parser.addInstructionMIPS("seq $t2, $t0, $zero");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2797,17 +2888,21 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		ExprInfo e = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> - expresion");
-      ExprInfo out = new ExprInfo();
-      // Operador unario -
-      if (e.type.equals("int") || e.type.equals("float")) {
-        out.type = e.type;
-      } else {
-        manager.addSemanticError("Operador unario '-' solo aplica a int o float");
-        out.type = "error";
-      }
-      out.text = "-(" + e.text + ")";
-      RESULT = out;
+       manager.addDerivation("expresion -> - expresion");
+       ExprInfo out = new ExprInfo();
+       if(e.type.equals("int") || e.type.equals("float")){
+           out.type = e.type;
+       } else {
+           manager.addSemanticError("Operador unario '-' solo aplica a int o float, encontrado: " + e.type);
+           out.type = "error";
+       }
+       out.text = "-(" + e.text + ")";
+       // Código MIPS para negativo unario:
+       parser.addInstructionMIPS("# Evaluación de - unario");
+       // Se carga el operando y se niega (usando substract de cero)
+       parser.addInstructionMIPS("lw $t0, " + e.text);
+       parser.addInstructionMIPS("sub $t2, $zero, $t0");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2821,21 +2916,29 @@ class CUP$Parser$actions {
 		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> ++ IDENTIFICADOR");
-      ExprInfo out = new ExprInfo();
-      SymbolData var = manager.findSymbolRecursive(id);
-      if (var == null) {
-        manager.addSemanticError("Variable '"+id+"' no declarada antes de ++");
-        out.type = "error";
-      } else {
-        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-        else {
-          manager.addSemanticError("++ aplica solo a variables numéricas");
-          out.type = "error";
-        }
-      }
-      out.text = "++" + id;
-      RESULT = out;
+       manager.addDerivation("expresion -> ++ IDENTIFICADOR");
+       ExprInfo out = new ExprInfo();
+       SymbolData var = manager.findSymbolRecursive(id);
+       if(var == null){
+           manager.addSemanticError("Variable '" + id + "' no declarada antes de ++");
+           out.type = "error";
+       } else {
+           if(var.type.equals("int") || var.type.equals("float"))
+              out.type = var.type;
+           else {
+              manager.addSemanticError("++ aplica solo a variables numéricas, encontrado: " + var.type);
+              out.type = "error";
+           }
+       }
+       out.text = "++" + id;
+       // Código MIPS para pre-incremento:
+       parser.addInstructionMIPS("# Pre-incremento de " + id);
+       parser.addInstructionMIPS("lw $t0, " + id);
+       parser.addInstructionMIPS("addi $t0, $t0, 1");
+       parser.addInstructionMIPS("sw $t0, " + id);
+       // El resultado se deja en $t2:
+       parser.addInstructionMIPS("move $t2, $t0");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2849,21 +2952,28 @@ class CUP$Parser$actions {
 		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> -- IDENTIFICADOR");
-      ExprInfo out = new ExprInfo();
-      SymbolData var = manager.findSymbolRecursive(id);
-      if (var == null) {
-        manager.addSemanticError("Variable '"+id+"' no declarada antes de --");
-        out.type = "error";
-      } else {
-        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-        else {
-          manager.addSemanticError("-- aplica solo a variables numéricas");
-          out.type = "error";
-        }
-      }
-      out.text = "--" + id;
-      RESULT = out;
+       manager.addDerivation("expresion -> -- IDENTIFICADOR");
+       ExprInfo out = new ExprInfo();
+       SymbolData var = manager.findSymbolRecursive(id);
+       if(var == null){
+           manager.addSemanticError("Variable '" + id + "' no declarada antes de --");
+           out.type = "error";
+       } else {
+           if(var.type.equals("int") || var.type.equals("float"))
+              out.type = var.type;
+           else {
+              manager.addSemanticError("-- aplica solo a variables numéricas, encontrado: " + var.type);
+              out.type = "error";
+           }
+       }
+       out.text = "--" + id;
+       // Código MIPS para pre-decremento:
+       parser.addInstructionMIPS("# Pre-decremento de " + id);
+       parser.addInstructionMIPS("lw $t0, " + id);
+       parser.addInstructionMIPS("addi $t0, $t0, -1");
+       parser.addInstructionMIPS("sw $t0, " + id);
+       parser.addInstructionMIPS("move $t2, $t0");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2877,21 +2987,29 @@ class CUP$Parser$actions {
 		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-      manager.addDerivation("expresion -> IDENTIFICADOR ++");
-      ExprInfo out = new ExprInfo();
-      SymbolData var = manager.findSymbolRecursive(id);
-      if (var == null) {
-        manager.addSemanticError("Variable '"+id+"' no declarada antes de ++");
-        out.type = "error";
-      } else {
-        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-        else {
-          manager.addSemanticError("++ aplica solo a variables numéricas");
-          out.type = "error";
-        }
-      }
-      out.text = id + "++";
-      RESULT = out;
+       manager.addDerivation("expresion -> IDENTIFICADOR ++");
+       ExprInfo out = new ExprInfo();
+       SymbolData var = manager.findSymbolRecursive(id);
+       if(var == null){
+           manager.addSemanticError("Variable '" + id + "' no declarada antes de ++");
+           out.type = "error";
+       } else {
+           if(var.type.equals("int") || var.type.equals("float"))
+              out.type = var.type;
+           else {
+              manager.addSemanticError("++ aplica solo a variables numéricas, encontrado: " + var.type);
+              out.type = "error";
+           }
+       }
+       out.text = id + "++";
+       // Código MIPS para post-incremento:
+       // Primero se carga el valor, se guarda en $t2 (resultado) y luego se incrementa la variable.
+       parser.addInstructionMIPS("# Post-incremento de " + id);
+       parser.addInstructionMIPS("lw $t0, " + id);
+       parser.addInstructionMIPS("move $t2, $t0");
+       parser.addInstructionMIPS("addi $t0, $t0, 1");
+       parser.addInstructionMIPS("sw $t0, " + id);
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2905,21 +3023,28 @@ class CUP$Parser$actions {
 		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-      manager.addDerivation("expresion -> IDENTIFICADOR --");
-      ExprInfo out = new ExprInfo();
-      SymbolData var = manager.findSymbolRecursive(id);
-      if (var == null) {
-        manager.addSemanticError("Variable '"+id+"' no declarada antes de --");
-        out.type = "error";
-      } else {
-        if (var.type.equals("int") || var.type.equals("float")) out.type = var.type;
-        else {
-          manager.addSemanticError("-- aplica solo a variables numéricas");
-          out.type = "error";
-        }
-      }
-      out.text = id + "--";
-      RESULT = out;
+       manager.addDerivation("expresion -> IDENTIFICADOR --");
+       ExprInfo out = new ExprInfo();
+       SymbolData var = manager.findSymbolRecursive(id);
+       if(var == null){
+           manager.addSemanticError("Variable '" + id + "' no declarada antes de --");
+           out.type = "error";
+       } else {
+           if(var.type.equals("int") || var.type.equals("float"))
+              out.type = var.type;
+           else {
+              manager.addSemanticError("-- aplica solo a variables numéricas, encontrado: " + var.type);
+              out.type = "error";
+           }
+       }
+       out.text = id + "--";
+       // Código MIPS para post-decremento:
+       parser.addInstructionMIPS("# Post-decremento de " + id);
+       parser.addInstructionMIPS("lw $t0, " + id);
+       parser.addInstructionMIPS("move $t2, $t0");
+       parser.addInstructionMIPS("addi $t0, $t0, -1");
+       parser.addInstructionMIPS("sw $t0, " + id);
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2936,45 +3061,49 @@ class CUP$Parser$actions {
 		int argListright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		java.util.List<ExprInfo> argList = (java.util.List<ExprInfo>)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-      manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
-      ExprInfo out = new ExprInfo();
-      SymbolData funcSym = manager.findSymbolRecursive(id);
-      if (funcSym == null || !funcSym.isFunction) {
-        manager.addSemanticError("Llamada a función desconocida: '"+id+"'");
-        out.type = "error";
-      } else {
-        // Recuperar el tipo de retorno
-        String funcTypePrefix = "funcType:";
-        if (funcSym.type.startsWith(funcTypePrefix)) {
-          out.type = funcSym.type.substring(funcTypePrefix.length());
-        } else {
-          out.type = "error";
-          manager.addSemanticError("Función '"+id+"' con tipo inválido: " + funcSym.type);
-        }
-
-        // Verificar número y tipo de argumentos
-        List<String> paramDefs = funcSym.paramTypes;
-        // paramDefs ejemplo: ["int:param1", "bool:param2"]
-        if (paramDefs.size() != argList.size()) {
-          manager.addSemanticError("Llamada a '"+id+"' con # de argumentos distinto ("
-            + argList.size() + ") que la definición (" + paramDefs.size() + ")");
-        } else {
-          for (int i = 0; i < paramDefs.size(); i++) {
-            String def = paramDefs.get(i);
-            String[] parts = def.split(":"); // p.e. "int:paramName"
-            String paramType = parts[0];
-
-            ExprInfo actualArg = argList.get(i);
-            if (!actualArg.type.equals(paramType) && !actualArg.type.equals("error")) {
-              manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
-                + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
-            }
-          }
-        }
-      }
-      // Convertir la lista de ExprInfo a texto si se desea
-      out.text = id + "(...)";
-      RESULT = out;
+       manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
+       ExprInfo out = new ExprInfo();
+       SymbolData funcSym = manager.findSymbolRecursive(id);
+       if(funcSym == null || !funcSym.isFunction){
+           manager.addSemanticError("Llamada a función desconocida: '" + id + "'");
+           out.type = "error";
+       } else {
+           String funcTypePrefix = "funcType:";
+           if(funcSym.type.startsWith(funcTypePrefix)){
+               out.type = funcSym.type.substring(funcTypePrefix.length());
+           } else {
+               out.type = "error";
+               manager.addSemanticError("Función '" + id + "' con tipo inválido: " + funcSym.type);
+           }
+           // Verificar número y tipo de argumentos
+           List<String> paramDefs = funcSym.paramTypes;
+           if(paramDefs.size() != argList.size()){
+              manager.addSemanticError("Llamada a '" + id + "' con número de argumentos distinto ("
+                  + argList.size() + ") a la definición (" + paramDefs.size() + ")");
+           } else {
+              for(int i = 0; i < paramDefs.size(); i++){
+                 String def = paramDefs.get(i);
+                 String[] parts = def.split(":");
+                 String paramType = parts[0];
+                 ExprInfo actualArg = argList.get(i);
+                 if(!actualArg.type.equals(paramType) && !actualArg.type.equals("error")){
+                    manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
+                        + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
+                 }
+              }
+           }
+       }
+       out.text = id + "(...)";
+       // Para la generación de código de llamada a función, se podría:
+       // 1. Empujar los argumentos en la pila.
+       // 2. Llamar a la función con 'jal'.
+       // 3. Recuperar el valor de retorno en $v0 o similar.
+       // Aquí incluimos un comentario, ya que la generación completa depende de la convención adoptada.
+       parser.addInstructionMIPS("# Llamada a función " + id);
+       parser.addInstructionMIPS("jal " + id);
+       // Se asume que el valor retornado se deja en $v0 y se mueve a $t2
+       parser.addInstructionMIPS("move $t2, $v0");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2988,26 +3117,29 @@ class CUP$Parser$actions {
 		int idright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> IDENTIFICADOR");
-      ExprInfo out = new ExprInfo();
-      SymbolData var = manager.findSymbolRecursive(id);
-      if (var == null) {
-        manager.addSemanticError("Variable o función '"+id+"' no declarada");
-        out.type = "error";
-      } else {
-        if (var.isFunction) {
-          String funcTypePrefix = "funcType:";
-          if (var.type.startsWith(funcTypePrefix)) {
-            out.type = var.type.substring(funcTypePrefix.length());
-          } else {
-            out.type = "error";
-          }
-        } else {
-          out.type = var.type;
-        }
-      }
-      out.text = id;
-      RESULT = out;
+       manager.addDerivation("expresion -> IDENTIFICADOR");
+       ExprInfo out = new ExprInfo();
+       SymbolData var = manager.findSymbolRecursive(id);
+       if(var == null){
+           manager.addSemanticError("Variable o función '" + id + "' no declarada");
+           out.type = "error";
+       } else {
+           if(var.isFunction){
+               String funcTypePrefix = "funcType:";
+               if(var.type.startsWith(funcTypePrefix)){
+                   out.type = var.type.substring(funcTypePrefix.length());
+               } else {
+                   out.type = "error";
+               }
+           } else {
+               out.type = var.type;
+           }
+       }
+       out.text = id;
+       // Para una variable, se carga su valor
+       parser.addInstructionMIPS("# Acceso a variable " + id);
+       parser.addInstructionMIPS("lw $t2, " + id);
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3021,11 +3153,14 @@ class CUP$Parser$actions {
 		int lintright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object lint = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> L_INTEGER");
-      ExprInfo out = new ExprInfo();
-      out.type = "int";
-      out.text = lint.toString();
-      RESULT = out;
+       manager.addDerivation("expresion -> L_INTEGER");
+       ExprInfo out = new ExprInfo();
+       out.type = "int";
+       out.text = lint.toString();
+       // Generar código MIPS para cargar el literal
+       parser.addInstructionMIPS("# Cargar literal entero " + lint.toString());
+       parser.addInstructionMIPS("li $t2, " + lint.toString());
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3039,11 +3174,14 @@ class CUP$Parser$actions {
 		int flitright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object flit = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> FLOAT_LITERAL");
-      ExprInfo out = new ExprInfo();
-      out.type = "float";
-      out.text = flit.toString();
-      RESULT = out;
+       manager.addDerivation("expresion -> FLOAT_LITERAL");
+       ExprInfo out = new ExprInfo();
+       out.type = "float";
+       out.text = flit.toString();
+       // Para simplificar, se carga el literal float como entero (o usar instrucciones de coma flotante si se requiere)
+       parser.addInstructionMIPS("# Cargar literal float " + flit.toString());
+       parser.addInstructionMIPS("li $t2, " + flit.toString());
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3057,11 +3195,15 @@ class CUP$Parser$actions {
 		int chlright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object chl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> CHAR_LITERAL");
-      ExprInfo out = new ExprInfo();
-      out.type = "char";
-      out.text = "'"+chl+"'";
-      RESULT = out;
+       manager.addDerivation("expresion -> CHAR_LITERAL");
+       ExprInfo out = new ExprInfo();
+       out.type = "char";
+       out.text = "'" + chl + "'";
+       // Se carga el valor ASCII del carácter
+       parser.addInstructionMIPS("# Cargar literal char " + chl);
+       // Suponiendo que 'chl' es convertible a String:
+       parser.addInstructionMIPS("li $t2, " + ((String)chl).charAt(0));
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3075,11 +3217,14 @@ class CUP$Parser$actions {
 		int strright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object str = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> STRING_LITERAL");
-      ExprInfo out = new ExprInfo();
-      out.type = "string";
-      out.text = "\""+str+"\"";
-      RESULT = out;
+       manager.addDerivation("expresion -> STRING_LITERAL");
+       ExprInfo out = new ExprInfo();
+       out.type = "string";
+       out.text = "\"" + str + "\"";
+       // Para cadenas, se asume que se ha declarado una etiqueta en la sección .data.
+       // Aquí solo se genera un comentario.
+       parser.addInstructionMIPS("# Acceso a literal string " + str);
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3093,11 +3238,18 @@ class CUP$Parser$actions {
 		int booright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object boo = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("expresion -> BOOL_LITERAL");
-      ExprInfo out = new ExprInfo();
-      out.type = "bool";
-      out.text = boo.toString();
-      RESULT = out;
+       manager.addDerivation("expresion -> BOOL_LITERAL");
+       ExprInfo out = new ExprInfo();
+       out.type = "bool";
+       out.text = boo.toString();
+       parser.addInstructionMIPS("# Cargar literal booleano " + boo.toString());
+       // Asumimos 1 para true y 0 para false:
+       if(boo.toString().equals("true")){
+           parser.addInstructionMIPS("li $t2, 1");
+       } else {
+           parser.addInstructionMIPS("li $t2, 0");
+       }
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3114,37 +3266,45 @@ class CUP$Parser$actions {
 		int exright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo ex = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-      manager.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
-      ExprInfo out = new ExprInfo();
-      SymbolData var = manager.findSymbolRecursive(arr);
-      if (var == null) {
-        manager.addSemanticError("Acceso a arreglo no declarado: " + arr);
-        out.type = "error";
-      } else if (!var.isArray) {
-        manager.addSemanticError("El identificador '" + arr + "' no es un array");
-        out.type = "error";
-      } else {
-        // Checar que ex sea int
-        if (!ex.type.equals("int")) {
-          manager.addSemanticError("Índice de array debe ser int, se encontró: " + ex.type);
-        } else {
-          // Intentar evaluar el índice en tiempo de compilación
-          try {
-            int indexValue = Integer.parseInt(ex.text);
-            if (indexValue < 0 || indexValue >= var.arraySize) {
-              manager.addSemanticError("Error en acceso a array: el índice " + indexValue +
-                  " está fuera de los límites (0-" + (var.arraySize - 1) + ") en el arreglo " + arr);
-            }
-          } catch (NumberFormatException nfe) {
-            // Si no se puede evaluar a entero (por ejemplo, si es una variable o expresión compleja),
-            // se omite el chequeo estático.
-          }
-        }
-        // El tipo del acceso es el tipo base del array
-        out.type = var.type;
-      }
-      out.text = arr + "[" + ex.text + "]";
-      RESULT = out;
+       manager.addDerivation("expresion -> IDENTIFICADOR [ expresion ]");
+       ExprInfo out = new ExprInfo();
+       SymbolData var = manager.findSymbolRecursive(arr);
+       if(var == null){
+           manager.addSemanticError("Acceso a arreglo no declarado: " + arr);
+           out.type = "error";
+       } else if(!var.isArray){
+           manager.addSemanticError("El identificador '" + arr + "' no es un array");
+           out.type = "error";
+       } else {
+           if(!ex.type.equals("int")){
+               manager.addSemanticError("Índice de array debe ser int, se encontró: " + ex.type);
+           } else {
+               try {
+                   int indexValue = Integer.parseInt(ex.text);
+                   if(indexValue < 0 || indexValue >= var.arraySize){
+                       manager.addSemanticError("Error en acceso a array: el índice " + indexValue +
+                         " está fuera de los límites (0-" + (var.arraySize - 1) + ") en el arreglo " + arr);
+                   }
+               } catch(NumberFormatException nfe){
+                   // Si no es evaluable en tiempo de compilación, se omite la comprobación.
+               }
+           }
+           out.type = var.type;
+       }
+       out.text = arr + "[" + ex.text + "]";
+       // Generar código MIPS para acceso a array:
+       parser.addInstructionMIPS("# Acceso a elemento de array " + arr);
+       // Se asume que el resultado de 'ex' está en $t2 y se mueve a $t3:
+       parser.addInstructionMIPS("move $t3, $t2");
+       // Cargar la dirección base del array:
+       parser.addInstructionMIPS("la $t0, " + arr);
+       // Calcular el offset: multiplicar el índice ($t3) por 4 (tamaño de palabra)
+       parser.addInstructionMIPS("mul $t3, $t3, 4");
+       // Sumar el offset a la base para obtener la dirección efectiva:
+       parser.addInstructionMIPS("add $t0, $t0, $t3");
+       // Cargar el valor del array en $t2:
+       parser.addInstructionMIPS("lw $t2, 0($t0)");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3158,9 +3318,11 @@ class CUP$Parser$actions {
 		int exright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo ex = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-      manager.addDerivation("expresion -> ( expresion )");
-      ExprInfo out = new ExprInfo(ex.type, "(" + ex.text + ")");
-      RESULT = out;
+       manager.addDerivation("expresion -> ( expresion )");
+       ExprInfo out = new ExprInfo(ex.type, "(" + ex.text + ")");
+       // Generar código MIPS para agrupar (simplemente se propaga el resultado)
+       // No se necesita instrucción extra.
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -3171,10 +3333,10 @@ class CUP$Parser$actions {
             {
               ExprInfo RESULT =null;
 		
-      manager.addDerivation("expresion -> error )");
-      manager.addSemanticError("Error en expresión. Recuperado hasta ')'");
-      ExprInfo out = new ExprInfo("error", "errorExpr");
-      RESULT = out;
+       manager.addDerivation("expresion -> error )");
+       manager.addSemanticError("Error en expresión. Recuperado hasta ')'");
+       ExprInfo out = new ExprInfo("error", "errorExpr");
+       RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
