@@ -3075,34 +3075,40 @@ class CUP$Parser$actions {
                out.type = "error";
                manager.addSemanticError("Función '" + id + "' con tipo inválido: " + funcSym.type);
            }
-           // Verificar número y tipo de argumentos
            List<String> paramDefs = funcSym.paramTypes;
-           if(paramDefs.size() != argList.size()){
+           List<ExprInfo> args = (List<ExprInfo>) argList;  // Usamos "argList", no "$argList"
+           if(paramDefs.size() != args.size()){
               manager.addSemanticError("Llamada a '" + id + "' con número de argumentos distinto ("
-                  + argList.size() + ") a la definición (" + paramDefs.size() + ")");
+                  + args.size() + ") a la definición (" + paramDefs.size() + ")");
            } else {
-              for(int i = 0; i < paramDefs.size(); i++){
-                 String def = paramDefs.get(i);
-                 String[] parts = def.split(":");
-                 String paramType = parts[0];
-                 ExprInfo actualArg = argList.get(i);
-                 if(!actualArg.type.equals(paramType) && !actualArg.type.equals("error")){
-                    manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
-                        + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
-                 }
+              for (int i = 0; i < paramDefs.size(); i++) {
+                  String[] parts = paramDefs.get(i).split(":");
+                  String paramType = parts[0];
+                  ExprInfo actualArg = args.get(i);
+                  if (!actualArg.type.equals(paramType) && !actualArg.type.equals("error")){
+                      manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
+                          + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
+                  }
               }
            }
        }
        out.text = id + "(...)";
-       // Para la generación de código de llamada a función, se podría:
-       // 1. Empujar los argumentos en la pila.
-       // 2. Llamar a la función con 'jal'.
-       // 3. Recuperar el valor de retorno en $v0 o similar.
-       // Aquí incluimos un comentario, ya que la generación completa depende de la convención adoptada.
-       parser.addInstructionMIPS("# Llamada a función " + id);
+
+       // Generación de código MIPS para llamada a función:
+       int numArgs = ((List<ExprInfo>) argList).size();
+       // Empujar argumentos en orden inverso
+       for (int i = numArgs - 1; i >= 0; i--) {
+           ExprInfo arg = ((List<ExprInfo>) argList).get(i);
+           parser.addInstructionMIPS("addi $sp, $sp, -4");
+           parser.addInstructionMIPS("sw " + arg.text + ", 0($sp)");
+       }
+       // Llamada a la función
        parser.addInstructionMIPS("jal " + id);
-       // Se asume que el valor retornado se deja en $v0 y se mueve a $t2
+       // Recuperar el valor de retorno (asumido en $v0) y moverlo a $t2
        parser.addInstructionMIPS("move $t2, $v0");
+       // Limpieza de la pila: liberar 4 bytes por cada argumento
+       parser.addInstructionMIPS("addi $sp, $sp, " + (4 * numArgs));
+
        RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -3178,9 +3184,14 @@ class CUP$Parser$actions {
        ExprInfo out = new ExprInfo();
        out.type = "float";
        out.text = flit.toString();
-       // Para simplificar, se carga el literal float como entero (o usar instrucciones de coma flotante si se requiere)
+       // Generación de código MIPS para cargar un literal float de forma real
        parser.addInstructionMIPS("# Cargar literal float " + flit.toString());
-       parser.addInstructionMIPS("li $t2, " + flit.toString());
+       // Usamos la instrucción li.s para cargar el valor en el registro flotante $f0
+       parser.addInstructionMIPS("li.s $f0, " + flit.toString());
+       // Movemos el valor a $f2 (registro flotante donde dejamos el resultado)
+       parser.addInstructionMIPS("mov.s $f2, $f0");
+       // Si se requiere usar el valor en operaciones enteras o mixtas, se puede mover a $t2:
+       parser.addInstructionMIPS("mfc1 $t2, $f2");
        RESULT = out;
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);

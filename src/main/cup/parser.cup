@@ -1651,59 +1651,58 @@ expresion ::=
        parser.addInstructionMIPS("sw $t0, " + id);
        RESULT = out;
     :}
-| // Llamada a función
-  IDENTIFICADOR:id ABREREGALO argumentos:argList CIERRAREGALO
-      {:
-         manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
-         ExprInfo out = new ExprInfo();
-         SymbolData funcSym = manager.findSymbolRecursive(id);
-         if(funcSym == null || !funcSym.isFunction){
-             manager.addSemanticError("Llamada a función desconocida: '" + id + "'");
-             out.type = "error";
-         } else {
-             String funcTypePrefix = "funcType:";
-             if(funcSym.type.startsWith(funcTypePrefix)){
-                 out.type = funcSym.type.substring(funcTypePrefix.length());
-             } else {
-                 out.type = "error";
-                 manager.addSemanticError("Función '" + id + "' con tipo inválido: " + funcSym.type);
-             }
-             List<String> paramDefs = funcSym.paramTypes;
-             List<ExprInfo> args = (List<ExprInfo>)$argList;
-             if(paramDefs.size() != args.size()){
-                manager.addSemanticError("Llamada a '" + id + "' con número de argumentos distinto ("
-                    + args.size() + ") a la definición (" + paramDefs.size() + ")");
-             } else {
-                for (int i = 0; i < paramDefs.size(); i++) {
-                    String[] parts = paramDefs.get(i).split(":");
-                    String paramType = parts[0];
-                    ExprInfo actualArg = args.get(i);
-                    if (!actualArg.type.equals(paramType) && !actualArg.type.equals("error")) {
-                        manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
-                            + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
-                    }
-                }
-             }
-         }
-         out.text = id + "(...)";
+| IDENTIFICADOR:id ABREREGALO argumentos:argList CIERRAREGALO
+    {:
+       manager.addDerivation("expresion -> IDENTIFICADOR ( argumentos )");
+       ExprInfo out = new ExprInfo();
+       SymbolData funcSym = manager.findSymbolRecursive(id);
+       if(funcSym == null || !funcSym.isFunction){
+           manager.addSemanticError("Llamada a función desconocida: '" + id + "'");
+           out.type = "error";
+       } else {
+           String funcTypePrefix = "funcType:";
+           if(funcSym.type.startsWith(funcTypePrefix)){
+               out.type = funcSym.type.substring(funcTypePrefix.length());
+           } else {
+               out.type = "error";
+               manager.addSemanticError("Función '" + id + "' con tipo inválido: " + funcSym.type);
+           }
+           List<String> paramDefs = funcSym.paramTypes;
+           List<ExprInfo> args = (List<ExprInfo>) argList;  // Usamos "argList", no "$argList"
+           if(paramDefs.size() != args.size()){
+              manager.addSemanticError("Llamada a '" + id + "' con número de argumentos distinto ("
+                  + args.size() + ") a la definición (" + paramDefs.size() + ")");
+           } else {
+              for (int i = 0; i < paramDefs.size(); i++) {
+                  String[] parts = paramDefs.get(i).split(":");
+                  String paramType = parts[0];
+                  ExprInfo actualArg = args.get(i);
+                  if (!actualArg.type.equals(paramType) && !actualArg.type.equals("error")){
+                      manager.addSemanticError("Argumento " + (i+1) + " en llamada a '" + id
+                          + "' debe ser '" + paramType + "', encontrado '" + actualArg.type + "'");
+                  }
+              }
+           }
+       }
+       out.text = id + "(...)";
 
-         // Generación de código MIPS para llamada a función:
-         int numArgs = ((List<ExprInfo>)$argList).size();
-         // Empujar argumentos en orden inverso
-         for (int i = numArgs - 1; i >= 0; i--) {
-             ExprInfo arg = ((List<ExprInfo>)$argList).get(i);
-             parser.addInstructionMIPS("addi $sp, $sp, -4");
-             parser.addInstructionMIPS("sw " + arg.text + ", 0($sp)");
-         }
-         // Llamada a la función
-         parser.addInstructionMIPS("jal " + id);
-         // Recuperar el valor de retorno (asumido en $v0) y moverlo a $t2
-         parser.addInstructionMIPS("move $t2, $v0");
-         // Limpieza de la pila: liberar 4 bytes por cada argumento
-         parser.addInstructionMIPS("addi $sp, $sp, " + (4 * numArgs));
+       // Generación de código MIPS para llamada a función:
+       int numArgs = ((List<ExprInfo>) argList).size();
+       // Empujar argumentos en orden inverso
+       for (int i = numArgs - 1; i >= 0; i--) {
+           ExprInfo arg = ((List<ExprInfo>) argList).get(i);
+           parser.addInstructionMIPS("addi $sp, $sp, -4");
+           parser.addInstructionMIPS("sw " + arg.text + ", 0($sp)");
+       }
+       // Llamada a la función
+       parser.addInstructionMIPS("jal " + id);
+       // Recuperar el valor de retorno (asumido en $v0) y moverlo a $t2
+       parser.addInstructionMIPS("move $t2, $v0");
+       // Limpieza de la pila: liberar 4 bytes por cada argumento
+       parser.addInstructionMIPS("addi $sp, $sp, " + (4 * numArgs));
 
-         RESULT = out;
-      :}
+       RESULT = out;
+    :}
 | // Variable o función identificador
   IDENTIFICADOR:id
     {:
@@ -1743,23 +1742,22 @@ expresion ::=
        parser.addInstructionMIPS("li $t2, " + lint.toString());
        RESULT = out;
     :}
-| // Literal float
-  | FLOAT_LITERAL:flit
-      {:
-         manager.addDerivation("expresion -> FLOAT_LITERAL");
-         ExprInfo out = new ExprInfo();
-         out.type = "float";
-         out.text = flit.toString();
-         // Generación de código MIPS para cargar un literal float de forma real
-         parser.addInstructionMIPS("# Cargar literal float " + flit.toString());
-         // Usamos la instrucción li.s para cargar el valor en el registro flotante $f0
-         parser.addInstructionMIPS("li.s $f0, " + flit.toString());
-         // Movemos el valor a $f2 (registro flotante donde dejamos el resultado)
-         parser.addInstructionMIPS("mov.s $f2, $f0");
-         // Si se requiere usar el valor en operaciones enteras o mixtas, se puede mover a $t2:
-         parser.addInstructionMIPS("mfc1 $t2, $f2");
-         RESULT = out;
-      :}
+| FLOAT_LITERAL:flit
+    {:
+       manager.addDerivation("expresion -> FLOAT_LITERAL");
+       ExprInfo out = new ExprInfo();
+       out.type = "float";
+       out.text = flit.toString();
+       // Generación de código MIPS para cargar un literal float de forma real
+       parser.addInstructionMIPS("# Cargar literal float " + flit.toString());
+       // Usamos la instrucción li.s para cargar el valor en el registro flotante $f0
+       parser.addInstructionMIPS("li.s $f0, " + flit.toString());
+       // Movemos el valor a $f2 (registro flotante donde dejamos el resultado)
+       parser.addInstructionMIPS("mov.s $f2, $f0");
+       // Si se requiere usar el valor en operaciones enteras o mixtas, se puede mover a $t2:
+       parser.addInstructionMIPS("mfc1 $t2, $f2");
+       RESULT = out;
+    :}
 | // Literal char
   CHAR_LITERAL:chl
     {:
