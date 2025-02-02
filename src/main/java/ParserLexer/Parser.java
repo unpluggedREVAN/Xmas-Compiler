@@ -663,6 +663,11 @@ public class Parser extends java_cup.runtime.lr_parser {
         return this.asignacionesRealizadas;
     }
 
+    // Agregar este método al final de la sección de código del parser
+    public List<String> getCodigoMIPS() {
+        return this.codigoMIPS;
+    }
+
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Token inesperado", sym);
@@ -806,7 +811,6 @@ class CUP$Parser$actions {
          manager.addDerivation("programa -> maindeclaracion bloque");
          System.out.println("Regla 'programa' con sólo MAIN");
          imprimirReporteFinal();
-         parser.generarArchivoMIPS();
        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("programa",0, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }

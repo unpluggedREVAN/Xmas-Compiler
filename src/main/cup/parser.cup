@@ -59,6 +59,11 @@ parser code {:
         return this.asignacionesRealizadas;
     }
 
+    // Agregar este método al final de la sección de código del parser
+    public List<String> getCodigoMIPS() {
+        return this.codigoMIPS;
+    }
+
     @Override
     public void syntax_error(Symbol sym) {
         report_error("Token inesperado", sym);
@@ -226,7 +231,6 @@ programa ::=
          manager.addDerivation("programa -> maindeclaracion bloque");
          System.out.println("Regla 'programa' con sólo MAIN");
          imprimirReporteFinal();
-         parser.generarArchivoMIPS();
        :}
   ;
 

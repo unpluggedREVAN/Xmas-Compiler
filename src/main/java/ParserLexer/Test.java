@@ -9,15 +9,15 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class Test {
-    // ejecuta el análisis léxico y hay una prueba del sintáctico
+    // Ejecuta el análisis léxico y realiza una prueba del análisis sintáctico
     public void ejecutarAnalisis(String archivoEntrada) {
         try {
-            // a la ruta hay que ponerle el nombre del archivo
+            // Se construye la ruta de entrada y salida
             Path rutaEntrada = Paths.get(archivoEntrada);
             String directorioSalida = rutaEntrada.getParent().toString();
-            String archivoSalida = directorioSalida + "/output_tokens.txt";
+            String archivoSalidaTokens = directorioSalida + "/output_tokens.txt";
 
-            // creación del lexer
+            // Creación del lexer
             Reader reader = new BufferedReader(new FileReader(archivoEntrada));
             Lexer lexer = new Lexer(reader);
 
@@ -33,9 +33,9 @@ public class Test {
                 System.out.println("Tipo: " + tipoToken + ", Lexema: " + lexema + ", Posición: " + posicion);
             }
 
-            // aquí escribe la tabla de tokens en un archivo de salida
-            escribirTokensEnArchivo(lexer.tokenTable, archivoSalida);
-            System.out.println("\nOutput del scanner guardado en: " + archivoSalida);
+            // Escribir la tabla de tokens en un archivo de salida
+            escribirTokensEnArchivo(lexer.tokenTable, archivoSalidaTokens);
+            System.out.println("\nOutput del scanner guardado en: " + archivoSalidaTokens);
 
             // Reiniciar el lector para el parser
             reader = new BufferedReader(new FileReader(archivoEntrada));
@@ -51,19 +51,24 @@ public class Test {
             System.out.println("Iniciando análisis semántico...");
             SemanticAnalyzer semAnalyzer = new SemanticAnalyzer(
                     parser.getSymbolTableManager(),
-                    parser.getAsignaciones() // se pasan 2 argumentos al constructor
+                    parser.getAsignaciones()  // Se pasan las asignaciones recolectadas
             );
-            semAnalyzer.runSemanticChecks();  // Realiza validaciones
+            semAnalyzer.runSemanticChecks();
 
-            // ============== FASE DE GENERACIÓN DE CÓDIGO ==============
+            // ============== FASE DE GENERACIÓN DE CÓDIGO MIPS ==============
             System.out.println("Iniciando generación de código MIPS...");
+            // Se crea la instancia de MIPSGenerator pasando:
+            // 1. La tabla de símbolos (obtención con getSymbolTableManager())
+            // 2. La lista de instrucciones MIPS (obtenida con getCodigoMIPS(), método que debes agregar en Parser)
+            // 3. La lista de asignaciones (getAsignaciones())
             MIPSGenerator mipsGen = new MIPSGenerator(
                     parser.getSymbolTableManager(),
+                    parser.getCodigoMIPS(),
                     parser.getAsignaciones()
             );
-            String codigoMIPSsalida = directorioSalida + "/output.asm";
-            mipsGen.generateCode(codigoMIPSsalida);
-            System.out.println("Generación de código finalizada en " + codigoMIPSsalida);
+            String archivoSalidaMIPS = directorioSalida + "/output.asm";
+            mipsGen.generateCode(archivoSalidaMIPS);
+            System.out.println("Generación de código finalizada en " + archivoSalidaMIPS);
 
         } catch (Exception e) {
             System.err.println("Error durante el análisis:");
@@ -71,11 +76,15 @@ public class Test {
         }
     }
 
+    /**
+     * Escribe la tabla de tokens en un archivo de salida.
+     * @param tokenTable Lista de tokens (cada token es un arreglo de String con lexema, tipo y posición)
+     * @param archivoSalida Ruta del archivo de salida
+     */
     private void escribirTokensEnArchivo(List<String[]> tokenTable, String archivoSalida) {
         try (PrintWriter writer = new PrintWriter(archivoSalida)) {
             writer.printf("%-15s %-20s %-10s%n", "Lexema", "Tipo de Token", "Posición");
             writer.println("-------------------------------------------------------------");
-
             for (String[] fila : tokenTable) {
                 writer.printf("%-15s %-20s %-10s%n", fila[0], fila[1], fila[2]);
             }
@@ -85,7 +94,7 @@ public class Test {
         }
     }
 
-    // main
+    // Método main para ejecutar el compilador
     public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("Error: Debe proporcionar la ruta del archivo .txt como parámetro.");
