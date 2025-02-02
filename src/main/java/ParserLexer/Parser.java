@@ -2192,12 +2192,26 @@ class CUP$Parser$actions {
 		Object cs = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
       manager.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
-      RESULT = "switch("+sw+") { "+cs+" }";
-      manager.addControlStructure("Se detectó un 'switch' con expr: " + sw);
+      // Generar etiqueta para la salida del switch
+      String switchExit = "switch_exit_" + parser.labelCount;
+      parser.labelCount++;
+      // Guardar la etiqueta de salida en el manager para que los case la usen
+      manager.setSwitchExitLabel(switchExit);
 
-      // Aquí podrías guardar sw.type para validar cases
+      // Evaluar la expresión del switch: se asume que sw.text contiene la dirección o el registro del resultado.
+      parser.addInstructionMIPS("# Evaluar expresión del switch");
+      parser.addInstructionMIPS("lw $t0, " + ((Parser.ExprInfo)sw).text);
 
-      manager.popControlStructure(); // salimos del switch
+      // Insertar el código generado por los case blocks
+      // Se castea cs a String para que addInstructionMIPS lo acepte.
+      parser.addInstructionMIPS("# Inicio de los case blocks");
+      parser.addInstructionMIPS((String)cs);
+
+      // Etiqueta de salida del switch
+      parser.addInstructionMIPS(switchExit + ":");
+
+      RESULT = "switch(" + ((Parser.ExprInfo)sw).text + ") { " + (String)cs + " }";
+      manager.popControlStructure();
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("switch_estructura",15, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2213,9 +2227,8 @@ class CUP$Parser$actions {
 		
       manager.addDerivation("switch_estructura -> SWITCH ( error ) { case_blocks }");
       report_error("Error en 'switch'", "SWITCH");
-      RESULT = "switchError{ "+cs+" }";
-
-      manager.popControlStructure(); // salimos del switch
+      RESULT = "switchError{ " + (String)cs + " }";
+      manager.popControlStructure();
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("switch_estructura",15, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2233,7 +2246,7 @@ class CUP$Parser$actions {
 		Object cb = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         manager.addDerivation("case_blocks -> case_blocks case_block");
-        RESULT = prev + " " + cb;
+        RESULT = (String)prev + "\n" + (String)cb;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("case_blocks",16, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2248,7 +2261,7 @@ class CUP$Parser$actions {
 		Object cb = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         manager.addDerivation("case_blocks -> case_block");
-        RESULT = cb;
+        RESULT = (String)cb;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("case_blocks",16, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2263,7 +2276,7 @@ class CUP$Parser$actions {
 		Object db = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         manager.addDerivation("case_blocks -> default_block");
-        RESULT = db;
+        RESULT = (String)db;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("case_blocks",16, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2281,8 +2294,19 @@ class CUP$Parser$actions {
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         manager.addDerivation("case_block -> CASE L_INTEGER : bloque");
-        RESULT = "case "+li+": "+bl;
-        // Podrías checar si el switch era int
+        String caseLabel = "case_" + li + "_" + parser.labelCount;
+        parser.labelCount++;
+        // Generar comparación: cargar el literal en $t1 y comparar con el valor del switch en $t0.
+        parser.addInstructionMIPS("# Comprobando case " + li);
+        parser.addInstructionMIPS("li $t1, " + li);
+        parser.addInstructionMIPS("beq $t0, $t1, " + caseLabel);
+        // Generar el bloque de código para este caso:
+        parser.addInstructionMIPS(caseLabel + ":");
+        // Se castea bl a String
+        parser.addInstructionMIPS((String)bl);
+        // Al final del bloque, saltar a la etiqueta de salida del switch.
+        parser.addInstructionMIPS("j " + manager.getSwitchExitLabel());
+        RESULT = "case " + li + ": " + (String)bl;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("case_block",17, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2300,8 +2324,18 @@ class CUP$Parser$actions {
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         manager.addDerivation("case_block -> CASE CHAR_LITERAL : bloque");
-        RESULT = "case '"+ch+"': "+bl;
-        // Podrías checar si el switch era char
+        // Se castea ch a String y se extrae el primer carácter
+        String chStr = (String)ch;
+        int asciiVal = chStr.charAt(0);
+        String caseLabel = "case_" + chStr + "_" + parser.labelCount;
+        parser.labelCount++;
+        parser.addInstructionMIPS("# Comprobando case '" + chStr + "'");
+        parser.addInstructionMIPS("li $t1, " + asciiVal);
+        parser.addInstructionMIPS("beq $t0, $t1, " + caseLabel);
+        parser.addInstructionMIPS(caseLabel + ":");
+        parser.addInstructionMIPS((String)bl);
+        parser.addInstructionMIPS("j " + manager.getSwitchExitLabel());
+        RESULT = "case '" + chStr + "': " + (String)bl;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("case_block",17, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2316,7 +2350,13 @@ class CUP$Parser$actions {
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
         manager.addDerivation("default_block -> DEFAULT : bloque");
-        RESULT = "default: "+bl;
+        String defaultLabel = "default_" + parser.labelCount;
+        parser.labelCount++;
+        parser.addInstructionMIPS("# Default case");
+        parser.addInstructionMIPS(defaultLabel + ":");
+        parser.addInstructionMIPS((String)bl);
+        parser.addInstructionMIPS("j " + manager.getSwitchExitLabel());
+        RESULT = "default: " + (String)bl;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("default_block",18, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }

@@ -13,6 +13,7 @@ import java.util.Stack;
 public class SymbolTableManager {
 
     private boolean returnFound;
+    private String switchExitLabel;
 
     /**
      * Estructura que guarda la información de cada símbolo.
@@ -388,6 +389,14 @@ public class SymbolTableManager {
         if (!loopExitLabelStack.isEmpty()) {
             loopExitLabelStack.pop();
         }
+    }
+
+    public void setSwitchExitLabel(String label) {
+        this.switchExitLabel = label;
+    }
+
+    public String getSwitchExitLabel() {
+        return this.switchExitLabel;
     }
 
     // ----------------------------------------------------------------
