@@ -1579,25 +1579,31 @@ class CUP$Parser$actions {
 		int exright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo ex = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-            manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
-            System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
+         manager.addDerivation("asignacion -> IDENTIFICADOR = expresion ;");
+         System.out.println("Asignación simple a variable " + idVar + " con expr: " + ex);
 
-            SymbolData var = manager.findSymbolRecursive(idVar);
-            if (var != null) {
-                if (!manager.esCompatible(var.type, ex.type)) {
-                    manager.addSemanticError("Error en asignación: la variable '" + idVar +
-                        "' es de tipo '" + var.type + "', pero la expresión es de tipo '" + ex.type + "'");
-                } else {
-                    var.value = ex;
-                    System.out.println("Valor actualizado en tabla de símbolos: " + idVar + " = " + ex);
-                }
-            } else {
-                manager.addSemanticError("Error: Asignación a variable no declarada '" + idVar + "'");
-            }
-            String asigStr = "assign(" + idVar + "=" + ex + ")";
-            asignacionesRealizadas.add(asigStr);
-            RESULT = asigStr;
-          
+         SymbolData var = manager.findSymbolRecursive(idVar);
+         if (var != null) {
+             if (!manager.esCompatible(var.type, ex.type)) {
+                 manager.addSemanticError("Error en asignación: la variable '" + idVar +
+                     "' es de tipo '" + var.type + "', pero la expresión es de tipo '" + ex.type + "'");
+             } else {
+                 var.value = ex;
+                 System.out.println("Valor actualizado en tabla de símbolos: " + idVar + " = " + ex);
+             }
+         } else {
+             manager.addSemanticError("Error: Asignación a variable no declarada '" + idVar + "'");
+         }
+         String asigStr = "assign(" + idVar + "=" + ex + ")";
+         asignacionesRealizadas.add(asigStr);
+
+         // GENERACIÓN DE CÓDIGO MIPS:
+         // Se asume que el código generado en la evaluación de 'ex' deja el resultado en $t2.
+         parser.addInstructionMIPS("# Asignación a variable " + idVar);
+         parser.addInstructionMIPS("sw $t2, " + idVar);
+
+         RESULT = asigStr;
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1616,35 +1622,55 @@ class CUP$Parser$actions {
 		int rhsright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		ExprInfo rhs = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-          manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
-          System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
+           manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
+           System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
 
-          // Buscamos la variable
-          SymbolTableManager.SymbolData var = manager.findSymbolRecursive(idVar);
-          if (var == null) {
-              manager.addSemanticError("Error: Asignación a array: variable '" + idVar + "' no declarada.");
-          } else {
-              // Verificar que la variable es un array
-              if (!var.isArray) {
-                  manager.addSemanticError("Error: La variable '" + idVar + "' no es un array.");
-              }
-              // Verificar que el índice sea de tipo int
-              if (!pos.type.equals("int")) {
-                  manager.addSemanticError("Error: El índice del array debe ser de tipo int, se encontró: " + pos.type);
-              }
-              // Verificar compatibilidad del valor asignado con el tipo base del array.
-              // Suponiendo que el tipo base del array está en var.type (por ejemplo, "int" o "char")
-              if (!manager.esCompatible(var.type, rhs.type)) {
-                  manager.addSemanticError("Error en asignación al array: la variable '" + idVar +
-                      "' es de tipo array de '" + var.type + "', pero la expresión es de tipo '" + rhs.type + "'");
-              }
-          }
+           // Buscamos la variable
+           SymbolTableManager.SymbolData var = manager.findSymbolRecursive(idVar);
+           if (var == null) {
+               manager.addSemanticError("Error: Asignación a array: variable '" + idVar + "' no declarada.");
+           } else {
+               // Verificar que la variable es un array
+               if (!var.isArray) {
+                   manager.addSemanticError("Error: La variable '" + idVar + "' no es un array.");
+               }
+               // Verificar que el índice sea de tipo int
+               if (!pos.type.equals("int")) {
+                   manager.addSemanticError("Error: El índice del array debe ser de tipo int, se encontró: " + pos.type);
+               }
+               // Verificar compatibilidad del valor asignado con el tipo base del array.
+               if (!manager.esCompatible(var.type, rhs.type)) {
+                   manager.addSemanticError("Error en asignación al array: la variable '" + idVar +
+                       "' es de tipo array de '" + var.type + "', pero la expresión es de tipo '" + rhs.type + "'");
+               }
+           }
 
-          // Se guarda la asignación (por ejemplo, para el análisis semántico posterior)
-          String asigStr = "assignArr(" + idVar + "["+pos+"]="+rhs+")";
-          asignacionesRealizadas.add(asigStr);
-          RESULT = asigStr;
-      
+           String asigStr = "assignArr(" + idVar + "[" + pos + "]=" + rhs + ")";
+           asignacionesRealizadas.add(asigStr);
+
+           // GENERACIÓN DE CÓDIGO MIPS PARA ASIGNACIÓN A ARRAY:
+           // Se asume que:
+           // - La evaluación de la expresión 'pos' deja su resultado en $t2.
+           // - Luego, se mueve ese valor a $t3 para preservar el índice.
+           // - A continuación, la evaluación de 'rhs' deja su resultado en $t2.
+           // - Se utiliza la etiqueta 'idVar' como base del array en la sección .data.
+           parser.addInstructionMIPS("# Asignación a elemento de array " + idVar);
+           // Suponemos que el resultado de 'pos' ya se evaluó y está en $t2;
+           // guardamos ese índice en $t3.
+           parser.addInstructionMIPS("move $t3, $t2");
+           // Evaluar la expresión 'rhs' deja su resultado en $t2.
+           // Calcular la dirección efectiva:
+           //   1. Cargar la dirección base del array.
+           parser.addInstructionMIPS("la $t0, " + idVar);
+           //   2. Multiplicar el índice (en $t3) por 4 (tamaño de palabra).
+           parser.addInstructionMIPS("mul $t3, $t3, 4");
+           //   3. Sumar la dirección base y el offset.
+           parser.addInstructionMIPS("add $t0, $t0, $t3");
+           //   4. Almacenar el valor de 'rhs' (en $t2) en la dirección efectiva.
+           parser.addInstructionMIPS("sw $t2, 0($t0)");
+
+           RESULT = asigStr;
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("asignacion",9, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1665,12 +1691,24 @@ class CUP$Parser$actions {
        String t = (String) td;
        int line = funIdleft + 1;
        int col  = funIdright + 1;
+       // Crear el scope para la función y registrar la función en la tabla de símbolos
        manager.crearScopeFuncion(t, funId, line, col);
 
        // Pila de tipo de retorno
        manager.pushFunctionReturnType(t);
        // Reiniciamos el flag de return para esta función
        manager.resetReturnFound();
+
+       // --- Generación del prólogo de la función ---
+       // Etiquetamos la función con su nombre
+       parser.addInstructionMIPS(funId + ":");
+       // Reservamos espacio en la pila para $ra y $fp (por ejemplo, 8 bytes)
+       parser.addInstructionMIPS("addi $sp, $sp, -8");
+       // Guardamos el registro de retorno y el frame pointer en el stack
+       parser.addInstructionMIPS("sw $ra, 4($sp)");
+       parser.addInstructionMIPS("sw $fp, 0($sp)");
+       // Establecemos el nuevo frame pointer
+       parser.addInstructionMIPS("move $fp, $sp");
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$1",34, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1703,12 +1741,20 @@ class CUP$Parser$actions {
        String t = (String) td;
        System.out.println("Función declarada: " + funId + ", tipo " + t + ", params: " + pStr);
 
+       // Aquí se asume que 'bloque:b' ya generó el código correspondiente al cuerpo de la función.
        // Verificar que, si la función no es void, se haya encontrado al menos un return.
        if (!t.equals("void") && !manager.getReturnFound()) {
            manager.addSemanticError("La función '" + funId + "' de tipo '" + t + "' no retorna un valor en todas las rutas de ejecución.");
        }
 
-       // Al salir de la función:
+       // --- Generación del epílogo de la función ---
+       // Restaurar el stack frame y los registros guardados
+       parser.addInstructionMIPS("move $sp, $fp");      // Restaurar $sp desde $fp
+       parser.addInstructionMIPS("lw $fp, 0($sp)");       // Restaurar $fp
+       parser.addInstructionMIPS("lw $ra, 4($sp)");       // Restaurar $ra
+       parser.addInstructionMIPS("addi $sp, $sp, 8");     // Liberar el espacio reservado
+       parser.addInstructionMIPS("jr $ra");               // Salto a la dirección de retorno
+
        manager.popScope();
        manager.popFunctionReturnType();
     
@@ -1891,14 +1937,32 @@ class CUP$Parser$actions {
 		int bright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object b = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        manager.addDerivation("if_estructura -> IF ( expresion ) bloque");
-        RESULT = "if("+cond+")"+b;
-        manager.addControlStructure("Se detectó un 'if' con cond: " + cond);
+          manager.addDerivation("if_estructura -> IF ( expresion ) bloque");
+          // Generar etiquetas para la rama falsa y la salida del if
+          String falseLabel = "if_false_" + parser.labelCount;
+          String exitLabel = "if_exit_" + parser.labelCount++;
 
-        // CHEQUEO: debe ser bool
-        if (!cond.type.equals("bool")) {
-          manager.addSemanticError("La condición del if debe ser de tipo bool, encontrado: " + cond.type);
-        }
+          // Generación de código MIPS:
+          parser.addInstructionMIPS("# Inicio de if");
+          // Se asume que la evaluación de la condición deja su resultado en $t2
+          parser.addInstructionMIPS("lw $t2, " + cond.text);
+          // Si la condición es falsa, saltar a falseLabel
+          parser.addInstructionMIPS("beqz $t2, " + falseLabel);
+          // Código del bloque verdadero (ya generado en 'b')
+          // Luego, saltar al final del if
+          parser.addInstructionMIPS("j " + exitLabel);
+          // Rama falsa:
+          parser.addInstructionMIPS(falseLabel + ":");
+          // (Opcional: código para la rama falsa, si se desea)
+          // Etiqueta de salida:
+          parser.addInstructionMIPS(exitLabel + ":");
+
+          RESULT = "if(" + cond.text + ") " + b;
+
+          // Validación semántica: comprobar que la condición sea de tipo bool
+          if (!cond.type.equals("bool")) {
+            manager.addSemanticError("La condición del if debe ser de tipo bool, encontrado: " + cond.type);
+          }
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1918,14 +1982,28 @@ class CUP$Parser$actions {
 		int b2right = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object b2 = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-        manager.addDerivation("if_estructura -> IF ( expresion ) bloque ELSE bloque");
-        RESULT = "if("+cond+")"+b1+" else "+b2;
-        manager.addControlStructure("Se detectó un 'if-else' con cond: " + cond);
+          manager.addDerivation("if_estructura -> IF ( expresion ) bloque ELSE bloque");
+          // Generar etiquetas para la rama falsa y la salida del if-else
+          String falseLabel = "if_false_" + parser.labelCount;
+          String exitLabel = "if_exit_" + parser.labelCount++;
 
-        if (!cond.type.equals("bool")) {
-          manager.addSemanticError("La condición del if debe ser de tipo bool, encontrado: " + cond.type);
-        }
-      
+          // Generación de código MIPS:
+          parser.addInstructionMIPS("# Inicio de if-else");
+          parser.addInstructionMIPS("lw $t2, " + cond.text);
+          parser.addInstructionMIPS("beqz $t2, " + falseLabel);
+          // Código para el bloque verdadero (b1)
+          parser.addInstructionMIPS("j " + exitLabel);
+          // Rama falsa:
+          parser.addInstructionMIPS(falseLabel + ":");
+          // Código para el bloque del else (b2)
+          parser.addInstructionMIPS(exitLabel + ":");
+
+          RESULT = "if(" + cond.text + ") " + b1 + " else " + b2;
+
+          if (!cond.type.equals("bool")) {
+            manager.addSemanticError("La condición del if debe ser de tipo bool, encontrado: " + cond.type);
+          }
+        
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("if_estructura",12, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-6)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -1958,15 +2036,40 @@ class CUP$Parser$actions {
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
       manager.addDerivation("while_estructura -> WHILE ( expresion ) bloque");
-      RESULT = "while("+cond+")"+bl;
-      manager.addControlStructure("Se detectó un 'while' con cond: " + cond);
 
-      // Checar cond sea bool
+      // Generar etiquetas únicas para el inicio y la salida del bucle.
+      String loopStart = "while_start_" + parser.labelCount;
+      String loopExit  = "while_exit_"  + parser.labelCount++;
+
+      // Generación de código MIPS para el while:
+      parser.addInstructionMIPS("# Inicio del while");
+      parser.addInstructionMIPS(loopStart + ":");
+
+      // Evaluar la condición; se asume que cond.text contiene la dirección o el registro
+      // donde se encuentra el resultado de la condición.
+      parser.addInstructionMIPS("lw $t2, " + cond.text);
+
+      // Si la condición es falsa (0), saltar a la etiqueta de salida.
+      parser.addInstructionMIPS("beqz $t2, " + loopExit);
+
+      // El cuerpo del while (bloque 'bl') ya generó sus instrucciones en el momento adecuado.
+      // Aquí se asume que las instrucciones correspondientes al bloque se encuentran en la lista codigoMIPS.
+
+      // Salto incondicional para repetir el bucle.
+      parser.addInstructionMIPS("j " + loopStart);
+
+      // Etiqueta de salida del while.
+      parser.addInstructionMIPS(loopExit + ":");
+
+      RESULT = "while(" + cond.text + ") " + bl;
+
+      // Validación semántica: la condición debe ser de tipo bool.
       if (!cond.type.equals("bool")) {
-        manager.addSemanticError("La condición del while debe ser bool, encontrado: " + cond.type);
+         manager.addSemanticError("La condición del while debe ser de tipo bool, encontrado: " + cond.type);
       }
 
-      manager.popControlStructure(); // salimos del while
+      // Salir de la estructura de control (se elimina el marcador correspondiente, si se usó)
+      manager.popControlStructure();
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("while_estructura",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1982,9 +2085,8 @@ class CUP$Parser$actions {
 		
       manager.addDerivation("while_estructura -> WHILE ( error ) bloque");
       report_error("Error en condición de 'while'", "WHILE");
-      RESULT = "whileError"+bl;
-
-      manager.popControlStructure(); // salir del while
+      RESULT = "whileError" + bl;
+      manager.popControlStructure();
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("while_estructura",13, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -2007,16 +2109,56 @@ class CUP$Parser$actions {
 		int blright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
-      RESULT = "for("+ini+", "+cond+", "+step+")"+bl;
-      manager.addControlStructure("Se detectó un 'for' con init=" + ini + ", cond=" + cond + ", step=" + step);
+         manager.addDerivation("for_estructura -> FOR ( asignacion , expresion , expresion ) bloque");
 
-      // Checar cond sea bool
-      if (!((Parser.ExprInfo)cond).type.equals("bool")) {
-        manager.addSemanticError("La condición del for debe ser bool, encontrado: " + ((Parser.ExprInfo)cond).type);
-      }
-      manager.popControlStructure(); // salimos del for
-    
+         // Generar etiquetas únicas para el inicio del bucle, la fase de actualización (step)
+         // y la salida del bucle.
+         String forStart = "for_start_" + parser.labelCount;
+         String forStep  = "for_step_"  + parser.labelCount++;
+         String forExit  = "for_exit_"  + parser.labelCount++;
+
+         // --- Generación de código MIPS para el for ---
+
+         // La inicialización 'ini' ya se evaluó previamente.
+         parser.addInstructionMIPS("# Inicio del for: inicialización completada");
+
+         // Etiqueta para el inicio del bucle: se evalúa la condición a partir de aquí.
+         parser.addInstructionMIPS(forStart + ":");
+
+         // Evaluar la condición.
+         // Se asume que 'cond.text' es una dirección o etiqueta de la cual cargar el valor booleano.
+         parser.addInstructionMIPS("lw $t2, " + cond.text);
+         // Si la condición es falsa (0), saltar a la etiqueta de salida.
+         parser.addInstructionMIPS("beqz $t2, " + forExit);
+
+         // Se ejecuta el cuerpo del bucle (bloque 'bl' ya generó sus instrucciones).
+         // [Aquí se insertan las instrucciones del bloque, ya que se han ido acumulando]
+
+         // Etiqueta para la fase de actualización (step).
+         parser.addInstructionMIPS(forStep + ":");
+         // Se asume que la evaluación de 'step' ya generó sus instrucciones y deja su resultado en $t2.
+         // (Si fuera necesario, se podría insertar el código para 'step' aquí o llamar a addInstructionMIPS)
+         // En este ejemplo, simplemente se indica con un comentario:
+         parser.addInstructionMIPS("# Ejecución de la fase step del for");
+
+         // Salto incondicional para volver a evaluar la condición.
+         parser.addInstructionMIPS("j " + forStart);
+
+         // Etiqueta de salida del bucle.
+         parser.addInstructionMIPS(forExit + ":");
+
+         // Establecer el resultado semántico (puedes ajustar la representación textual según convenga)
+         RESULT = "for(" + ini + ", " + cond.text + ", " + step.text + ") " + bl;
+
+         // Validar que la condición sea de tipo bool.
+         if (!((Parser.ExprInfo)cond).type.equals("bool")) {
+             manager.addSemanticError("La condición del for debe ser bool, encontrado: " +
+                                        ((Parser.ExprInfo)cond).type);
+         }
+
+         // Salir de la estructura de control.
+         manager.popControlStructure();
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("for_estructura",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-8)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
@@ -2029,12 +2171,11 @@ class CUP$Parser$actions {
 		int blright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object bl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-      manager.addDerivation("for_estructura -> FOR ( error ) bloque");
-      report_error("Error en 'for'", "FOR");
-      RESULT = "forError"+bl;
-
-      manager.popControlStructure(); // salimos del for
-    
+         manager.addDerivation("for_estructura -> FOR ( error ) bloque");
+         report_error("Error en 'for'", "FOR");
+         RESULT = "forError" + bl;
+         manager.popControlStructure();
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("for_estructura",14, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
