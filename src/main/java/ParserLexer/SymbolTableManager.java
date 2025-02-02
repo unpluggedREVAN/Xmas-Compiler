@@ -325,6 +325,8 @@ public class SymbolTableManager {
         return this.lastDeclaredIdentifier;
     }
 
+    private Stack<String> loopExitLabelStack = new Stack<>();
+
     public void setVarName(String varName) {
         this.lastDeclaredVar = varName;
     }
@@ -362,6 +364,30 @@ public class SymbolTableManager {
         }
         // Se pueden añadir más reglas según las conversiones permitidas.
         return false;
+    }
+
+    /**
+     * Registra la etiqueta de salida de un bucle.
+     */
+    public void pushLoopExitLabel(String label) {
+        loopExitLabelStack.push(label);
+    }
+
+    /**
+     * Retorna la etiqueta de salida del bucle actual.
+     */
+    public String getCurrentLoopExitLabel() {
+        if (loopExitLabelStack.isEmpty()) return null;
+        return loopExitLabelStack.peek();
+    }
+
+    /**
+     * Elimina la etiqueta de salida del bucle actual.
+     */
+    public void popLoopExitLabel() {
+        if (!loopExitLabelStack.isEmpty()) {
+            loopExitLabelStack.pop();
+        }
     }
 
     // ----------------------------------------------------------------

@@ -1004,6 +1004,31 @@ class CUP$Parser$actions {
 		
          manager.addDerivation("sentencia -> PRINT ( expresion ) ;");
          System.out.println("Imprimiendo la expresión: " + e);
+         // Generación de código MIPS para PRINT
+         if(e.type.equals("string")){
+             // Se asume que e.text es la etiqueta de la cadena definida en .data
+             parser.addInstructionMIPS("la $a0, " + e.text);
+             parser.addInstructionMIPS("li $v0, 4");
+             parser.addInstructionMIPS("syscall");
+         } else if(e.type.equals("int") || e.type.equals("float")){
+             // Si e.text es un literal, se carga de inmediato; de lo contrario, se asume que es el nombre de una variable
+             try {
+                 // Intentamos interpretar e.text como número literal
+                 Integer.parseInt(e.text);
+                 parser.addInstructionMIPS("li $a0, " + e.text);
+             } catch (NumberFormatException ex) {
+                 // Si no es un literal, se asume que e.text es una etiqueta o dirección
+                 parser.addInstructionMIPS("lw $a0, " + e.text);
+             }
+             parser.addInstructionMIPS("li $v0, 1");
+             parser.addInstructionMIPS("syscall");
+         } else {
+             // Para otros tipos, se puede agregar un mensaje o usar syscall 1
+             parser.addInstructionMIPS("la $a0, " + e.text);
+             parser.addInstructionMIPS("li $v0, 4");
+             parser.addInstructionMIPS("syscall");
+         }
+         RESULT = e;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1019,6 +1044,12 @@ class CUP$Parser$actions {
 		
          manager.addDerivation("sentencia -> READ ( IDENTIFICADOR ) ;");
          System.out.println("Leyendo variable: " + id);
+         // Generación de código MIPS para READ (lectura de un entero)
+         parser.addInstructionMIPS("li $v0, 5");  // Syscall para leer entero
+         parser.addInstructionMIPS("syscall");
+         // Se asume que la variable 'id' tiene una dirección en .data; se almacena el resultado
+         parser.addInstructionMIPS("sw $v0, " + id);
+         RESULT = id;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1035,11 +1066,9 @@ class CUP$Parser$actions {
            manager.addDerivation("sentencia -> RETURN expresion ;");
            System.out.println("Return con expr: " + ret);
 
-           // Verificar si estamos dentro de una función
            if (!manager.isInsideFunction()) {
              manager.addSemanticError("Uso de 'return' fuera de una función.");
            } else {
-             // Chequear si coincide con el tipo de la función
              String expected = manager.getCurrentFunctionReturnType();
              if (expected != null && !expected.equals("void")) {
                  if (!ret.type.equals(expected) && !ret.type.equals("error")) {
@@ -1048,8 +1077,18 @@ class CUP$Parser$actions {
                  }
              }
            }
-           // Marcar que se encontró un return
            manager.setReturnFound(true);
+           // Generación de código MIPS para RETURN:
+           // Si ret.text es un literal numérico, se carga inmediatamente; de lo contrario, se mueve su valor.
+           try {
+               Integer.parseInt(ret.text);
+               parser.addInstructionMIPS("li $v0, " + ret.text);
+           } catch (NumberFormatException ex) {
+               parser.addInstructionMIPS("move $v0, " + ret.text);
+           }
+           // Saltar a la etiqueta de salida de la función (se debe generar esta etiqueta en la producción de función)
+           parser.addInstructionMIPS("j exit_function");
+           RESULT = ret;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1063,11 +1102,18 @@ class CUP$Parser$actions {
          manager.addDerivation("sentencia -> BREAK ;");
          System.out.println("Break detectado.");
          manager.addControlStructure("Se detectó un 'break'.");
-
-         // Verificar si es válido
          if (!manager.canBreakHere()) {
            manager.addSemanticError("Uso de 'break' fuera de while/for/switch");
          }
+         // Generación de código MIPS para BREAK:
+         // Se asume que el SymbolTableManager mantiene la etiqueta de salida del bucle actual.
+         String exitLabel = manager.getCurrentLoopExitLabel();
+         if (exitLabel != null) {
+             parser.addInstructionMIPS("j " + exitLabel);
+         } else {
+             manager.addSemanticError("No se pudo determinar la etiqueta de salida para 'break'");
+         }
+         RESULT = "break";
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1138,10 +1184,16 @@ class CUP$Parser$actions {
         String t = (String) td;
         System.out.println("Declaración detectada: (tipo=" + t + ", var=" + myid + ")");
 
-        // Guardar la variable con valor inicial null
+        // Guardar la variable con valor inicial null en la tabla de símbolos
         int line = myidleft + 1;
         int col  = myidright + 1;
         manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
+
+        // Generación de código MIPS:
+        // Como se trata de una variable global (o declarada en el scope actual),
+        // se añade un comentario para indicar la reserva.
+        // La declaración real de espacio en la sección .data se realizará en MIPSGenerator.
+        parser.addInstructionMIPS("# Reserva para variable " + myid);
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$0",33, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1192,9 +1244,13 @@ class CUP$Parser$actions {
         SymbolData var = manager.findSymbolRecursive(lastId);
 
         if (var != null) {
-            var.value = ex;
-            // Si manejas isInitialized, podrías hacer: var.isInitialized = true;
+            var.value = ex;  // Se guarda el resultado semántico en la tabla de símbolos
             System.out.println("✔ Valor asignado correctamente: " + lastId + " = " + ex);
+
+            // Generación de código MIPS:
+            // Se asume que el resultado de evaluar la expresión se dejó en el registro $t2.
+            // Se almacena ese valor en la dirección correspondiente a la variable (usando su etiqueta, que es su identificador).
+            parser.addInstructionMIPS("sw $t2, " + lastId);
         } else {
             manager.addSemanticError("Error: Variable '" + lastId + "' no declarada antes de asignación.");
         }
@@ -1211,31 +1267,33 @@ class CUP$Parser$actions {
 		int idxright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
 		ExprInfo idx = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
-          manager.addDerivation("declaracion_aux -> [ expresion ] ;");
+        manager.addDerivation("declaracion_aux -> [ expresion ] ;");
 
-          String lastId = manager.getLastDeclaredIdentifier();
-          SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+        String lastId = manager.getLastDeclaredIdentifier();
+        SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-          // Verificar que la expresión que define la dimensión sea de tipo int
-          if (!idx.type.equals("int")) {
-              manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
-          } else {
-              try {
-                  int dimension = Integer.parseInt(idx.text);
-                  if (dimension < 1) {
-                      manager.addSemanticError("Error en la declaración de array: el tamaño debe ser al menos 1, se encontró: " + dimension);
-                  } else {
-                      if (var != null) {
-                          manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
-                          System.out.println("✔ Array detectado: " + lastId + " con tamaño " + dimension);
-                      } else {
-                          manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
-                      }
-                  }
-              } catch (NumberFormatException e) {
-                  manager.addSemanticError("Error en la declaración de array: el tamaño debe ser un literal entero, se encontró: " + idx.text);
-              }
-          }
+        // Verificar que la expresión que define la dimensión sea de tipo int
+        if (!idx.type.equals("int")) {
+            manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
+        } else {
+            try {
+                int dimension = Integer.parseInt(idx.text);
+                if (dimension < 1) {
+                    manager.addSemanticError("Error en la declaración de array: el tamaño debe ser al menos 1, se encontró: " + dimension);
+                } else {
+                    if (var != null) {
+                        manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
+                        System.out.println("✔ Array detectado: " + lastId + " con tamaño " + dimension);
+                        // Opcional: generar comentario para reserva de espacio para el array.
+                        parser.addInstructionMIPS("# Reserva para array " + lastId + " de tamaño " + dimension);
+                    } else {
+                        manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
+                    }
+                }
+            } catch (NumberFormatException e) {
+                manager.addSemanticError("Error en la declaración de array: el tamaño debe ser un literal entero, se encontró: " + idx.text);
+            }
+        }
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1252,43 +1310,44 @@ class CUP$Parser$actions {
 		int airight = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)).right;
 		Object ai = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
-          manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
+        manager.addDerivation("declaracion_aux -> [ expresion ] = array_init ;");
 
-          String lastId = manager.getLastDeclaredIdentifier();
-          SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
+        String lastId = manager.getLastDeclaredIdentifier();
+        SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-          // Verificar que la expresión que define la dimensión sea de tipo int
-          if (!idx.type.equals("int")) {
-              manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
-          } else {
-              try {
-                  int dimension = Integer.parseInt(idx.text);
-                  if (dimension < 1) {
-                      manager.addSemanticError("Error en la declaración de array: el tamaño debe ser al menos 1, se encontró: " + dimension);
-                  } else {
-                      if (var != null) {
-                          manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
+        // Verificar que la expresión que define la dimensión sea de tipo int
+        if (!idx.type.equals("int")) {
+            manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
+        } else {
+            try {
+                int dimension = Integer.parseInt(idx.text);
+                if (dimension < 1) {
+                    manager.addSemanticError("Error en la declaración de array: el tamaño debe ser al menos 1, se encontró: " + dimension);
+                } else {
+                    if (var != null) {
+                        manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
 
-                          // Aquí se asume que 'ai' es una lista de Parser.ExprInfo (ver la producción array_init)
-                          List<Parser.ExprInfo> elementos = (List<Parser.ExprInfo>) ai;
-                          for (Parser.ExprInfo elem : elementos) {
-                              if (!manager.esCompatible(var.type, elem.type)) {
-                                  manager.addSemanticError("Error en inicialización de array '" + lastId +
-                                      "': el elemento " + elem.text + " es de tipo " + elem.type +
-                                      ", se esperaba " + var.type);
-                              }
-                          }
-
-                          var.value = ai;
-                          System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
-                      } else {
-                          manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
-                      }
-                  }
-              } catch (NumberFormatException e) {
-                  manager.addSemanticError("Error en la declaración de array: el tamaño debe ser un literal entero, se encontró: " + idx.text);
-              }
-          }
+                        // Aquí se asume que 'ai' es una lista de Parser.ExprInfo (ver la producción array_init)
+                        List<Parser.ExprInfo> elementos = (List<Parser.ExprInfo>) ai;
+                        for (Parser.ExprInfo elem : elementos) {
+                            if (!manager.esCompatible(var.type, elem.type)) {
+                                manager.addSemanticError("Error en inicialización de array '" + lastId +
+                                    "': el elemento " + elem.text + " es de tipo " + elem.type +
+                                    ", se esperaba " + var.type);
+                            }
+                        }
+                        var.value = ai;
+                        System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
+                        // Opcional: comentario para reserva del array
+                        parser.addInstructionMIPS("# Reserva e inicialización para array " + lastId);
+                    } else {
+                        manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
+                    }
+                }
+            } catch (NumberFormatException e) {
+                manager.addSemanticError("Error en la declaración de array: el tamaño debe ser un literal entero, se encontró: " + idx.text);
+            }
+        }
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-5)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
