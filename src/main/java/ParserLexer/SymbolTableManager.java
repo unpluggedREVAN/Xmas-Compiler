@@ -158,18 +158,36 @@ public class SymbolTableManager {
      * Agrega un símbolo (variable) al scope indicado.
      */
     public void addSimbolo(String scope, String lexeme, int line, int col, String type) {
-        // Verificar duplicado
+        // Verificar duplicado en el mismo scope
         if (findSymbolInScope(lexeme, scope) != null) {
             addSemanticError("Variable '" + lexeme + "' redeclarada en scope '" + scope + "'");
             return;
         }
+
+        // Si no estamos en el scope global, comprobar si la variable ya existe en un scope superior
+        if (!scope.equals("global")) {
+            // Iterar sobre los scopes almacenados en la pila (scopeStack)
+            // Se asume que scopeStack contiene los scopes en orden desde el global hasta el actual
+            for (String parentScope : scopeStack) {
+                // Saltamos el scope actual
+                if (!parentScope.equals(scope)) {
+                    if (findSymbolInScope(lexeme, parentScope) != null) {
+                        addSemanticError("Advertencia: variable '" + lexeme + "' declarada en scope '" + scope +
+                                "' sobrescribe la variable definida en el scope '" + parentScope + "'");
+                        // Si prefieres tratarlo como error, puedes usar "return;" en lugar de "break;"
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Agregar el símbolo en el scope actual
         SymbolData data = new SymbolData(lexeme, type, line, col, scope, null);
         tablaSimbolos.get(scope).add(data);
 
         System.out.println("Símbolo agregado -> lex:'" + lexeme + "', tipo:'" + type
                 + "', scope:'" + scope + "', línea:" + line + ", col:" + col);
     }
-
     /**
      * Marca un símbolo ya existente como array, con el tamaño dado.
      */
