@@ -235,18 +235,26 @@ maindeclaracion ::=
     MAIN
       {:
         manager.addDerivation("maindeclaracion -> MAIN");
+        // Generar el prólogo de main: etiquetar con "main:".
+        parser.addInstructionMIPS("main:");
       :}
   | MAIN ABREREGALO CIERRAREGALO
       {:
         manager.addDerivation("maindeclaracion -> MAIN ( )");
+        // Generar el prólogo de main.
+        parser.addInstructionMIPS("main:");
       :}
   | tipo_dato MAIN
       {:
         manager.addDerivation("maindeclaracion -> tipo_dato MAIN");
+        // Generar el prólogo de main.
+        parser.addInstructionMIPS("main:");
       :}
   | tipo_dato MAIN ABREREGALO CIERRAREGALO
       {:
         manager.addDerivation("maindeclaracion -> tipo_dato MAIN ( )");
+        // Generar el prólogo de main.
+        parser.addInstructionMIPS("main:");
       :}
   ;
 
@@ -279,6 +287,14 @@ bloque ::=
       {:
         manager.addDerivation("bloque -> { lista_sentencias }");
         System.out.println("Regla 'bloque' ejecutada.");
+        // Si estamos en un contexto de función, podrías marcar el inicio del bloque.
+        // Como actualmente no se gestionan variables locales dentro de bloques,
+        // se generan solo comentarios para facilitar la depuración.
+        parser.addInstructionMIPS("# Inicio de bloque");
+
+        // (Aquí se asume que las instrucciones generadas en 'lista_sentencias' ya están en codigoMIPS)
+
+        parser.addInstructionMIPS("# Fin de bloque");
       :}
   | /* epsilon */
       {:

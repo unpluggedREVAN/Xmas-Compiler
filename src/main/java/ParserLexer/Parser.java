@@ -818,6 +818,8 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> MAIN");
+        // Generar el prólogo de main: etiquetar con "main:".
+        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -829,6 +831,8 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> MAIN ( )");
+        // Generar el prólogo de main.
+        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -840,6 +844,8 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> tipo_dato MAIN");
+        // Generar el prólogo de main.
+        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -851,6 +857,8 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> tipo_dato MAIN ( )");
+        // Generar el prólogo de main.
+        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -907,6 +915,14 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("bloque -> { lista_sentencias }");
         System.out.println("Regla 'bloque' ejecutada.");
+        // Si estamos en un contexto de función, podrías marcar el inicio del bloque.
+        // Como actualmente no se gestionan variables locales dentro de bloques,
+        // se generan solo comentarios para facilitar la depuración.
+        parser.addInstructionMIPS("# Inicio de bloque");
+
+        // (Aquí se asume que las instrucciones generadas en 'lista_sentencias' ya están en codigoMIPS)
+
+        parser.addInstructionMIPS("# Fin de bloque");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("bloque",4, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
