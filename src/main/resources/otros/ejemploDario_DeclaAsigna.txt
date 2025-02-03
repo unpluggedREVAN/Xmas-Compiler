@@ -1,0 +1,10 @@
+\_Prueba de declaración y asignación_/
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+bromista _var1_ finregalo
+rodolfo _var2_ entrega 22 finregalo
+rodolfo _var3_ entrega 15 finregalo
+
+envia _var2_ finregalo
+cierracuento

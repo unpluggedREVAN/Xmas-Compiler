@@ -1,0 +1,34 @@
+\_Prueba de las expresiones y algunos tipos de datos_/
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+\_Asiganciones de varios tipos de datos_/
+rodolfo _entero1_ entrega 2 finregalo
+rodolfo _entero2_ entrega 5 finregalo
+trueno _booleano1_ entrega true finregalo
+trueno _booleano2_ entrega false finregalo
+cupido _char1_ entrega 'a' finregalo
+cometa _cadena1_ entrega "Hola soy string" finregalo
+
+\_Pruebas de las expresiones_/
+rodolfo _result_ finregalo
+trueno _resultBool_ finregalo
+
+_result_ entrega _entero1_ navidad 5 finregalo
+_result_ entrega _entero2_ intercambio 2 finregalo
+_result_ entrega _entero1_ reyes 2 finregalo
+_result_ entrega _entero2_ nochebuena 2 finregalo
+_result_ entrega _entero1_ magos 2 finregalo
+_result_ entrega _entero1_ adviento 2 finregalo
+
+_resultBool_ entrega _booleano1_ melchor false finregalo
+_resultBool_ entrega _booleano2_ gaspar false finregalo
+_resultBool_ entrega _entero1_ snowball 10 finregalo
+_resultBool_ entrega _entero2_ evergreen 3 finregalo
+_resultBool_ entrega _entero2_ minstix 1 finregalo
+_resultBool_ entrega _entero1_ upatree 1 finregalo
+_resultBool_ entrega _entero1_ mary _entero2_ finregalo
+_resultBool_ entrega _entero1_ openslae 6 finregalo
+
+envia _entero1_ finregalo
+cierracuento

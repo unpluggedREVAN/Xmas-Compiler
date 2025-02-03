@@ -1,0 +1,17 @@
+\_Prueba del for y de la expresión de suma_/
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+rodolfo _var2_ entrega 22 finregalo
+rodolfo _temp_ entrega 0 finregalo
+
+duende abreregalo rodolfo _i_ entrega 2 finregalo, _i_ snowball 5, _i_ quien cierraregalo abrecuento
+
+	_temp_ entrega _var2_ navidad _i_ finregalo
+
+cierracuento
+
+_var2_ entrega _temp_ finregalo
+
+envia _var2_ finregalo
+cierracuento

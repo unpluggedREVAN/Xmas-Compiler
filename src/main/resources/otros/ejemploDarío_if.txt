@@ -1,0 +1,13 @@
+\_Prueba del if_/
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+rodolfo _var2_ entrega 22 finregalo
+
+elfo abreregalo _var2_ minstix 0 cierraregalo abrecuento
+  rodolfo _newVar_ entrega 0 finregalo
+  _var2_ entrega 1 finregalo
+cierracuento
+
+envia _var2_ finregalo
+cierracuento

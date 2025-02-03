@@ -1,0 +1,34 @@
+\_Prueba de llamada de otra función, definir si un número es para o impar y prueba de print_/
+
+trueno _isEvenNumber_ abreregalo rodolfo _num_ cierraregalo abrecuento
+
+	\_Función que retorna true si un número es par y false si es impar_/	
+
+	elfo abreregalo _num_ magos 2 mary 0 cierraregalo abrecuento
+	
+	envia true finregalo
+
+	cierracuento
+	hada abrecuento
+	envia false finregalo
+	cierracuento
+
+cierracuento
+
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+	#Numero a ver si es par
+	rodolfo _numero_ entrega 5 finregalo
+
+	trueno _varBool_ entrega _isEvenNumber_abreregalo _numero_ cierraregalo finregalo
+
+	elfo abreregalo _varBool_ cierraregalo abrecuento
+
+		narra abreregalo "Es par" cierraregalo finregalo
+
+	cierracuento
+	hada abrecuento narra abreregalo "Es impar" cierraregalo cierracuento # Aquí hace el else para imprimir si es impar
+
+	envia 0 finregalo
+cierracuento

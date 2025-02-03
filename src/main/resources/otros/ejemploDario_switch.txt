@@ -1,0 +1,17 @@
+\_Prueba de la estructura switch y del break_/
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+rodolfo _entero1_ entrega 5 finregalo
+
+varios abreregalo _temp_ cierraregalo
+	abrecuento
+
+	historia 0 sigue abrecuento _entero1_ entrega 0 finregalo corta finregalo cierracuento
+	historia 1 sigue abrecuento _entero1_ entrega 1 finregalo corta finregalo cierracuento
+	historia 2 sigue abrecuento _entero1_ entrega 2 finregalo corta finregalo cierracuento
+
+	cierracuento
+
+envia _entero1_ finregalo
+cierracuento

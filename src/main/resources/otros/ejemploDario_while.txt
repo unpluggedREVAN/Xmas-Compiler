@@ -1,0 +1,14 @@
+\_Prueba del while y de incremento y decremento_/
+
+rodolfo _verano_ abreregalo cierraregalo abrecuento 
+
+rodolfo _var2_ entrega 22 finregalo
+rodolfo _var_ entrega 5 finregalo
+
+envuelve abreregalo _var_ upatree 0 cierraregalo abrecuento
+	_var2_ quien finregalo
+	_var_ grinch finregalo
+cierracuento
+
+envia _var2_ finregalo
+cierracuento
