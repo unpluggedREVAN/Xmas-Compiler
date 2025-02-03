@@ -626,13 +626,13 @@ public class Parser extends java_cup.runtime.lr_parser {
     private SymbolTableManager manager;
     private Lexer s;
 
-    // NUEVO: Para guardar asignaciones simples (p.e. "assign(x=expr)").
+    // Para guardar asignaciones simples (p.e. "assign(x=expr)").
     private List<String> asignacionesRealizadas = new ArrayList<>();
 
-    // AÑADIR ESTA CLASE PARA MANEJO DE TIPOS DE EXPRESIÓN
+    // MANEJO DE TIPOS DE EXPRESIÓN
     public static class ExprInfo {
         public String type;  // p.e., "int", "float", "bool", "string", o "error"
-        public String text;  // representación textual de la expresión
+        public String text;  // representación textual de expresión
 
         public ExprInfo() {
             this.type = "";
@@ -645,7 +645,7 @@ public class Parser extends java_cup.runtime.lr_parser {
 
         @Override
         public String toString() {
-            return text; // Imprime el valor textual en lugar de la referencia
+            return text; // Imprime el valor textual en lugar de la referencia, para corregir
         }
     }
 
@@ -658,12 +658,11 @@ public class Parser extends java_cup.runtime.lr_parser {
         return this.manager;
     }
 
-    // Método para que Test.java recoja las asignaciones y las pase al SemanticAnalyzer
+    // Para que Test.java recoja las asignaciones y las pase al SemanticAnalyzer
     public List<String> getAsignaciones() {
         return this.asignacionesRealizadas;
     }
 
-    // Agregar este método al final de la sección de código del parser
     public List<String> getCodigoMIPS() {
         return this.codigoMIPS;
     }
@@ -679,7 +678,7 @@ public class Parser extends java_cup.runtime.lr_parser {
                     + (cur_token != null ? cur_token.value : "null")
                     + " (línea " + (cur_token != null ? (cur_token.left + 1) : -1)
                     + ", col "   + (cur_token != null ? (cur_token.right + 1) : -1) + ")");
-        // No lanzamos excepción, para que el programa no termine abruptamente.
+        // No lanza excepción, para que el programa no termine abruptamente.
     }
 
     @Override
@@ -720,10 +719,10 @@ public class Parser extends java_cup.runtime.lr_parser {
   /*Lista para guardar las instrucciones MIPS que se van creando*/
   private List<String> codigoMIPS = new ArrayList<>();
 
-  /*Contador para generar etiquetas en MIPS unicas*/
+  /*Contador para etiquetas en MIPS unicas*/
   private int labelCount = 0;
 
-  //Método para añadir instrucción
+  //añadir instrucción
   public void addInstructionMIPS(String instruction) {
     codigoMIPS.add(instruction);
   }
@@ -911,12 +910,10 @@ class CUP$Parser$actions {
 		
         manager.addDerivation("bloque -> { lista_sentencias }");
         System.out.println("Regla 'bloque' ejecutada.");
-        // Si estamos en un contexto de función, podrías marcar el inicio del bloque.
-        // Como actualmente no se gestionan variables locales dentro de bloques,
         // se generan solo comentarios para facilitar la depuración.
         parser.addInstructionMIPS("# Inicio de bloque");
 
-        // (Aquí se asume que las instrucciones generadas en 'lista_sentencias' ya están en codigoMIPS)
+        // (se asume que las instrucciones generadas en 'lista_sentencias' ya están en codigoMIPS)
 
         parser.addInstructionMIPS("# Fin de bloque");
       
@@ -1002,7 +999,7 @@ class CUP$Parser$actions {
            System.out.println("Imprimiendo la expresión: " + e);
            // Generación de código MIPS para PRINT
            if(e.type.equals("string")){
-               // Se asume que e.text es la etiqueta de la cadena definida en .data
+               // e.text es la etiqueta de la cadena definida en .data
                parser.addInstructionMIPS("la $a0, " + e.text);
                parser.addInstructionMIPS("li $v0, 4");
                parser.addInstructionMIPS("syscall");
@@ -1048,10 +1045,10 @@ class CUP$Parser$actions {
 		
          manager.addDerivation("sentencia -> READ ( IDENTIFICADOR ) ;");
          System.out.println("Leyendo variable: " + id);
-         // Generación de código MIPS para READ (lectura de un entero)
+         // código MIPS para READ (lectura de un entero)
          parser.addInstructionMIPS("li $v0, 5");  // Syscall para leer entero
          parser.addInstructionMIPS("syscall");
-         // Se asume que la variable 'id' tiene una dirección en .data; se almacena el resultado
+         // asume que la variable 'id' tiene una dirección en .data; se almacena el resultado
          parser.addInstructionMIPS("sw $v0, " + id);
          RESULT = id;
       
@@ -1083,7 +1080,7 @@ class CUP$Parser$actions {
            }
            manager.setReturnFound(true);
            // Generación de código MIPS para RETURN:
-           // Si ret.text es un literal numérico, se carga inmediatamente; de lo contrario, se mueve su valor.
+           // Si ret.text es un literal numérico, se carga inmediatamente sino se mueve el valor.
            try {
                Integer.parseInt(ret.text);
                parser.addInstructionMIPS("li $v0, " + ret.text);
@@ -1110,7 +1107,7 @@ class CUP$Parser$actions {
            manager.addSemanticError("Uso de 'break' fuera de while/for/switch");
          }
          // Generación de código MIPS para BREAK:
-         // Se asume que el SymbolTableManager mantiene la etiqueta de salida del bucle actual.
+         // SymbolTableManager mantiene la etiqueta de salida del bucle actual.
          String exitLabel = manager.getCurrentLoopExitLabel();
          if (exitLabel != null) {
              parser.addInstructionMIPS("j " + exitLabel);
@@ -1194,9 +1191,8 @@ class CUP$Parser$actions {
         manager.addSimbolo(manager.getCurrentScope(), myid, line, col, t);
 
         // Generación de código MIPS:
-        // Como se trata de una variable global (o declarada en el scope actual),
         // se añade un comentario para indicar la reserva.
-        // La declaración real de espacio en la sección .data se realizará en MIPSGenerator.
+        // La declaración real de espacio en la sección .data se hace en MIPSGenerator.
         parser.addInstructionMIPS("# Reserva para variable " + myid);
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$0",33, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1216,7 +1212,7 @@ class CUP$Parser$actions {
 		int myidright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
 		String myid = (String)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
-        // Código posterior si es necesario
+        // si es necesario
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion",7, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1286,7 +1282,7 @@ class CUP$Parser$actions {
         String lastId = manager.getLastDeclaredIdentifier();
         SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-        // Verificar que la expresión que define la dimensión sea de tipo int
+        // la expresión que define la dimensión sea de tipo int
         if (!idx.type.equals("int")) {
             manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
         } else {
@@ -1297,7 +1293,7 @@ class CUP$Parser$actions {
                 } else {
                     if (var != null) {
                         manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
-                        System.out.println("✔ Array detectado: " + lastId + " con tamaño " + dimension);
+                        System.out.println("Array detectado: " + lastId + " con tamaño " + dimension);
                         // Generar comentario para reserva de espacio para el array.
                         parser.addInstructionMIPS("# Reserva para array " + lastId + " de tamaño " + dimension);
                     } else {
@@ -1329,7 +1325,7 @@ class CUP$Parser$actions {
         String lastId = manager.getLastDeclaredIdentifier();
         SymbolData var = manager.findSymbolInScope(lastId, manager.getCurrentScope());
 
-        // Verificar que la expresión que define la dimensión sea de tipo int
+        // que la expresión que define la dimensión sea de tipo int
         if (!idx.type.equals("int")) {
             manager.addSemanticError("Error en la declaración de array: el tamaño debe ser de tipo int, se encontró: " + idx.type);
         } else {
@@ -1612,7 +1608,7 @@ class CUP$Parser$actions {
          asignacionesRealizadas.add(asigStr);
 
          // GENERACIÓN DE CÓDIGO MIPS:
-         // Se asume que el código generado en la evaluación de 'ex' deja el resultado en $t2.
+         // asume que el código generado en la evaluación de 'ex' deja el resultado en $t2.
          parser.addInstructionMIPS("# Asignación a variable " + idVar);
          parser.addInstructionMIPS("sw $t2, " + idVar);
 
@@ -1639,16 +1635,16 @@ class CUP$Parser$actions {
            manager.addDerivation("asignacion -> IDENTIFICADOR [ expresion ] = expresion ;");
            System.out.println("Asignación a arreglo " + idVar + "[" + pos + "] = " + rhs);
 
-           // Buscamos la variable
+           // se busca la variable aquí
            SymbolTableManager.SymbolData var = manager.findSymbolRecursive(idVar);
            if (var == null) {
                manager.addSemanticError("Error: Asignación a array: variable '" + idVar + "' no declarada.");
            } else {
-               // Verificar que la variable es un array
+               // Verifica que la variable es un array
                if (!var.isArray) {
                    manager.addSemanticError("Error: La variable '" + idVar + "' no es un array.");
                }
-               // Verificar que el índice sea de tipo int
+               // Verifica que el índice sea de tipo int
                if (!pos.type.equals("int")) {
                    manager.addSemanticError("Error: El índice del array debe ser de tipo int, se encontró: " + pos.type);
                }
@@ -1663,24 +1659,24 @@ class CUP$Parser$actions {
            asignacionesRealizadas.add(asigStr);
 
            // GENERACIÓN DE CÓDIGO MIPS PARA ASIGNACIÓN A ARRAY:
-           // Se asume que:
+           // Se asume:
            // - La evaluación de la expresión 'pos' deja su resultado en $t2.
-           // - Luego, se mueve ese valor a $t3 para preservar el índice.
-           // - A continuación, la evaluación de 'rhs' deja su resultado en $t2.
+           // - Luego, se mueve ese valor a $t3 para preservar índice.
+           // - la evaluación de 'rhs' deja su resultado en $t2.
            // - Se utiliza la etiqueta 'idVar' como base del array en la sección .data.
            parser.addInstructionMIPS("# Asignación a elemento de array " + idVar);
            // Suponemos que el resultado de 'pos' ya se evaluó y está en $t2;
            // guardamos ese índice en $t3.
            parser.addInstructionMIPS("move $t3, $t2");
-           // Evaluar la expresión 'rhs' deja su resultado en $t2.
+           // Evaluar la expresión 'rhs' deja el resultado en $t2.
            // Calcular la dirección efectiva:
-           //   1. Cargar la dirección base del array.
+           //   * Cargar la dirección base del array.
            parser.addInstructionMIPS("la $t0, " + idVar);
-           //   2. Multiplicar el índice (en $t3) por 4 (tamaño de palabra).
+           //   * Multiplicar el índice (en $t3) por 4 (tamaño de palabra).
            parser.addInstructionMIPS("mul $t3, $t3, 4");
-           //   3. Sumar la dirección base y el offset.
+           //   * Sumar la dirección base y el offset.
            parser.addInstructionMIPS("add $t0, $t0, $t3");
-           //   4. Almacenar el valor de 'rhs' (en $t2) en la dirección efectiva.
+           //   * Almacenar el valor de 'rhs' (en $t2) en la dirección efectiva.
            parser.addInstructionMIPS("sw $t2, 0($t0)");
 
            RESULT = asigStr;
@@ -1705,23 +1701,23 @@ class CUP$Parser$actions {
        String t = (String) td;
        int line = funIdleft + 1;
        int col  = funIdright + 1;
-       // Crear el scope para la función y registrar la función en la tabla de símbolos
+       // crear scope y registrar la función en la tabla de símbolos
        manager.crearScopeFuncion(t, funId, line, col);
 
        // Pila de tipo de retorno
        manager.pushFunctionReturnType(t);
-       // Reiniciamos el flag de return para esta función
+       // Reinicia el flag de return para esta función
        manager.resetReturnFound();
 
        // --- Generación del prólogo de la función ---
-       // Etiquetamos la función con su nombre
+       // etiqueta la función con nombre
        parser.addInstructionMIPS(funId + ":");
-       // Reservamos espacio en la pila para $ra y $fp (por ejemplo, 8 bytes)
+       // reserva espacio en la pila para $ra y $fp (por ejemplo, 8 bytes)
        parser.addInstructionMIPS("addi $sp, $sp, -8");
-       // Guardamos el registro de retorno y el frame pointer en el stack
+       // registro de retorno y el frame pointer en el stack
        parser.addInstructionMIPS("sw $ra, 4($sp)");
        parser.addInstructionMIPS("sw $fp, 0($sp)");
-       // Establecemos el nuevo frame pointer
+       // el nuevo frame pointer
        parser.addInstructionMIPS("move $fp, $sp");
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("NT$1",34, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1762,12 +1758,12 @@ class CUP$Parser$actions {
        }
 
        // --- Generación del epílogo de la función ---
-       // Restaurar el stack frame y los registros guardados
+       // Restaura el stack frame y los registros guardados
        parser.addInstructionMIPS("move $sp, $fp");      // Restaurar $sp desde $fp
        parser.addInstructionMIPS("lw $fp, 0($sp)");       // Restaurar $fp
        parser.addInstructionMIPS("lw $ra, 4($sp)");       // Restaurar $ra
-       parser.addInstructionMIPS("addi $sp, $sp, 8");     // Liberar el espacio reservado
-       parser.addInstructionMIPS("jr $ra");               // Salto a la dirección de retorno
+       parser.addInstructionMIPS("addi $sp, $sp, 8");     // Libera el espacio reservado
+       parser.addInstructionMIPS("jr $ra");               // Salto a ls dirección de retorno
 
        manager.popScope();
        manager.popFunctionReturnType();
@@ -1952,22 +1948,21 @@ class CUP$Parser$actions {
 		Object b = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
           manager.addDerivation("if_estructura -> IF ( expresion ) bloque");
-          // Generar etiquetas para la rama falsa y la salida del if
+          // Generar etiquetas
           String falseLabel = "if_false_" + parser.labelCount;
           String exitLabel = "if_exit_" + parser.labelCount++;
 
-          // Generación de código MIPS:
+          // MIPS:
           parser.addInstructionMIPS("# Inicio de if");
-          // Se asume que la evaluación de la condición deja su resultado en $t2
+          // asume que la evaluación de la condición deja resultado en $t2
           parser.addInstructionMIPS("lw $t2, " + cond.text);
           // Si la condición es falsa, saltar a falseLabel
           parser.addInstructionMIPS("beqz $t2, " + falseLabel);
-          // Código del bloque verdadero (ya generado en 'b')
+          // Código del bloque (ya generado en 'b')
           // Luego, saltar al final del if
           parser.addInstructionMIPS("j " + exitLabel);
           // Rama falsa:
           parser.addInstructionMIPS(falseLabel + ":");
-          // (Opcional: código para la rama falsa, si se desea)
           // Etiqueta de salida:
           parser.addInstructionMIPS(exitLabel + ":");
 
@@ -2001,15 +1996,15 @@ class CUP$Parser$actions {
           String falseLabel = "if_false_" + parser.labelCount;
           String exitLabel = "if_exit_" + parser.labelCount++;
 
-          // Generación de código MIPS:
+          // código MIPS:
           parser.addInstructionMIPS("# Inicio de if-else");
           parser.addInstructionMIPS("lw $t2, " + cond.text);
           parser.addInstructionMIPS("beqz $t2, " + falseLabel);
-          // Código para el bloque verdadero (b1)
+          // bloque verdadero (b1)
           parser.addInstructionMIPS("j " + exitLabel);
           // Rama falsa:
           parser.addInstructionMIPS(falseLabel + ":");
-          // Código para el bloque del else (b2)
+          // bloque del else (b2)
           parser.addInstructionMIPS(exitLabel + ":");
 
           RESULT = "if(" + cond.text + ") " + b1 + " else " + b2;
@@ -2059,16 +2054,14 @@ class CUP$Parser$actions {
       parser.addInstructionMIPS("# Inicio del while");
       parser.addInstructionMIPS(loopStart + ":");
 
-      // Evaluar la condición; se asume que cond.text contiene la dirección o el registro
+      // se asume que cond.text contiene la dirección o el registro
       // donde se encuentra el resultado de la condición.
       parser.addInstructionMIPS("lw $t2, " + cond.text);
 
-      // Si la condición es falsa (0), saltar a la etiqueta de salida.
+      // Si es falsa (0), saltar a la etiqueta de salida.
       parser.addInstructionMIPS("beqz $t2, " + loopExit);
 
-      // El cuerpo del while (bloque 'bl') ya generó sus instrucciones en el momento adecuado.
-      // Aquí se asume que las instrucciones correspondientes al bloque se encuentran en la lista codigoMIPS.
-
+      // El cuerpo del while (bloque 'bl') ya generó sus instrucciones en el momento
       // Salto incondicional para repetir el bucle.
       parser.addInstructionMIPS("j " + loopStart);
 
@@ -2131,40 +2124,37 @@ class CUP$Parser$actions {
          String forStep  = "for_step_"  + parser.labelCount++;
          String forExit  = "for_exit_"  + parser.labelCount++;
 
-         // --- Generación de código MIPS para el for ---
+         // --- código MIPS para el for ---
 
-         // La inicialización 'ini' ya se evaluó previamente.
+         // 'ini' ya se evaluó previamente.
          parser.addInstructionMIPS("# Inicio del for: inicialización completada");
 
-         // Etiqueta para el inicio del bucle: se evalúa la condición a partir de aquí.
+         // se evalúa la condición a partir de aquí.
          parser.addInstructionMIPS(forStart + ":");
 
-         // Evaluar la condición.
          // Se asume que 'cond.text' es una dirección o etiqueta de la cual cargar el valor booleano.
          parser.addInstructionMIPS("lw $t2, " + cond.text);
          // Si la condición es falsa (0), saltar a la etiqueta de salida.
          parser.addInstructionMIPS("beqz $t2, " + forExit);
 
-         // Se ejecuta el cuerpo del bucle (bloque 'bl' ya generó sus instrucciones).
-         // [Aquí se insertan las instrucciones del bloque, ya que se han ido acumulando]
+         // cuerpo del bucle (bloque 'bl' ya generó instrucciones).
+         // [Aquí deberían de insertarse las instrucciones del bloque, ya que se han ido acumulando]
 
          // Etiqueta para la fase de actualización (step).
          parser.addInstructionMIPS(forStep + ":");
-         // Se asume que la evaluación de 'step' ya generó sus instrucciones y deja su resultado en $t2.
-         // (Si fuera necesario, se podría insertar el código para 'step' aquí o llamar a addInstructionMIPS)
-         // En este ejemplo, simplemente se indica con un comentario:
+         // la evaluación de 'step' ya generó sus instrucciones y deja su resultado en $t2.
          parser.addInstructionMIPS("# Ejecución de la fase step del for");
 
          // Salto incondicional para volver a evaluar la condición.
          parser.addInstructionMIPS("j " + forStart);
 
-         // Etiqueta de salida del bucle.
+         // salida del bucle.
          parser.addInstructionMIPS(forExit + ":");
 
-         // Establecer el resultado semántico (puedes ajustar la representación textual según convenga)
+         // Establecer el resultado semántico
          RESULT = "for(" + ini + ", " + cond.text + ", " + step.text + ") " + bl;
 
-         // Validar que la condición sea de tipo bool.
+         // validar la condición sea de tipo bool.
          if (!((Parser.ExprInfo)cond).type.equals("bool")) {
              manager.addSemanticError("La condición del for debe ser bool, encontrado: " +
                                         ((Parser.ExprInfo)cond).type);
@@ -2206,13 +2196,13 @@ class CUP$Parser$actions {
 		Object cs = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-1)).value;
 		
       manager.addDerivation("switch_estructura -> SWITCH ( expresion ) { case_blocks }");
-      // Generar etiqueta para la salida del switch
+      //etiqueta para la salida del switch
       String switchExit = "switch_exit_" + parser.labelCount;
       parser.labelCount++;
       // Guardar la etiqueta de salida en el manager para que los case la usen
       manager.setSwitchExitLabel(switchExit);
 
-      // Evaluar la expresión del switch: se asume que sw.text contiene la dirección o el registro del resultado.
+      // se asume que sw.text contiene la dirección o el registro del resultado.
       parser.addInstructionMIPS("# Evaluar expresión del switch");
       parser.addInstructionMIPS("lw $t0, " + ((Parser.ExprInfo)sw).text);
 
@@ -2221,7 +2211,7 @@ class CUP$Parser$actions {
       parser.addInstructionMIPS("# Inicio de los case blocks");
       parser.addInstructionMIPS((String)cs);
 
-      // Etiqueta de salida del switch
+      // salida del switch
       parser.addInstructionMIPS(switchExit + ":");
 
       RESULT = "switch(" + ((Parser.ExprInfo)sw).text + ") { " + (String)cs + " }";
@@ -2310,11 +2300,11 @@ class CUP$Parser$actions {
         manager.addDerivation("case_block -> CASE L_INTEGER : bloque");
         String caseLabel = "case_" + li + "_" + parser.labelCount;
         parser.labelCount++;
-        // Generar comparación: cargar el literal en $t1 y comparar con el valor del switch en $t0.
+        // comparación: cargar el literal en $t1 y comparar con el valor del switch en $t0.
         parser.addInstructionMIPS("# Comprobando case " + li);
         parser.addInstructionMIPS("li $t1, " + li);
         parser.addInstructionMIPS("beq $t0, $t1, " + caseLabel);
-        // Generar el bloque de código para este caso:
+        // bloque de código para este caso:
         parser.addInstructionMIPS(caseLabel + ":");
         // Se castea bl a String
         parser.addInstructionMIPS((String)bl);
@@ -2396,7 +2386,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " || " + e2.text + ")";
-       // Generar código MIPS para OR:
+       // MIPS para OR:
        parser.addInstructionMIPS("# Evaluación de ||");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
@@ -2458,7 +2448,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " == " + e2.text + ")";
-       // Generar código MIPS para comparación de igualdad:
+       // código MIPS para comparación de igualdad:
        parser.addInstructionMIPS("# Evaluación de ==");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
@@ -2489,7 +2479,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " != " + e2.text + ")";
-       // Código MIPS para desigualdad:
+       // para desigualdad:
        parser.addInstructionMIPS("# Evaluación de !=");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
@@ -2522,7 +2512,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " < " + e2.text + ")";
-       // Código MIPS para comparación de menor:
+       // código para comparación de menor:
        parser.addInstructionMIPS("# Evaluación de <");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
@@ -2558,7 +2548,7 @@ class CUP$Parser$actions {
        parser.addInstructionMIPS("# Evaluación de <=");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
-       // Usamos 'slt' y luego invertimos el resultado:
+       // Usa 'slt' y luego invierte el resultado:
        parser.addInstructionMIPS("slt $t3, $t0, $t1");
        parser.addInstructionMIPS("xori $t2, $t3, 1");
        RESULT = out;
@@ -2656,7 +2646,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " + " + e2.text + ")";
-       // Código MIPS para suma:
+       // MIPS para suma:
        parser.addInstructionMIPS("# Evaluación de +");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
@@ -2726,7 +2716,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " * " + e2.text + ")";
-       // Código MIPS para multiplicación:
+       // multiplicación:
        parser.addInstructionMIPS("# Evaluación de *");
        parser.addInstructionMIPS("lw $t0, " + e1.text);
        parser.addInstructionMIPS("lw $t1, " + e2.text);
@@ -2842,7 +2832,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "(" + e1.text + " ^ " + e2.text + ")";
-       // Código MIPS para potencia (bucle de multiplicación):
+       // potencia (bucle de multiplicación):
        parser.addInstructionMIPS("# Evaluación de ^ (potencia)");
        // Cargar operandos:
        parser.addInstructionMIPS("lw $t0, " + e1.text);
@@ -2884,7 +2874,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "!(" + e.text + ")";
-       // Código MIPS para NOT: se utiliza seqz (set equal to zero)
+       // para NOT: se utiliza seqz (set equal to zero)
        parser.addInstructionMIPS("# Evaluación de !");
        parser.addInstructionMIPS("lw $t0, " + e.text);
        parser.addInstructionMIPS("seq $t2, $t0, $zero");
@@ -2911,7 +2901,7 @@ class CUP$Parser$actions {
            out.type = "error";
        }
        out.text = "-(" + e.text + ")";
-       // Código MIPS para negativo unario:
+       // negativo unario:
        parser.addInstructionMIPS("# Evaluación de - unario");
        // Se carga el operando y se niega (usando substract de cero)
        parser.addInstructionMIPS("lw $t0, " + e.text);
@@ -2945,7 +2935,6 @@ class CUP$Parser$actions {
            }
        }
        out.text = "++" + id;
-       // Código MIPS para pre-incremento:
        parser.addInstructionMIPS("# Pre-incremento de " + id);
        parser.addInstructionMIPS("lw $t0, " + id);
        parser.addInstructionMIPS("addi $t0, $t0, 1");
@@ -2981,7 +2970,6 @@ class CUP$Parser$actions {
            }
        }
        out.text = "--" + id;
-       // Código MIPS para pre-decremento:
        parser.addInstructionMIPS("# Pre-decremento de " + id);
        parser.addInstructionMIPS("lw $t0, " + id);
        parser.addInstructionMIPS("addi $t0, $t0, -1");
@@ -3016,7 +3004,6 @@ class CUP$Parser$actions {
            }
        }
        out.text = id + "++";
-       // Código MIPS para post-incremento:
        // Primero se carga el valor, se guarda en $t2 (resultado) y luego se incrementa la variable.
        parser.addInstructionMIPS("# Post-incremento de " + id);
        parser.addInstructionMIPS("lw $t0, " + id);
@@ -3052,7 +3039,6 @@ class CUP$Parser$actions {
            }
        }
        out.text = id + "--";
-       // Código MIPS para post-decremento:
        parser.addInstructionMIPS("# Post-decremento de " + id);
        parser.addInstructionMIPS("lw $t0, " + id);
        parser.addInstructionMIPS("move $t2, $t0");
@@ -3108,7 +3094,7 @@ class CUP$Parser$actions {
        }
        out.text = id + "(...)";
 
-       // Generación de código MIPS para llamada a función:
+       // código MIPS para llamada a función:
        int numArgs = ((List<ExprInfo>) argList).size();
        // Empujar argumentos en orden inverso
        for (int i = numArgs - 1; i >= 0; i--) {
@@ -3156,7 +3142,7 @@ class CUP$Parser$actions {
            }
        }
        out.text = id;
-       // Para una variable, se carga su valor
+       // Para una variable se carga el valor
        parser.addInstructionMIPS("# Acceso a variable " + id);
        parser.addInstructionMIPS("lw $t2, " + id);
        RESULT = out;
@@ -3177,7 +3163,7 @@ class CUP$Parser$actions {
        ExprInfo out = new ExprInfo();
        out.type = "int";
        out.text = lint.toString();
-       // Generar código MIPS para cargar el literal
+       // cargar el literal
        parser.addInstructionMIPS("# Cargar literal entero " + lint.toString());
        parser.addInstructionMIPS("li $t2, " + lint.toString());
        RESULT = out;
@@ -3198,13 +3184,12 @@ class CUP$Parser$actions {
        ExprInfo out = new ExprInfo();
        out.type = "float";
        out.text = flit.toString();
-       // Generación de código MIPS para cargar un literal float de forma real
+       // cargar un literal float de forma real
        parser.addInstructionMIPS("# Cargar literal float " + flit.toString());
-       // Usamos la instrucción li.s para cargar el valor en el registro flotante $f0
+       // li.s para cargar el valor en el registro flotante $f0
        parser.addInstructionMIPS("li.s $f0, " + flit.toString());
-       // Movemos el valor a $f2 (registro flotante donde dejamos el resultado)
+       // el valor se lleva a $f2 (registro flotante donde queda el resultado)
        parser.addInstructionMIPS("mov.s $f2, $f0");
-       // Si se requiere usar el valor en operaciones enteras o mixtas, se puede mover a $t2:
        parser.addInstructionMIPS("mfc1 $t2, $f2");
        RESULT = out;
     
@@ -3223,7 +3208,7 @@ class CUP$Parser$actions {
          manager.addDerivation("expresion -> CHAR_LITERAL");
          ExprInfo out = new ExprInfo();
          out.type = "char";
-         // Convertir explícitamente el Character a String.
+         // Convertir explícitamente el Character a String o hay problemas
          String chStr = Character.toString((Character) chl);
          out.text = "'" + chStr + "'";
          // Se carga el valor ASCII del carácter.
@@ -3248,7 +3233,6 @@ class CUP$Parser$actions {
        out.type = "string";
        out.text = "\"" + str + "\"";
        // Para cadenas, se asume que se ha declarado una etiqueta en la sección .data.
-       // Aquí solo se genera un comentario.
        parser.addInstructionMIPS("# Acceso a literal string " + str);
        RESULT = out;
     
@@ -3269,7 +3253,7 @@ class CUP$Parser$actions {
        out.type = "bool";
        out.text = boo.toString();
        parser.addInstructionMIPS("# Cargar literal booleano " + boo.toString());
-       // Asumimos 1 para true y 0 para false:
+       // 1 para true
        if(boo.toString().equals("true")){
            parser.addInstructionMIPS("li $t2, 1");
        } else {
@@ -3312,23 +3296,23 @@ class CUP$Parser$actions {
                          " está fuera de los límites (0-" + (var.arraySize - 1) + ") en el arreglo " + arr);
                    }
                } catch(NumberFormatException nfe){
-                   // Si no es evaluable en tiempo de compilación, se omite la comprobación.
+                   // no es evaluable en tiempo de compilación, se omite
                }
            }
            out.type = var.type;
        }
        out.text = arr + "[" + ex.text + "]";
-       // Generar código MIPS para acceso a array:
+       // acceso a array:
        parser.addInstructionMIPS("# Acceso a elemento de array " + arr);
-       // Se asume que el resultado de 'ex' está en $t2 y se mueve a $t3:
+       // aquí el resultado de 'ex' está en $t2 y se mueve a $t3 eso se asume:
        parser.addInstructionMIPS("move $t3, $t2");
-       // Cargar la dirección base del array:
+       // Cargar la dirección base del array
        parser.addInstructionMIPS("la $t0, " + arr);
        // Calcular el offset: multiplicar el índice ($t3) por 4 (tamaño de palabra)
        parser.addInstructionMIPS("mul $t3, $t3, 4");
        // Sumar el offset a la base para obtener la dirección efectiva:
        parser.addInstructionMIPS("add $t0, $t0, $t3");
-       // Cargar el valor del array en $t2:
+       // Cargar el valor del array en $t2 donde queda:
        parser.addInstructionMIPS("lw $t2, 0($t0)");
        RESULT = out;
     
@@ -3346,7 +3330,7 @@ class CUP$Parser$actions {
 		
        manager.addDerivation("expresion -> ( expresion )");
        ExprInfo out = new ExprInfo(ex.type, "(" + ex.text + ")");
-       // Generar código MIPS para agrupar (simplemente se propaga el resultado)
+       // agrupar (simplemente se propaga el resultado)
        // No se necesita instrucción extra.
        RESULT = out;
     
@@ -3374,7 +3358,7 @@ class CUP$Parser$actions {
               java.util.List<ExprInfo> RESULT =null;
 		
       manager.addDerivation("argumentos -> /* epsilon */");
-      // Retornamos una lista vacía de ExprInfo
+      // Retorna una lista vacía de ExprInfo
       RESULT = new ArrayList<ExprInfo>();
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("argumentos",30, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
