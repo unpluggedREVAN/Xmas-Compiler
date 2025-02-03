@@ -1,5 +1,9 @@
 /* ============================================================================
    parser.cup - Xmas-Compiler (versión de la fase 3)
+   Fuentes:
+   - https://web.stanford.edu/class/cs143/
+   - https://github.com/search?q=MIPS+compiler+java&type=repositories
+   - https://github.com/Ricardo96r/MIPS-Assembly-Ejemplos/tree/master
 ============================================================================ */
 package ParserLexer;
 
