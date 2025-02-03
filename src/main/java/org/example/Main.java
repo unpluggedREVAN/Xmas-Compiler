@@ -21,7 +21,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
-            System.out.println("\n===== Xmas-Scanner =====");
+            System.out.println("\n===== Xmas-Compiler =====");
             System.out.println("1. Generar el ParserLexer (borra los anteriores y genera nuevos)");
             System.out.println("2. Compilar los archivos");
             System.out.println("3. Procesar un archivo");
