@@ -1,5 +1,5 @@
 /* ============================================================================
-   parser.cup - Xmas-Compiler (versión final con modificaciones semánticas)
+   parser.cup - Xmas-Compiler (versión de la fase 3)
 ============================================================================ */
 package ParserLexer;
 

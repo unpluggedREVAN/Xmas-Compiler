@@ -32,7 +32,7 @@ public class SymbolTableManager {
         public boolean isFunction;
         public List<String> paramTypes;  // p.e. ["int:param1", "float:param2"]
 
-        // NUEVO: para controlar uso de variables sin inicializar (opcional)
+        // NUEVO: para controlar uso de variables sin inicializar (pero lo puedo hacer diferente)
         public boolean isInitialized;
 
         public SymbolData(String lexeme, String type, int line, int column, String scope, Object value) {
@@ -137,7 +137,7 @@ public class SymbolTableManager {
     // ----------------------------------------------------------------
 
     /**
-     * Crea un nuevo scope para una función (y registra la función
+     * Este crea un nuevo scope para una función (y registra la función
      * en la tabla de símbolos del scope actual).
      */
     public void crearScopeFuncion(String returnType, String funcName, int line, int col) {
@@ -175,14 +175,14 @@ public class SymbolTableManager {
                     if (findSymbolInScope(lexeme, parentScope) != null) {
                         addSemanticError("Advertencia: variable '" + lexeme + "' declarada en scope '" + scope +
                                 "' sobrescribe la variable definida en el scope '" + parentScope + "'");
-                        // Si prefieres tratarlo como error, puedes usar "return;" en lugar de "break;"
+                        // se puede usar "return;" en lugar de "break; para tratar como error"
                         break;
                     }
                 }
             }
         }
 
-        // Agregar el símbolo en el scope actual
+        // Agregr el símbolo en el scope actual
         SymbolData data = new SymbolData(lexeme, type, line, col, scope, null);
         tablaSimbolos.get(scope).add(data);
 
@@ -209,7 +209,7 @@ public class SymbolTableManager {
         String funcScope = getCurrentScope();
         SymbolData funcSym = findSymbolInScope(funcScope, funcScope);
         if (funcSym != null && funcSym.isFunction) {
-            // Solo añadimos si no está repetido
+            // Solo se añade si no estaba
             String joined = paramType + ":" + paramName;
             if (funcSym.paramTypes.contains(joined)) {
                 addSemanticError("Parámetro repetido '" + paramName
@@ -340,7 +340,7 @@ public class SymbolTableManager {
      * Verifica si un string corresponde a un tipo básico válido
      */
     public boolean isValidType(String t) {
-        // Ajustar según los tipos que manejas (tipado explícito y fuerte)
+        // hay que ajustar para los tipos
         return t.equals("int") || t.equals("float")
                 || t.equals("bool") || t.equals("char")
                 || t.equals("string");
@@ -359,11 +359,11 @@ public class SymbolTableManager {
         if (tipoDeclarado.equals(tipoExpr)) {
             return true;
         }
-        // Permitir conversión implícita: asignar un int a una variable float.
+        // asignar un int a una variable float, en cierto caso se permite
         if (tipoDeclarado.equals("float") && tipoExpr.equals("int")) {
             return true;
         }
-        // Se pueden añadir más reglas según las conversiones permitidas.
+        // añadir las otras aquí
         return false;
     }
 
@@ -400,7 +400,7 @@ public class SymbolTableManager {
     }
 
     // ----------------------------------------------------------------
-    // NUEVOS MÉTODOS para la pila de retorno de funciones
+    // NUEVOS métodos para la pila de retorno de funciones
     // ----------------------------------------------------------------
     /**
      * Indica si estamos dentro de alguna función.
@@ -449,7 +449,7 @@ public class SymbolTableManager {
     }
 
     // ----------------------------------------------------------------
-    // NUEVOS MÉTODOS para la pila de estructuras de control
+    // para la pila de estructuras de control
     // ----------------------------------------------------------------
     /**
      * Invocado cuando se entra a un while, for, o switch (u otras si aplican).

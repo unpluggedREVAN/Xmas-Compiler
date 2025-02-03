@@ -8,7 +8,7 @@ import java.util.List;
 public class MIPSGenerator {
 
     private SymbolTableManager symbolTable;
-    private List<String> asignaciones;  // Lista de asignaciones (puede usarse para chequeos adicionales)
+    private List<String> asignaciones;  // Lista de asignaciones (para chequeos extra)
     private List<String> codigoMIPS;    // Lista de instrucciones MIPS generadas en el parser
 
     /**
@@ -31,44 +31,65 @@ public class MIPSGenerator {
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(outputFile))) {
             // ---------------------------
-            // Sección .data: Declaraciones
+            // Sección .data: Declaración de variables y arreglos
             // ---------------------------
             pw.println(".data");
-            // Recorremos los símbolos del scope "global" para reservar espacio
+            // Recorremos los símbolos del scope "global"
             List<SymbolTableManager.SymbolData> globalSymbols = symbolTableSymbolsInScope("global");
             if (globalSymbols != null) {
                 for (SymbolTableManager.SymbolData sd : globalSymbols) {
-                    // Generar la directiva adecuada según el tipo declarado
-                    if (sd.type.equals("int")) {
-                        pw.println(sd.lexeme + ": .word 0");
-                    } else if (sd.type.equals("float")) {
-                        pw.println(sd.lexeme + ": .float 0.0");
-                    } else if (sd.type.equals("bool")) {
-                        // Usamos .word para booleanos (0 para false, 1 para true)
-                        pw.println(sd.lexeme + ": .word 0");
-                    } else if (sd.type.equals("char")) {
-                        // Reservamos un byte para un char
-                        pw.println(sd.lexeme + ": .byte 0");
-                    } else if (sd.type.equals("string")) {
-                        // Para cadenas, se reserva espacio con .asciiz (se puede modificar para almacenar el literal real)
-                        pw.println(sd.lexeme + ": .asciiz \"\"");
+                    if (sd.isArray) {
+                        // Reservar espacio para arreglos según el tipo base y tamaño.
+                        if (sd.type.equals("int") || sd.type.equals("bool")) {
+                            // Se asume 4 bytes por elemento.
+                            pw.println(sd.lexeme + ": .space " + (sd.arraySize * 4));
+                        } else if (sd.type.equals("float")) {
+                            pw.println(sd.lexeme + ": .space " + (sd.arraySize * 4));
+                        } else if (sd.type.equals("char")) {
+                            // 1 byte por elemento.
+                            pw.println(sd.lexeme + ": .space " + sd.arraySize);
+                        } else if (sd.type.equals("string")) {
+                            // Los arreglos de strings requieren un manejo especial; por ahora, se deja un comentario.
+                            pw.println("# Arreglo de strings " + sd.lexeme + " requiere manejo especial");
+                        }
+                    } else {
+                        // Variables escalares
+                        if (sd.type.equals("int")) {
+                            pw.println(sd.lexeme + ": .word " + (sd.value != null ? sd.value : 0));
+                        } else if (sd.type.equals("float")) {
+                            pw.println(sd.lexeme + ": .float " + (sd.value != null ? sd.value : 0.0));
+                        } else if (sd.type.equals("bool")) {
+                            // Convertir boolean a 1 (true) o 0 (false)
+                            int boolVal = 0;
+                            if (sd.value != null && sd.value instanceof Boolean) {
+                                boolVal = ((Boolean) sd.value) ? 1 : 0;
+                            }
+                            pw.println(sd.lexeme + ": .word " + boolVal);
+                        } else if (sd.type.equals("char")) {
+                            // Reservar un byte para un char; se convierte el valor a ASCII.
+                            String charVal = "";
+                            if (sd.value != null) {
+                                charVal = String.valueOf(sd.value);
+                            }
+                            pw.println(sd.lexeme + ": .byte " + (charVal.isEmpty() ? 0 : (int) charVal.charAt(0)));
+                        } else if (sd.type.equals("string")) {
+                            // Reservar espacio para la cadena usando .asciiz; si no hay valor se reserva cadena vacía.
+                            String strVal = (sd.value != null) ? sd.value.toString() : "";
+                            pw.println(sd.lexeme + ": .asciiz \"" + strVal + "\"");
+                        }
                     }
-                    // Si se necesitan otros tipos o arrays, se pueden agregar más casos aquí.
                 }
             }
-            // Se pueden agregar directivas de alineación o constantes, según se requiera.
 
             // ---------------------------
-            // Sección .text: Código
+            // Sección .text: Código MIPS
             // ---------------------------
             pw.println("\n.text");
-            pw.println(".globl main");
             pw.println("main:");
-            // Se escriben todas las instrucciones acumuladas en la lista codigoMIPS
             for (String instr : codigoMIPS) {
                 pw.println(instr);
             }
-            // Instrucciones finales para terminar la ejecución del programa
+            // Instrucciones finales para terminar la ejecución del program
             pw.println("\n# Fin del programa - syscall de salida");
             pw.println("li $v0, 10");
             pw.println("syscall");

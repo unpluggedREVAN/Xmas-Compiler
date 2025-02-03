@@ -5,8 +5,8 @@ import java.util.Set;
 import java.util.HashSet;
 
 /**
- * Analizador semántico ampliado para cubrir los puntos clave
- * de la Fase 3.
+ * Analizador ampliado / se migraron los métodos acá
+ *
  */
 public class SemanticAnalyzer {
 
@@ -25,18 +25,17 @@ public class SemanticAnalyzer {
         checkDeclaracionesYTipos();
         checkTiposExpresiones();
 
-        // Chequeos nuevos o ampliados
         checkUniqueMain();
         checkArrayDimensions();
         checkFunctionParams();
-        // Podrías añadir más si lo deseas (control de break/continue, etc.)
+        // control de break falta
 
         System.out.println("[SEMANTIC] Análisis semántico terminado.\n");
     }
 
     /**
      * 1) Verificación de uso de variables (deben estar declaradas antes de usarse).
-     *    Este método ya existía de forma similar.
+     *
      */
     private void checkDeclaracionesYTipos() {
         for (String asig : asignacionesSimples) {
@@ -50,8 +49,8 @@ public class SemanticAnalyzer {
     }
 
     /**
-     * 2) Chequeo de tipos de expresiones (simplificado).
-     *    Ejemplo: si la variable es int y la expresión contiene '.', asumimos float.
+     * 2) Chequeo de tipos de expresiones
+     *    Ejemplo: si la variable es int y la expresión contiene '.', asume float.
      */
     private void checkTiposExpresiones() {
         for (String asig : asignacionesSimples) {
@@ -61,12 +60,12 @@ public class SemanticAnalyzer {
             SymbolTableManager.SymbolData sd = symbolTable.findSymbolRecursive(var);
             if (sd == null) continue; // Ya se reportó
 
-            // Chequeo muy básico de "float" vs "int"
+            // Chequeo de "float" vs "int"
             if (sd.type.equals("int") && expr.contains(".")) {
                 symbolTable.addSemanticError("Asignando float a variable int ("+ var + ") en " + asig);
             }
 
-            // Detectar división por cero sencilla: "/0"
+            // Detectar división por cero
             if (expr.contains("/0")) {
                 symbolTable.addSemanticError("División por cero en la expresión: " + expr);
             }
@@ -107,14 +106,14 @@ public class SemanticAnalyzer {
     }
 
     /**
-     * 5) Verificar que los parámetros de cada función no se repitan
-     *    y que sus tipos sean válidos.
+     * 5) Verifica que los parámetros de cada función no se repitan
+     *    y que los tipos sean válidos.
      */
     private void checkFunctionParams() {
         for (var entry : symbolTable.getTablaSimbolos().entrySet()) {
             for (var sd : entry.getValue()) {
                 if (sd.isFunction) {
-                    // Revisamos sd.paramTypes, que lucen como "tipo:paramName"
+                    // Revisar sd.paramTypes
                     Set<String> seenParamNames = new HashSet<>();
                     for (String paramDesc : sd.paramTypes) {
                         String[] parts = paramDesc.split(":");
@@ -141,7 +140,7 @@ public class SemanticAnalyzer {
     }
 
     // --------------------------------------------------
-    // Métodos auxiliares para parsear la asignación simple
+    // para parsear la asignación simple
     // --------------------------------------------------
     private String parseVarFromAssign(String asigStr) {
         // "assign(x= expr)"

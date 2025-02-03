@@ -59,7 +59,7 @@ public class Test {
             System.out.println("Iniciando generación de código MIPS...");
             // Se crea la instancia de MIPSGenerator pasando:
             // 1. La tabla de símbolos (obtención con getSymbolTableManager())
-            // 2. La lista de instrucciones MIPS (obtenida con getCodigoMIPS(), método que debes agregar en Parser)
+            // 2. La lista de instrucciones MIPS
             // 3. La lista de asignaciones (getAsignaciones())
             MIPSGenerator mipsGen = new MIPSGenerator(
                     parser.getSymbolTableManager(),
