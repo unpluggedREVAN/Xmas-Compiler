@@ -24,7 +24,7 @@ public class Main {
             System.out.println("\n===== Xmas-Scanner =====");
             System.out.println("1. Generar el ParserLexer (borra los anteriores y genera nuevos)");
             System.out.println("2. Compilar los archivos");
-            System.out.println("3. Probar el scanner");
+            System.out.println("3. Procesar un archivo");
             System.out.println("4. Salir");
             System.out.print("Seleccione una opción: ");
 

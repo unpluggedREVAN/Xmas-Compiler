@@ -822,8 +822,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> MAIN");
-        // Generar el prólogo de main: etiquetar con "main:".
-        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -835,8 +833,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> MAIN ( )");
-        // Generar el prólogo de main.
-        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -848,8 +844,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> tipo_dato MAIN");
-        // Generar el prólogo de main.
-        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-1)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -861,8 +855,6 @@ class CUP$Parser$actions {
               Object RESULT =null;
 		
         manager.addDerivation("maindeclaracion -> tipo_dato MAIN ( )");
-        // Generar el prólogo de main.
-        parser.addInstructionMIPS("main:");
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("maindeclaracion",3, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-3)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1006,33 +998,41 @@ class CUP$Parser$actions {
 		int eright = ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)).right;
 		ExprInfo e = (ExprInfo)((java_cup.runtime.Symbol) CUP$Parser$stack.elementAt(CUP$Parser$top-2)).value;
 		
-         manager.addDerivation("sentencia -> PRINT ( expresion ) ;");
-         System.out.println("Imprimiendo la expresión: " + e);
-         // Generación de código MIPS para PRINT
-         if(e.type.equals("string")){
-             // Se asume que e.text es la etiqueta de la cadena definida en .data
-             parser.addInstructionMIPS("la $a0, " + e.text);
-             parser.addInstructionMIPS("li $v0, 4");
-             parser.addInstructionMIPS("syscall");
-         } else if(e.type.equals("int") || e.type.equals("float")){
-             // Si e.text es un literal, se carga de inmediato; de lo contrario, se asume que es el nombre de una variable
-             try {
-                 // Intentamos interpretar e.text como número literal
-                 Integer.parseInt(e.text);
-                 parser.addInstructionMIPS("li $a0, " + e.text);
-             } catch (NumberFormatException ex) {
-                 // Si no es un literal, se asume que e.text es una etiqueta o dirección
-                 parser.addInstructionMIPS("lw $a0, " + e.text);
-             }
-             parser.addInstructionMIPS("li $v0, 1");
-             parser.addInstructionMIPS("syscall");
-         } else {
-             // Para otros tipos, se puede agregar un mensaje o usar syscall 1
-             parser.addInstructionMIPS("la $a0, " + e.text);
-             parser.addInstructionMIPS("li $v0, 4");
-             parser.addInstructionMIPS("syscall");
-         }
-         RESULT = e;
+           manager.addDerivation("sentencia -> PRINT ( expresion ) ;");
+           System.out.println("Imprimiendo la expresión: " + e);
+           // Generación de código MIPS para PRINT
+           if(e.type.equals("string")){
+               // Se asume que e.text es la etiqueta de la cadena definida en .data
+               parser.addInstructionMIPS("la $a0, " + e.text);
+               parser.addInstructionMIPS("li $v0, 4");
+               parser.addInstructionMIPS("syscall");
+           } else if(e.type.equals("int")){
+               try {
+                   Integer.parseInt(e.text);
+                   parser.addInstructionMIPS("li $a0, " + e.text);
+               } catch (NumberFormatException ex) {
+                   parser.addInstructionMIPS("lw $a0, " + e.text);
+               }
+               parser.addInstructionMIPS("li $v0, 1");
+               parser.addInstructionMIPS("syscall");
+           } else if(e.type.equals("float")){
+               try {
+                   Float.parseFloat(e.text);
+                   // Si es literal float, se carga directamente en $f12
+                   parser.addInstructionMIPS("li.s $f12, " + e.text);
+               } catch(NumberFormatException ex) {
+                   // Si no es literal, se asume que e.text es la etiqueta de una variable
+                   parser.addInstructionMIPS("l.s $f12, " + e.text);
+               }
+               parser.addInstructionMIPS("li $v0, 2");
+               parser.addInstructionMIPS("syscall");
+           } else {
+               // Para otros tipos, se imprime como cadena.
+               parser.addInstructionMIPS("la $a0, " + e.text);
+               parser.addInstructionMIPS("li $v0, 4");
+               parser.addInstructionMIPS("syscall");
+           }
+           RESULT = e;
       
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("sentencia",6, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-4)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
@@ -1248,15 +1248,25 @@ class CUP$Parser$actions {
         SymbolData var = manager.findSymbolRecursive(lastId);
 
         if (var != null) {
-            var.value = ex;  // Se guarda el resultado semántico en la tabla de símbolos
-            System.out.println("✔ Valor asignado correctamente: " + lastId + " = " + ex);
-
-            // Generación de código MIPS:
-            // Se asume que el resultado de evaluar la expresión se dejó en el registro $t2.
-            // Se almacena ese valor en la dirección correspondiente a la variable (usando su etiqueta, que es su identificador).
-            parser.addInstructionMIPS("sw $t2, " + lastId);
+            if (!manager.esCompatible(var.type, ex.type)) {
+                manager.addSemanticError("Error en asignación: la variable '" + lastId +
+                     "' es de tipo '" + var.type + "', pero la expresión es de tipo '" + ex.type + "'");
+            } else {
+                var.value = ex;
+                System.out.println("✔ Valor asignado correctamente: " + lastId + " = " + ex);
+            }
         } else {
             manager.addSemanticError("Error: Variable '" + lastId + "' no declarada antes de asignación.");
+        }
+        String asigStr = "assign(" + lastId + "=" + ex + ")";
+        asignacionesRealizadas.add(asigStr);
+
+        parser.addInstructionMIPS("# Asignación a variable " + lastId);
+        if (var != null && var.type.equals("float")) {
+            // Se asume que el valor flotante ya se evaluó y se dejó en $f0.
+            parser.addInstructionMIPS("s.s $f0, " + lastId);
+        } else {
+            parser.addInstructionMIPS("sw $t2, " + lastId);
         }
     
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("declaracion_aux",8, ((java_cup.runtime.Symbol)CUP$Parser$stack.elementAt(CUP$Parser$top-2)), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
@@ -1288,7 +1298,7 @@ class CUP$Parser$actions {
                     if (var != null) {
                         manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
                         System.out.println("✔ Array detectado: " + lastId + " con tamaño " + dimension);
-                        // Opcional: generar comentario para reserva de espacio para el array.
+                        // Generar comentario para reserva de espacio para el array.
                         parser.addInstructionMIPS("# Reserva para array " + lastId + " de tamaño " + dimension);
                     } else {
                         manager.addSemanticError("Error: Intento de marcar '" + lastId + "' como array sin declaración previa.");
@@ -1331,7 +1341,7 @@ class CUP$Parser$actions {
                     if (var != null) {
                         manager.markAsArray(manager.getCurrentScope(), lastId, dimension);
 
-                        // Aquí se asume que 'ai' es una lista de Parser.ExprInfo (ver la producción array_init)
+                        // Se asume que 'ai' es una lista de Parser.ExprInfo (ver la producción array_init)
                         List<Parser.ExprInfo> elementos = (List<Parser.ExprInfo>) ai;
                         for (Parser.ExprInfo elem : elementos) {
                             if (!manager.esCompatible(var.type, elem.type)) {
@@ -1342,7 +1352,7 @@ class CUP$Parser$actions {
                         }
                         var.value = ai;
                         System.out.println("✔ Array inicializado correctamente: " + lastId + " = " + ai);
-                        // Opcional: comentario para reserva del array
+                        // Generar comentario para reserva e inicialización del array
                         parser.addInstructionMIPS("# Reserva e inicialización para array " + lastId);
                     } else {
                         manager.addSemanticError("Error: Intento de inicializar '" + lastId + "' como array sin declaración previa.");
@@ -3210,16 +3220,17 @@ class CUP$Parser$actions {
 		int chlright = ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()).right;
 		Object chl = (Object)((java_cup.runtime.Symbol) CUP$Parser$stack.peek()).value;
 		
-       manager.addDerivation("expresion -> CHAR_LITERAL");
-       ExprInfo out = new ExprInfo();
-       out.type = "char";
-       out.text = "'" + chl + "'";
-       // Se carga el valor ASCII del carácter
-       parser.addInstructionMIPS("# Cargar literal char " + chl);
-       // Suponiendo que 'chl' es convertible a String:
-       parser.addInstructionMIPS("li $t2, " + ((String)chl).charAt(0));
-       RESULT = out;
-    
+         manager.addDerivation("expresion -> CHAR_LITERAL");
+         ExprInfo out = new ExprInfo();
+         out.type = "char";
+         // Convertir explícitamente el Character a String.
+         String chStr = Character.toString((Character) chl);
+         out.text = "'" + chStr + "'";
+         // Se carga el valor ASCII del carácter.
+         parser.addInstructionMIPS("# Cargar literal char " + chStr);
+         parser.addInstructionMIPS("li $t2, " + (int) chStr.charAt(0));
+         RESULT = out;
+      
               CUP$Parser$result = parser.getSymbolFactory().newSymbol("expresion",32, ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$Parser$stack.peek()), RESULT);
             }
           return CUP$Parser$result;
